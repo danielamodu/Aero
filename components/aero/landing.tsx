@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, type ReactNode } from "react"
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react"
 import {
   AnimatePresence,
   motion,
@@ -154,7 +154,7 @@ function SiteNav() {
           <Button variant="ghost" className="hidden rounded-full font-medium text-neutral-700 hover:bg-neutral-100 sm:inline-flex">
             Log in
           </Button>
-          <Button className="rounded-full bg-aero-800 font-medium text-white hover:bg-aero-900">
+          <Button onClick={(e) => goTo(e, "waitlist")} className="rounded-full bg-aero-800 font-medium text-white hover:bg-aero-900">
             Get early access
             <ArrowUpRight className="size-4 transition-transform duration-300 group-hover/button:translate-x-0.5 group-hover/button:-translate-y-0.5" />
           </Button>
@@ -190,7 +190,7 @@ function SiteNav() {
             </div>
             <Button
               className="mt-6 h-12 w-full rounded-full bg-aero-800 font-medium text-white hover:bg-aero-900"
-              onClick={() => setMenuOpen(false)}
+              onClick={menuGo("waitlist")}
             >
               Get early access
             </Button>
@@ -335,7 +335,7 @@ function Hero() {
             transition={{ duration: 0.6, delay: 0.28 }}
             className="mt-8 flex flex-wrap items-center gap-3"
           >
-            <Button size="lg" className="h-12 rounded-full bg-aero-800 px-7 text-[15px] font-medium text-white hover:bg-aero-900">
+            <Button size="lg" onClick={(e) => goTo(e, "waitlist")} className="h-12 rounded-full bg-aero-800 px-7 text-[15px] font-medium text-white hover:bg-aero-900">
               Claim your @username
               <ArrowRight className="size-4 transition-transform duration-300 group-hover/button:translate-x-1" />
             </Button>
@@ -794,10 +794,44 @@ function FAQ() {
 /* ----------------------------------- cta ---------------------------------- */
 
 function CTA() {
-  const [name, setName] = useState("")
-  const clean = name.trim().replace(/^@+/, "")
+  const [username, setUsername] = useState("")
+  const [email, setEmail] = useState("")
+  const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">("idle")
+  const [message, setMessage] = useState("")
+  const [savedName, setSavedName] = useState("")
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault()
+    if (status === "sending") return
+    setStatus("sending")
+    setMessage("")
+    try {
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, email }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.ok) {
+        setStatus("error")
+        setMessage(data.error ?? "Something went wrong. Try again.")
+        return
+      }
+      setSavedName(username.trim().replace(/^@+/, "").toLowerCase())
+      setStatus("done")
+      setMessage(
+        data.emailed
+          ? `Confirmation sent to ${email.trim()}.`
+          : "You're on the list — email confirmations switch on soon."
+      )
+    } catch {
+      setStatus("error")
+      setMessage("Network hiccup. Try again.")
+    }
+  }
+
   return (
-    <section className="bg-white px-4 pb-24 sm:px-6">
+    <section id="waitlist" className="scroll-mt-16 bg-white px-4 pb-24 sm:px-6">
       <motion.div
         {...fadeUp}
         className="mx-auto max-w-[110rem] rounded-[2.5rem] bg-aero-800 px-6 py-20 text-center text-white sm:px-12"
@@ -807,21 +841,67 @@ function CTA() {
             <BrandWordmark tone="light" height={64} />
           </div>
           <h2 className="mt-8 text-4xl font-medium tracking-[-0.02em] text-balance sm:text-5xl">
-            Claim your @username
+            Join the waitlist
           </h2>
           <p className="mx-auto mt-4 max-w-md text-lg text-white/65">
-            One handle for sending, getting paid, and growing. Free to reserve, yours to keep.
+            Reserve your @username and get first access. One email when your invite is ready —
+            nothing else, ever.
           </p>
-          <form className="mx-auto mt-8 flex max-w-md flex-col gap-2.5 sm:flex-row" onSubmit={(e) => e.preventDefault()}>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="@yourname" aria-label="Desired username"
-              className="h-12 rounded-full border-white/25 bg-white/10 px-5 text-base text-white placeholder:text-white/40 focus-visible:ring-white/30" />
-            <Button className="h-12 shrink-0 rounded-full bg-white px-7 text-[15px] font-medium text-aero-900 hover:bg-aero-50">
-              Claim <ArrowRight className="size-4 transition-transform duration-300 group-hover/button:translate-x-1" />
-            </Button>
-          </form>
-          <p className="mt-4 text-[13px] text-white/50">
-            {clean ? `@${clean} — nice choice.` : "No wallet needed to reserve."}
-          </p>
+          {status === "done" ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="mx-auto mt-8 max-w-md rounded-[20px] bg-white/10 p-8"
+            >
+              <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-emerald-400 text-aero-950">
+                <Check className="size-6" strokeWidth={3} />
+              </span>
+              <p className="mt-4 text-xl font-medium">You&apos;re on the list{savedName ? `, @${savedName}` : ""}.</p>
+              <p className="mt-2 text-[15px] text-white/65">{message}</p>
+              <button
+                type="button"
+                onClick={() => { setStatus("idle"); setMessage("") }}
+                className="mt-4 text-sm text-white/60 underline underline-offset-4 hover:text-white"
+              >
+                Add another email
+              </button>
+            </motion.div>
+          ) : (
+            <form onSubmit={submit} className="mx-auto mt-8 max-w-md space-y-2.5">
+              <div className="flex flex-col gap-2.5 sm:flex-row">
+                <Input
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="@yourname"
+                  aria-label="Desired username"
+                  autoComplete="username"
+                  className="h-12 flex-1 rounded-full border-white/25 bg-white/10 px-5 text-base text-white placeholder:text-white/40 focus-visible:ring-white/30"
+                />
+                <Input
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@email.com"
+                  aria-label="Email address"
+                  type="email"
+                  autoComplete="email"
+                  className="h-12 flex-1 rounded-full border-white/25 bg-white/10 px-5 text-base text-white placeholder:text-white/40 focus-visible:ring-white/30"
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={status === "sending"}
+                className="h-12 w-full rounded-full bg-white px-7 text-[15px] font-medium text-aero-900 hover:bg-aero-50 disabled:opacity-70"
+              >
+                {status === "sending" ? "Joining…" : (
+                  <>Join the waitlist <ArrowRight className="size-4 transition-transform duration-300 group-hover/button:translate-x-1" /></>
+                )}
+              </Button>
+              {status === "error" && (
+                <p role="alert" className="pt-1 text-sm font-medium text-amber-200">{message}</p>
+              )}
+              <p className="pt-1 text-[13px] text-white/50">No wallet needed. No spam, ever.</p>
+            </form>
+          )}
           <div className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 border-t border-white/15 pt-8 text-sm text-white/60">
             <span className="inline-flex items-center gap-2"><ShieldCheck className="size-4" /> Self-custodied</span>
             <span className="inline-flex items-center gap-2"><Zap className="size-4" /> Sub-second settlement</span>
@@ -832,7 +912,6 @@ function CTA() {
     </section>
   )
 }
-
 /* ---------------------------------- footer -------------------------------- */
 
 export function Footer() {
@@ -855,7 +934,7 @@ export function Footer() {
           <div className="space-y-3">
             <p className="text-[13px] font-medium text-neutral-400">Company</p>
             <a href="#network" onClick={(e) => goTo(e, "network")} className="block text-neutral-600 hover:text-neutral-950">Network</a>
-            <a href="#top" onClick={(e) => goTo(e, "top")} className="block text-neutral-600 hover:text-neutral-950">Early access</a>
+            <a href="#waitlist" onClick={(e) => goTo(e, "waitlist")} className="block text-neutral-600 hover:text-neutral-950">Early access</a>
             <a href="/docs" className="block text-neutral-600 hover:text-neutral-950">Docs</a>
           </div>
         </div>

@@ -30,6 +30,10 @@ pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# local waitlist store (dev only — never commit signups)
+/data
 
 # vercel
 .vercel
