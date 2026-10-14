@@ -321,12 +321,6 @@ function Hero() {
     <section id="top" className="flex min-h-svh items-center bg-white pt-24 pb-20">
       <div className="mx-auto grid w-full max-w-[110rem] items-center gap-16 px-5 lg:grid-cols-[1.05fr_0.95fr] lg:px-10">
         <div>
-          <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
-            <span className="inline-flex items-center gap-2 rounded-full bg-neutral-100 px-3.5 py-1.5 text-[13px] font-medium text-neutral-700">
-              <span className="size-1.5 rounded-full bg-aero-800" />
-              Live on Avalanche · sub-second finality
-            </span>
-          </motion.div>
           <motion.h1
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
