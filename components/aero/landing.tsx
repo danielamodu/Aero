@@ -140,13 +140,27 @@ function RevealWords({ text, className }: { text: string; className?: string }) 
 
 function SiteNav() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24)
+    onScroll()
+    window.addEventListener("scroll", onScroll, { passive: true })
+    return () => window.removeEventListener("scroll", onScroll)
+  }, [])
   const menuGo = (id: string) => (e: { preventDefault: () => void }) => {
     goTo(e, id)
     setMenuOpen(false)
   }
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-neutral-200 bg-white/85 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 w-full max-w-[110rem] items-center justify-between px-5 lg:px-10">
+    <header className="fixed inset-x-0 top-0 z-50 px-3 sm:px-5">
+      <div
+        className={cn(
+          "mx-auto flex h-16 w-full max-w-[110rem] items-center justify-between gap-3 px-4 transition-all duration-300 sm:px-5",
+          scrolled
+            ? "mt-3 rounded-full border border-neutral-200/80 bg-white/70 shadow-[0_12px_40px_-16px_rgba(11,0,78,0.25)] backdrop-blur-xl"
+            : "mt-0 rounded-none border border-transparent bg-transparent"
+        )}
+      >
         <a href="#top" aria-label="Aero home" onClick={(e) => goTo(e, "top")}>
           <BrandLockup tone="dark" height={28} />
         </a>

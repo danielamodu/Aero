@@ -41,8 +41,8 @@ export function BrandLockup({
   }
   const src =
     tone === "dark"
-      ? "/brand/aero-lockup-blue.png"
-      : "/brand/aero-lockup-white.png"
+      ? "/brand/aero-lockup-blue-clear.png"
+      : "/brand/aero-lockup-white-clear.png"
   const dims =
     tone === "dark" ? { w: 688, h: 307 } : { w: 860, h: 420 }
   return (
