@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" baseProfile="tiny" version="1.2" width="512" height="512" viewBox="0 0 512 512">
+<title>Aero</title>
+<rect x="0" y="0" width="512" height="512" fill="#1800AD"/>
+<g fill="#FFFFFF">
+<rect x="42.7" y="42.7" width="426.7" height="117.3"/>
+<rect x="352" y="42.7" width="117.3" height="426.7"/>
+<polygon points="272,144 80,336 154.7,410.7 357.3,229.3"/>
+</g>
+</svg>
