@@ -43,6 +43,13 @@ const fadeUp = {
 
 const SOFT = "shadow-[0_12px_40px_-16px_rgba(11,0,78,0.25)]"
 
+/** Smooth-scroll to a section without putting the hash in the URL. */
+function goTo(e: { preventDefault: () => void }, id: string) {
+  e.preventDefault()
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })
+  history.replaceState(null, "", window.location.pathname + window.location.search)
+}
+
 function Kicker({ children, tone = "dark" }: { children: ReactNode; tone?: "dark" | "light" }) {
   return (
     <p className={cn("text-[13px] font-semibold tracking-[0.14em] uppercase", tone === "dark" ? "text-neutral-500" : "text-white/55")}>
@@ -122,14 +129,14 @@ function SiteNav() {
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-neutral-200 bg-white/85 backdrop-blur-xl">
       <div className="mx-auto flex h-16 w-full max-w-[110rem] items-center justify-between px-5 lg:px-10">
-        <a href="#top" aria-label="Aero home">
+        <a href="#top" aria-label="Aero home" onClick={(e) => goTo(e, "top")}>
           <BrandLockup tone="dark" height={28} />
         </a>
         <nav className="hidden items-center gap-8 text-[15px] font-medium text-neutral-600 md:flex">
-          <a href="#send" className="transition hover:text-neutral-950">Send</a>
-          <a href="#pay" className="transition hover:text-neutral-950">Pay</a>
-          <a href="#earn" className="transition hover:text-neutral-950">Earn</a>
-          <a href="#network" className="transition hover:text-neutral-950">Network</a>
+          <a href="#send" onClick={(e) => goTo(e, "send")} className="transition hover:text-neutral-950">Send</a>
+          <a href="#pay" onClick={(e) => goTo(e, "pay")} className="transition hover:text-neutral-950">Pay</a>
+          <a href="#earn" onClick={(e) => goTo(e, "earn")} className="transition hover:text-neutral-950">Earn</a>
+          <a href="#network" onClick={(e) => goTo(e, "network")} className="transition hover:text-neutral-950">Network</a>
         </nav>
         <div className="flex items-center gap-2">
           <Button variant="ghost" className="hidden rounded-full font-medium text-neutral-700 hover:bg-neutral-100 sm:inline-flex">
@@ -283,7 +290,7 @@ function Hero() {
               Claim your @username
               <ArrowRight className="size-4 transition-transform duration-300 group-hover/button:translate-x-1" />
             </Button>
-            <Button size="lg" variant="outline" className="h-12 rounded-full border-neutral-300 px-7 text-[15px] font-medium text-neutral-900 hover:bg-neutral-50">
+            <Button size="lg" variant="outline" onClick={(e) => goTo(e, "features")} className="h-12 rounded-full border-neutral-300 px-7 text-[15px] font-medium text-neutral-900 hover:bg-neutral-50">
               See how it works
             </Button>
           </motion.div>
@@ -386,7 +393,7 @@ const PILLARS = [
 
 function Pillars() {
   return (
-    <section className="bg-white py-24">
+    <section id="features" className="scroll-mt-16 bg-white py-24">
       <div className="mx-auto w-full max-w-[110rem] px-5 lg:px-10">
         <SectionHead
           eyebrow="What Aero does"
@@ -454,14 +461,14 @@ function SendDemo() {
               <div>
                 <label htmlFor="send-to" className="text-[13px] font-medium text-neutral-500">To</label>
                 <Input id="send-to" value={to} onChange={(e) => setTo(e.target.value)} placeholder="@username"
-                  className="mt-1.5 h-12 rounded-2xl border-neutral-200 bg-white text-[15px] font-medium focus-visible:ring-aero-800/20" />
+                  className="mt-1.5 h-12 rounded-2xl border-neutral-200 bg-white text-[15px] font-medium text-neutral-900 placeholder:text-neutral-400 focus-visible:ring-aero-800/20" />
               </div>
               <div>
                 <label htmlFor="send-amount" className="text-[13px] font-medium text-neutral-500">Amount (USDC)</label>
                 <div className="relative mt-1.5">
                   <span className="absolute top-1/2 left-4 -translate-y-1/2 text-[15px] font-medium text-neutral-400">$</span>
                   <Input id="send-amount" value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal"
-                    className="h-12 rounded-2xl border-neutral-200 pr-4 pl-8 text-[15px] font-medium tabular-nums focus-visible:ring-aero-800/20" />
+                    className="h-12 rounded-2xl border-neutral-200 bg-white pr-4 pl-8 text-[15px] font-medium text-neutral-900 tabular-nums placeholder:text-neutral-400 focus-visible:ring-aero-800/20" />
                 </div>
               </div>
               <Button onClick={send} disabled={sending}
@@ -792,14 +799,14 @@ function Footer() {
         <div className="grid grid-cols-2 gap-8 text-[15px]">
           <div className="space-y-3">
             <p className="text-[13px] font-medium text-neutral-400">Product</p>
-            <a href="#send" className="block text-neutral-600 hover:text-neutral-950">Send</a>
-            <a href="#pay" className="block text-neutral-600 hover:text-neutral-950">Pay</a>
-            <a href="#earn" className="block text-neutral-600 hover:text-neutral-950">Earn</a>
+            <a href="#send" onClick={(e) => goTo(e, "send")} className="block text-neutral-600 hover:text-neutral-950">Send</a>
+            <a href="#pay" onClick={(e) => goTo(e, "pay")} className="block text-neutral-600 hover:text-neutral-950">Pay</a>
+            <a href="#earn" onClick={(e) => goTo(e, "earn")} className="block text-neutral-600 hover:text-neutral-950">Earn</a>
           </div>
           <div className="space-y-3">
             <p className="text-[13px] font-medium text-neutral-400">Company</p>
-            <a href="#network" className="block text-neutral-600 hover:text-neutral-950">Network</a>
-            <a href="#top" className="block text-neutral-600 hover:text-neutral-950">Early access</a>
+            <a href="#network" onClick={(e) => goTo(e, "network")} className="block text-neutral-600 hover:text-neutral-950">Network</a>
+            <a href="#top" onClick={(e) => goTo(e, "top")} className="block text-neutral-600 hover:text-neutral-950">Early access</a>
           </div>
         </div>
       </div>
