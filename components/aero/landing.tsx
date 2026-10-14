@@ -45,11 +45,16 @@ const fadeUp = {
 
 const SOFT = "shadow-[0_12px_40px_-16px_rgba(11,0,78,0.25)]"
 
-/** Smooth-scroll to a section without putting the hash in the URL. */
+/** Smooth-scroll to a section without putting the hash in the URL. Falls back to home when the target isn't on this page. */
 function goTo(e: { preventDefault: () => void }, id: string) {
   e.preventDefault()
-  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })
-  history.replaceState(null, "", window.location.pathname + window.location.search)
+  const el = document.getElementById(id)
+  if (el) {
+    el.scrollIntoView({ behavior: "smooth", block: "start" })
+    history.replaceState(null, "", window.location.pathname + window.location.search)
+  } else {
+    window.location.href = `/#${id}`
+  }
 }
 
 function Kicker({ children, tone = "dark" }: { children: ReactNode; tone?: "dark" | "light" }) {
@@ -830,10 +835,10 @@ function CTA() {
 
 /* ---------------------------------- footer -------------------------------- */
 
-function Footer() {
+export function Footer() {
   return (
     <footer className="border-t border-neutral-200 bg-white">
-      <div className="mx-auto grid w-full max-w-[110rem] gap-10 px-5 py-14 md:grid-cols-[1.2fr_1fr] lg:px-10">
+      <div className="mx-auto grid w-full max-w-[110rem] gap-10 px-5 py-14 md:grid-cols-[1.2fr_1fr_1fr] lg:px-10">
         <div>
           <BrandLockup tone="dark" height={28} />
           <p className="mt-4 max-w-xs text-[15px] leading-relaxed text-neutral-500">
@@ -851,7 +856,13 @@ function Footer() {
             <p className="text-[13px] font-medium text-neutral-400">Company</p>
             <a href="#network" onClick={(e) => goTo(e, "network")} className="block text-neutral-600 hover:text-neutral-950">Network</a>
             <a href="#top" onClick={(e) => goTo(e, "top")} className="block text-neutral-600 hover:text-neutral-950">Early access</a>
+            <a href="/docs" className="block text-neutral-600 hover:text-neutral-950">Docs</a>
           </div>
+        </div>
+        <div className="space-y-3 text-[15px]">
+          <p className="text-[13px] font-medium text-neutral-400">Legal</p>
+          <a href="/privacy" className="block text-neutral-600 hover:text-neutral-950">Privacy</a>
+          <a href="/terms" className="block text-neutral-600 hover:text-neutral-950">Terms</a>
         </div>
       </div>
       <div className="border-t border-neutral-100">
