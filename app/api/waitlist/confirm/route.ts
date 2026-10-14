@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation"
 import { timingSafeEqual } from "node:crypto"
+import { confirmToken } from "@/lib/waitlist"
+import { db } from "@/lib/db"
 import { appendFile, mkdir } from "node:fs/promises"
 import { join } from "node:path"
-import { confirmToken } from "@/lib/waitlist"
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
@@ -22,15 +23,21 @@ export async function GET(req: Request) {
     redirect("/confirmed?error=1")
   }
 
-  try {
-    const dir = process.env.WAITLIST_DIR ?? join(process.cwd(), "data")
-    await mkdir(dir, { recursive: true })
-    await appendFile(
-      join(dir, "waitlist.jsonl"),
-      JSON.stringify({ event: "confirmed", email, username, created_at: new Date().toISOString() }) + "\n"
-    )
-  } catch {
-    /* non-fatal */
+  const sql = db()
+  if (sql) {
+    const rows = (await sql`UPDATE waitlist SET confirmed = TRUE, confirmed_at = NOW() WHERE email = ${email} AND username = ${username} RETURNING id`) as { id: number }[]
+    if (rows.length === 0) redirect("/confirmed?error=1")
+  } else {
+    try {
+      const dir = process.env.WAITLIST_DIR ?? join(process.cwd(), "data")
+      await mkdir(dir, { recursive: true })
+      await appendFile(
+        join(dir, "waitlist.jsonl"),
+        JSON.stringify({ event: "confirmed", email, username, created_at: new Date().toISOString() }) + "\n"
+      )
+    } catch {
+      /* non-fatal */
+    }
   }
 
   redirect(`/confirmed?user=${encodeURIComponent(`@${username}`)}`)

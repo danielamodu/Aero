@@ -66,17 +66,19 @@ export default async function AdminPage() {
           </p>
         ) : (
           <div className="mt-8 overflow-hidden rounded-[20px] border border-neutral-200">
-            <div className="grid grid-cols-[1fr_auto] items-center gap-4 border-b border-neutral-200 bg-[#f7f7f7] px-5 py-3 text-[13px] font-medium text-neutral-500 sm:grid-cols-[1.4fr_1fr_1fr_auto]">
+            <div className="grid grid-cols-[1fr_auto] items-center gap-4 border-b border-neutral-200 bg-[#f7f7f7] px-5 py-3 text-[13px] font-medium text-neutral-500 sm:grid-cols-[1.4fr_1fr_1fr_auto_auto]">
               <span>Email</span>
               <span className="hidden sm:block">Username</span>
               <span className="hidden sm:block">Signed up</span>
+              <span className="hidden text-right sm:block">Refs</span>
               <span className="text-right">Status</span>
             </div>
             {signups.map((s) => (
-              <div key={s.email} className="grid grid-cols-[1fr_auto] items-center gap-4 border-b border-neutral-100 px-5 py-3.5 text-[15px] last:border-0 sm:grid-cols-[1.4fr_1fr_1fr_auto]">
+              <div key={s.email} className="grid grid-cols-[1fr_auto] items-center gap-4 border-b border-neutral-100 px-5 py-3.5 text-[15px] last:border-0 sm:grid-cols-[1.4fr_1fr_1fr_auto_auto]">
                 <span className="truncate font-medium">{s.email}</span>
                 <span className="hidden text-neutral-600 sm:block">@{s.username}</span>
                 <span className="hidden text-neutral-400 tabular-nums sm:block">{s.created_at.slice(0, 10)}</span>
+                <span className="hidden text-right text-neutral-500 tabular-nums sm:block">{s.referrals}</span>
                 <span className={`justify-self-end rounded-full px-2.5 py-1 text-xs font-medium ${s.confirmed ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500"}`}>
                   {s.confirmed ? "Confirmed" : "Pending"}
                 </span>

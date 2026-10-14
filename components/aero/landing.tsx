@@ -813,17 +813,50 @@ function CTA() {
   const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">("idle")
   const [message, setMessage] = useState("")
   const [savedName, setSavedName] = useState("")
+  const [position, setPosition] = useState<number | null>(null)
+  const [myCode, setMyCode] = useState("")
+  const [already, setAlready] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  // Stash a referral code from ?ref= for the signup post.
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search).get("ref")
+      if (q && /^[A-Z2-9]{8}$/i.test(q.trim())) {
+        window.localStorage.setItem("aero_ref", q.trim().toUpperCase())
+      }
+    } catch {
+      /* private mode */
+    }
+  }, [])
+
+  const copyLink = async () => {
+    const link = `https://useaero.org?ref=${myCode}`
+    try {
+      await navigator.clipboard.writeText(link)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      /* clipboard unavailable */
+    }
+  }
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
     if (status === "sending") return
     setStatus("sending")
     setMessage("")
+    let referredBy: string | null = null
+    try {
+      referredBy = window.localStorage.getItem("aero_ref")
+    } catch {
+      /* ignore */
+    }
     try {
       const res = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, email }),
+        body: JSON.stringify({ username, email, referred_by: referredBy }),
       })
       const data = await res.json()
       if (!res.ok || !data.ok) {
@@ -832,6 +865,9 @@ function CTA() {
         return
       }
       setSavedName(username.trim().replace(/^@+/, "").toLowerCase())
+      setPosition(typeof data.position === "number" ? data.position : null)
+      setMyCode(typeof data.referral_code === "string" ? data.referral_code : "")
+      setAlready(!!data.already)
       setStatus("done")
       window.plausible?.("waitlist-signup")
       setMessage(
@@ -871,8 +907,33 @@ function CTA() {
               <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-emerald-400 text-aero-950">
                 <Check className="size-6" strokeWidth={3} />
               </span>
-              <p className="mt-4 text-xl font-medium">You&apos;re on the list{savedName ? `, @${savedName}` : ""}.</p>
+              <p className="mt-4 text-xl font-medium">
+                {already ? "You're already on the list" : "You're on the list"}
+                {savedName ? `, @${savedName}` : ""}.
+                {position ? (
+                  <span className="mt-1 block font-mono text-base text-white/80 tabular-nums">#{position} in line</span>
+                ) : null}
+              </p>
               <p className="mt-2 text-[15px] text-white/65">{message}</p>
+              {myCode ? (
+                <div className="mx-auto mt-5 flex max-w-sm items-center gap-2 rounded-full border border-white/25 bg-white/10 py-1.5 pr-1.5 pl-5">
+                  <span className="flex-1 truncate text-left font-mono text-sm text-white tabular-nums">
+                    useaero.org?ref={myCode}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={copyLink}
+                    className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-white px-4 text-sm font-medium text-aero-900 transition hover:bg-aero-50"
+                  >
+                    {copied ? (
+                      <><Check className="size-3.5" strokeWidth={3} /> Copied</>
+                    ) : (
+                      "Copy invite link"
+                    )}
+                  </button>
+                </div>
+              ) : null}
+              <p className="mt-3 text-[13px] text-white/50">Friends who join through your link move you up.</p>
               <button
                 type="button"
                 onClick={() => { setStatus("idle"); setMessage("") }}

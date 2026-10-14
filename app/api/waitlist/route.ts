@@ -3,7 +3,8 @@ import { appendFile, mkdir } from "node:fs/promises"
 import { join } from "node:path"
 import { Resend } from "resend"
 import { clientIp, throttle } from "@/lib/rate-limit"
-import { confirmToken } from "@/lib/waitlist"
+import { confirmToken, genReferralCode } from "@/lib/waitlist"
+import { db } from "@/lib/db"
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
@@ -11,6 +12,12 @@ function cleanUsername(raw: unknown): string | null {
   if (typeof raw !== "string") return null
   const u = raw.trim().replace(/^@+/, "").toLowerCase()
   return /^[a-z0-9_]{3,20}$/.test(u) ? u : null
+}
+
+function cleanRef(raw: unknown): string | null {
+  if (typeof raw !== "string") return null
+  const r = raw.trim().toUpperCase()
+  return /^[A-Z2-9]{8}$/.test(r) ? r : null
 }
 
 function confirmationHtml(username: string, confirmUrl: string): string {
@@ -43,14 +50,59 @@ function confirmationText(username: string, confirmUrl: string): string {
   return `One tap to lock in @${username}.\n\nConfirm your email to reserve your handle:\n${confirmUrl}\n\nAfter confirming: invite email when your spot opens, then send, pay, and earn from one balance.\n\nAero · useaero.org\n\nDidn't sign up? Just ignore this email.`
 }
 
-/** Best-effort local record (durable in dev; ephemeral on serverless — the emails are the source of truth there). */
-async function store(entry: Record<string, string>) {
+/** Best-effort local record (dev fallback when DATABASE_URL is unset). */
+async function storeFile(entry: Record<string, string>) {
   try {
     const dir = process.env.WAITLIST_DIR ?? join(process.cwd(), "data")
     await mkdir(dir, { recursive: true })
     await appendFile(join(dir, "waitlist.jsonl"), JSON.stringify(entry) + "\n")
   } catch {
     /* non-fatal */
+  }
+}
+
+type DbRow = {
+  id: number
+  email: string
+  username: string
+  referral_code: string
+  confirmed: boolean
+  created_at: string
+}
+
+async function sendConfirmation(email: string, username: string, confirmUrl: string): Promise<boolean> {
+  const key = process.env.RESEND_API_KEY
+  if (!key) return false
+  try {
+    const resend = new Resend(key)
+    const from = process.env.WAITLIST_FROM ?? "Aero <hello@useaero.org>"
+    const notify = process.env.WAITLIST_NOTIFY
+    const jobs = [
+      resend.emails.send({
+        from,
+        to: email,
+        subject: `Confirm your Aero spot (@${username})`,
+        html: confirmationHtml(username, confirmUrl),
+        text: confirmationText(username, confirmUrl),
+      }),
+    ]
+    if (notify) {
+      jobs.push(
+        resend.emails.send({
+          from,
+          to: notify,
+          subject: `Waitlist signup: @${username}`,
+          text: `@${username} <${email}> joined the waitlist (unconfirmed).`,
+        })
+      )
+    }
+    const [confirm] = await Promise.allSettled(jobs)
+    const ok = confirm.status === "fulfilled" && !confirm.value.error
+    if (!ok && confirm.status === "fulfilled") console.error("Resend error:", confirm.value.error)
+    return ok
+  } catch (err) {
+    console.error("Resend failed:", err)
+    return false
   }
 }
 
@@ -62,7 +114,7 @@ export async function POST(req: Request) {
     )
   }
 
-  let body: { email?: unknown; username?: unknown }
+  let body: { email?: unknown; username?: unknown; referred_by?: unknown }
   try {
     body = await req.json()
   } catch {
@@ -71,6 +123,7 @@ export async function POST(req: Request) {
 
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : ""
   const username = cleanUsername(body.username)
+  const refCode = cleanRef(body.referred_by)
 
   if (!EMAIL_RE.test(email)) {
     return NextResponse.json({ ok: false, error: "Enter a valid email address." }, { status: 400 })
@@ -82,47 +135,50 @@ export async function POST(req: Request) {
     )
   }
 
-  await store({ event: "signup", email, username, created_at: new Date().toISOString() })
-
-  const token = confirmToken(email, username)
+  const sql = db()
   const origin = new URL(req.url).origin
-  const confirmUrl = `${origin}/api/waitlist/confirm?email=${encodeURIComponent(email)}&username=${encodeURIComponent(username)}&token=${token}`
+  const confirmUrlFor = (e: string, u: string) =>
+    `${origin}/api/waitlist/confirm?email=${encodeURIComponent(e)}&username=${encodeURIComponent(u)}&token=${confirmToken(e, u)}`
 
-  let emailed = false
-  const key = process.env.RESEND_API_KEY
-  if (key) {
-    try {
-      const resend = new Resend(key)
-      const from = process.env.WAITLIST_FROM ?? "Aero <hello@useaero.org>"
-      const notify = process.env.WAITLIST_NOTIFY
-      const jobs = [
-        resend.emails.send({
-          from,
-          to: email,
-          subject: `Confirm your Aero spot (@${username})`,
-          html: confirmationHtml(username, confirmUrl),
-          text: confirmationText(username, confirmUrl),
-        }),
-      ]
-      if (notify) {
-        jobs.push(
-          resend.emails.send({
-            from,
-            to: notify,
-            subject: `Waitlist signup: @${username}`,
-            text: `@${username} <${email}> joined the waitlist (unconfirmed).`,
-          })
-        )
+  // ---- Postgres path ----
+  if (sql) {
+    const existing = (await sql`SELECT id, email, username, referral_code, confirmed FROM waitlist WHERE email = ${email}`) as DbRow[]
+    if (existing.length > 0) {
+      const row = existing[0]
+      const [{ count }] = (await sql`SELECT COUNT(*)::int AS count FROM waitlist WHERE id <= ${row.id}`) as { count: number }[]
+      let emailed = false
+      if (!row.confirmed) {
+        emailed = await sendConfirmation(row.email, row.username, confirmUrlFor(row.email, row.username))
       }
-      const [confirm] = await Promise.allSettled(jobs)
-      emailed = confirm.status === "fulfilled" && !confirm.value.error
-      if (!emailed && confirm.status === "fulfilled") {
-        console.error("Resend error:", confirm.value.error)
-      }
-    } catch (err) {
-      console.error("Resend failed:", err)
+      return NextResponse.json({ ok: true, emailed, already: true, position: count, referral_code: row.referral_code })
     }
+
+    let referredBy: string | null = null
+    if (refCode) {
+      const ref = (await sql`SELECT email FROM waitlist WHERE referral_code = ${refCode}`) as { email: string }[]
+      if (ref.length > 0 && ref[0].email !== email) referredBy = refCode
+    }
+
+    let row: DbRow | null = null
+    for (let attempt = 0; attempt < 5 && !row; attempt++) {
+      const code = genReferralCode()
+      try {
+        const inserted = (await sql`INSERT INTO waitlist (email, username, referral_code, referred_by) VALUES (${email}, ${username}, ${code}, ${referredBy}) RETURNING id, email, username, referral_code, confirmed`) as DbRow[]
+        row = inserted[0]
+      } catch {
+        /* code collision — retry */
+      }
+    }
+    if (!row) {
+      return NextResponse.json({ ok: false, error: "Couldn't save that — try again." }, { status: 500 })
+    }
+    const [{ count }] = (await sql`SELECT COUNT(*)::int AS count FROM waitlist WHERE id <= ${row.id}`) as { count: number }[]
+    const emailed = await sendConfirmation(email, username, confirmUrlFor(email, username))
+    return NextResponse.json({ ok: true, emailed, position: count, referral_code: row.referral_code })
   }
 
+  // ---- File fallback (dev without DATABASE_URL) ----
+  await storeFile({ event: "signup", email, username, created_at: new Date().toISOString() })
+  const emailed = await sendConfirmation(email, username, confirmUrlFor(email, username))
   return NextResponse.json({ ok: true, emailed })
 }

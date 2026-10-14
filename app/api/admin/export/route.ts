@@ -12,8 +12,8 @@ export async function GET() {
     return new Response("Unauthorized", { status: 401 })
   }
   const rows = await readSignups()
-  const csv = ["email,username,signed_up,confirmed"]
-    .concat(rows.map((r) => [csvCell(r.email), csvCell(r.username), csvCell(r.created_at), r.confirmed ? "yes" : "no"].join(",")))
+  const csv = ["email,username,signed_up,confirmed,referrals"]
+    .concat(rows.map((r) => [csvCell(r.email), csvCell(r.username), csvCell(r.created_at), r.confirmed ? "yes" : "no", String(r.referrals)].join(",")))
     .join("\n")
   return new Response(csv, {
     headers: {
