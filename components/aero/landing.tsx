@@ -14,6 +14,7 @@ import {
   ArrowRight,
   ArrowUpRight,
   Check,
+  Menu,
   Send,
   ShieldCheck,
   Sprout,
@@ -29,6 +30,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import { AeroMark } from "./logo"
 import { BrandIcon, BrandLockup, BrandWordmark } from "./brand-logo"
@@ -126,6 +128,11 @@ function RevealWords({ text, className }: { text: string; className?: string }) 
 /* ----------------------------------- nav ---------------------------------- */
 
 function SiteNav() {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuGo = (id: string) => (e: { preventDefault: () => void }) => {
+    goTo(e, id)
+    setMenuOpen(false)
+  }
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-neutral-200 bg-white/85 backdrop-blur-xl">
       <div className="mx-auto flex h-16 w-full max-w-[110rem] items-center justify-between px-5 lg:px-10">
@@ -146,7 +153,44 @@ function SiteNav() {
             Get early access
             <ArrowUpRight className="size-4 transition-transform duration-300 group-hover/button:translate-x-0.5 group-hover/button:-translate-y-0.5" />
           </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label="Open menu"
+            onClick={() => setMenuOpen(true)}
+            className="h-11 w-11 rounded-full text-neutral-900 hover:bg-neutral-100 md:hidden"
+          >
+            <Menu className="size-5" />
+          </Button>
         </div>
+        <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+          <SheetContent side="right" className="w-72 border-neutral-200 bg-white p-6">
+            <SheetTitle className="sr-only">Menu</SheetTitle>
+            <div className="mt-10 flex flex-col gap-1">
+              {[
+                ["Send", "send"],
+                ["Pay", "pay"],
+                ["Earn", "earn"],
+                ["Network", "network"],
+              ].map(([label, id]) => (
+                <a
+                  key={id}
+                  href={`#${id}`}
+                  onClick={menuGo(id)}
+                  className="rounded-2xl px-4 py-3.5 text-lg font-medium text-neutral-900 transition hover:bg-neutral-100"
+                >
+                  {label}
+                </a>
+              ))}
+            </div>
+            <Button
+              className="mt-6 h-12 w-full rounded-full bg-aero-800 font-medium text-white hover:bg-aero-900"
+              onClick={() => setMenuOpen(false)}
+            >
+              Get early access
+            </Button>
+          </SheetContent>
+        </Sheet>
       </div>
     </header>
   )
@@ -307,7 +351,7 @@ function Hero() {
             ].map(([v, l]) => (
               <div key={l}>
                 <dt className="sr-only">{l}</dt>
-                <dd className="text-[26px] font-medium tracking-tight text-neutral-900 tabular-nums">{v}</dd>
+                <dd className="text-[22px] font-medium tracking-tight text-neutral-900 tabular-nums sm:text-[26px]">{v}</dd>
                 <dd className="mt-1 text-[13px] text-neutral-500">{l}</dd>
               </div>
             ))}
@@ -461,14 +505,14 @@ function SendDemo() {
               <div>
                 <label htmlFor="send-to" className="text-[13px] font-medium text-neutral-500">To</label>
                 <Input id="send-to" value={to} onChange={(e) => setTo(e.target.value)} placeholder="@username"
-                  className="mt-1.5 h-12 rounded-2xl border-neutral-200 bg-white text-[15px] font-medium text-neutral-900 placeholder:text-neutral-400 focus-visible:ring-aero-800/20" />
+                  className="mt-1.5 h-12 rounded-2xl border-neutral-200 bg-white text-base font-medium text-neutral-900 placeholder:text-neutral-400 focus-visible:ring-aero-800/20" />
               </div>
               <div>
                 <label htmlFor="send-amount" className="text-[13px] font-medium text-neutral-500">Amount (USDC)</label>
                 <div className="relative mt-1.5">
                   <span className="absolute top-1/2 left-4 -translate-y-1/2 text-[15px] font-medium text-neutral-400">$</span>
                   <Input id="send-amount" value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal"
-                    className="h-12 rounded-2xl border-neutral-200 bg-white pr-4 pl-8 text-[15px] font-medium text-neutral-900 tabular-nums placeholder:text-neutral-400 focus-visible:ring-aero-800/20" />
+                    className="h-12 rounded-2xl border-neutral-200 bg-white pr-4 pl-8 text-base font-medium text-neutral-900 tabular-nums placeholder:text-neutral-400 focus-visible:ring-aero-800/20" />
                 </div>
               </div>
               <Button onClick={send} disabled={sending}
@@ -765,7 +809,7 @@ function CTA() {
           </p>
           <form className="mx-auto mt-8 flex max-w-md flex-col gap-2.5 sm:flex-row" onSubmit={(e) => e.preventDefault()}>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="@yourname" aria-label="Desired username"
-              className="h-12 rounded-full border-white/25 bg-white/10 px-5 text-[15px] text-white placeholder:text-white/40 focus-visible:ring-white/30" />
+              className="h-12 rounded-full border-white/25 bg-white/10 px-5 text-base text-white placeholder:text-white/40 focus-visible:ring-white/30" />
             <Button className="h-12 shrink-0 rounded-full bg-white px-7 text-[15px] font-medium text-aero-900 hover:bg-aero-50">
               Claim <ArrowRight className="size-4 transition-transform duration-300 group-hover/button:translate-x-1" />
             </Button>
@@ -824,7 +868,7 @@ function Footer() {
 
 export default function AeroLanding() {
   return (
-    <div className="min-h-screen bg-white font-sans text-neutral-900 antialiased">
+    <div className="min-h-screen overflow-x-clip bg-white font-sans text-neutral-900 antialiased [-webkit-tap-highlight-color:transparent]">
       <SiteNav />
       <main>
         <Hero />
