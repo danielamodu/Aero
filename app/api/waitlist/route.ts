@@ -71,7 +71,7 @@ export async function POST(req: Request) {
   if (key) {
     try {
       const resend = new Resend(key)
-      const from = process.env.WAITLIST_FROM ?? "Aero <onboarding@resend.dev>"
+      const from = process.env.WAITLIST_FROM ?? "Aero <hello@useaero.org>"
       const notify = process.env.WAITLIST_NOTIFY
       const jobs = [
         resend.emails.send({
