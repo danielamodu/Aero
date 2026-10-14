@@ -13,14 +13,19 @@ function cleanUsername(raw: unknown): string | null {
 
 function confirmationHtml(username: string): string {
   return `<!doctype html><html><body style="margin:0;padding:0;background:#f7f7f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">Your @${username} username is reserved — invite coming.</div>
 <div style="max-width:520px;margin:0 auto;padding:40px 20px;">
 <div style="background:#ffffff;border:1px solid #e5e5e5;border-radius:20px;overflow:hidden;">
-<div style="padding:32px 32px 24px;text-align:center;border-bottom:1px solid #f0f0f0;">
-<img src="https://useaero.org/brand/aero-lockup-blue.png" alt="Aero" width="150" style="display:inline-block;width:150px;height:auto;border:0;" />
+<div style="background:#1800ad;padding:30px 32px;text-align:center;">
+<img src="https://useaero.org/brand/aero-lockup-white-clear.png" alt="Aero" width="140" style="display:inline-block;width:140px;height:auto;border:0;" />
 </div>
 <div style="padding:32px;">
-<p style="margin:0 0 8px;font-size:24px;font-weight:600;letter-spacing:-0.02em;color:#171717;">You're on the list, @${username}.</p>
-<p style="margin:0 0 24px;font-size:15px;line-height:1.65;color:#525252;">Your username is reserved. We'll email you the moment your invite is ready — early signups get first pick of handles.</p>
+<p style="margin:0 0 8px;font-size:24px;font-weight:600;letter-spacing:-0.02em;color:#171717;">You're on the list.</p>
+<p style="margin:0 0 24px;font-size:15px;line-height:1.65;color:#525252;">We'll email you the moment your invite is ready — early signups get first pick of handles.</p>
+<div style="background:#f7f7f7;border:1px dashed #d4d4d4;border-radius:14px;padding:20px;text-align:center;margin:0 0 24px;">
+<p style="margin:0;font-size:28px;font-weight:700;letter-spacing:-0.01em;color:#1800ad;">@${username}</p>
+<p style="margin:6px 0 0;font-size:11px;font-weight:700;letter-spacing:0.16em;color:#737373;">USERNAME RESERVED</p>
+</div>
 <p style="margin:0 0 12px;font-size:12px;font-weight:700;letter-spacing:0.12em;color:#a3a3a3;">WHAT HAPPENS NEXT</p>
 <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">
 <tr><td style="padding:10px 0;border-top:1px solid #f0f0f0;font-size:15px;color:#404040;"><span style="display:inline-block;width:26px;height:26px;line-height:26px;text-align:center;border-radius:9999px;background:#f3f2fb;color:#1800ad;font-size:13px;font-weight:700;margin-right:10px;">1</span>Invite email when your spot opens</td></tr>
