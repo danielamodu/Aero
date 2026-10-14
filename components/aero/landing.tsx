@@ -1,23 +1,20 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 import {
   AnimatePresence,
   motion,
   useInView,
   useReducedMotion,
+  useScroll,
+  useTransform,
+  type MotionValue,
 } from "motion/react"
 import {
   ArrowRight,
   ArrowUpRight,
-  BadgeCheck,
-  Bell,
   Check,
-  ReceiptText,
   Send,
-  ShieldCheck,
-  Snowflake,
-  Sparkles,
   Sprout,
   Wallet,
   Zap,
@@ -25,19 +22,92 @@ import {
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { AeroMark } from "./logo"
-import { BrandIcon, BrandLockup } from "./brand-logo"
+import { BrandIcon, BrandLockup, BrandWordmark } from "./brand-logo"
 
-/* ---------------------------------- utils --------------------------------- */
+/* ---------------------------------- atoms --------------------------------- */
 
 const fadeUp = {
   initial: { opacity: 0, y: 28 },
   whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true, margin: "-80px" },
+  viewport: { once: true, margin: "-70px" },
 } as const
+
+function Kicker({ children, tone = "dark" }: { children: ReactNode; tone?: "dark" | "light" }) {
+  return (
+    <p
+      className={cn(
+        "font-mono text-xs font-bold tracking-[0.22em] uppercase",
+        tone === "dark" ? "text-aero-800" : "text-white/70"
+      )}
+    >
+      <span className={cn("mr-2 inline-block size-2", tone === "dark" ? "bg-aero-800" : "bg-emerald-300")} />
+      {children}
+    </p>
+  )
+}
+
+function SectionHead({
+  index,
+  title,
+  body,
+  tone = "dark",
+}: {
+  index: string
+  title: ReactNode
+  body?: string
+  tone?: "dark" | "light"
+}) {
+  return (
+    <motion.div {...fadeUp} className="max-w-3xl">
+      <div className="flex items-baseline gap-4">
+        <span className={cn("font-mono text-sm font-bold", tone === "dark" ? "text-aero-800" : "text-emerald-300")}>
+          {index}
+        </span>
+        <span className={cn("h-px flex-1", tone === "dark" ? "bg-aero-950/15" : "bg-white/20")} />
+      </div>
+      <h2
+        className={cn(
+          "mt-5 text-4xl font-extrabold tracking-tight text-balance uppercase sm:text-5xl",
+          tone === "dark" ? "text-aero-950" : "text-white"
+        )}
+      >
+        {title}
+      </h2>
+      {body && (
+        <p className={cn("mt-4 max-w-xl text-lg leading-relaxed", tone === "dark" ? "text-aero-950/65" : "text-white/70")}>
+          {body}
+        </p>
+      )}
+    </motion.div>
+  )
+}
+
+/** Outlined version of the Aero arrow — graphic texture, not the logo. */
+function OutlineArrow({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" strokeWidth="7" aria-hidden className={cn("size-8", className)}>
+      <rect x="8" y="8" width="80" height="22" />
+      <rect x="66" y="8" width="22" height="80" />
+      <polygon points="51,27 15,63 29,77 67,43" />
+    </svg>
+  )
+}
+
+function ArrowStrip({ dark = false }: { dark?: boolean }) {
+  const reduce = useReducedMotion()
+  const row = Array.from({ length: 12 })
+  return (
+    <div className={cn("overflow-hidden py-5", dark ? "bg-aero-950 text-white/25" : "bg-aero-800 text-white/25")}>
+      <div className={cn("flex w-max items-center gap-8 pr-8", !reduce && "animate-aero-marquee")}>
+        {[...row, ...row].map((_, i) => (
+          <OutlineArrow key={i} className="size-10 shrink-0" />
+        ))}
+      </div>
+    </div>
+  )
+}
 
 function useCountUp(target: number, active: boolean, duration = 1600) {
   const [value, setValue] = useState(0)
@@ -47,8 +117,7 @@ function useCountUp(target: number, active: boolean, duration = 1600) {
     const start = performance.now()
     const tick = (now: number) => {
       const p = Math.min(1, (now - start) / duration)
-      const eased = 1 - Math.pow(1 - p, 3)
-      setValue(target * eased)
+      setValue(target * (1 - Math.pow(1 - p, 3)))
       if (p < 1) raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
@@ -57,37 +126,59 @@ function useCountUp(target: number, active: boolean, duration = 1600) {
   return value
 }
 
+/* --------------------------- scroll word reveal ---------------------------- */
+
+function Word({
+  progress,
+  range,
+  children,
+}: {
+  progress: MotionValue<number>
+  range: [number, number]
+  children: ReactNode
+}) {
+  const opacity = useTransform(progress, range, [0.13, 1])
+  return <motion.span style={{ opacity }}>{children} </motion.span>
+}
+
+function RevealWords({ text, className }: { text: string; className?: string }) {
+  const ref = useRef<HTMLParagraphElement>(null)
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start 0.85", "end 0.45"],
+  })
+  const words = text.split(" ")
+  return (
+    <p ref={ref} className={className}>
+      {words.map((w, i) => (
+        <Word key={i} progress={scrollYProgress} range={[i / words.length, (i + 1) / words.length]}>
+          {w}
+        </Word>
+      ))}
+    </p>
+  )
+}
+
 /* ----------------------------------- nav ---------------------------------- */
 
 function SiteNav() {
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-aero-100 bg-white/75 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
-        <a href="#top" className="text-aero-800" aria-label="Aero home">
-          <BrandLockup tone="dark" height={32} />
+    <header className="fixed inset-x-0 top-0 z-50 border-b-2 border-aero-950 bg-white">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5">
+        <a href="#top" aria-label="Aero home">
+          <BrandLockup tone="dark" height={30} />
         </a>
-        <nav className="hidden items-center gap-7 text-sm font-medium text-neutral-600 md:flex">
-          <a href="#send" className="transition hover:text-aero-800">
-            Send
-          </a>
-          <a href="#pay" className="transition hover:text-aero-800">
-            Pay
-          </a>
-          <a href="#earn" className="transition hover:text-aero-800">
-            Earn
-          </a>
-          <a href="#network" className="transition hover:text-aero-800">
-            Network
-          </a>
+        <nav className="hidden items-center gap-7 font-mono text-xs font-bold tracking-[0.18em] text-aero-950/70 uppercase md:flex">
+          <a href="#send" className="transition hover:text-aero-800">Send</a>
+          <a href="#pay" className="transition hover:text-aero-800">Pay</a>
+          <a href="#earn" className="transition hover:text-aero-800">Earn</a>
+          <a href="#network" className="transition hover:text-aero-800">Network</a>
         </nav>
         <div className="flex items-center gap-2.5">
-          <Button
-            variant="ghost"
-            className="hidden text-aero-800 hover:bg-aero-50 sm:inline-flex"
-          >
+          <Button variant="ghost" className="hidden font-semibold text-aero-950 hover:bg-aero-50 sm:inline-flex">
             Log in
           </Button>
-          <Button className="bg-aero-800 font-semibold text-white hover:bg-aero-900">
+          <Button className="bg-aero-800 font-bold text-white hover:bg-aero-900">
             Get early access
             <ArrowUpRight className="size-4 transition-transform duration-300 group-hover/button:translate-x-0.5 group-hover/button:-translate-y-0.5" />
           </Button>
@@ -99,99 +190,89 @@ function SiteNav() {
 
 /* ----------------------------------- hero --------------------------------- */
 
-const HERO_FEED = [
-  { from: "@you", to: "@maya", amount: "$45.00", time: "0.8s" },
-  { from: "@leo", to: "@you", amount: "$120.00", time: "0.6s" },
-  { from: "@you", to: "@sam", amount: "$12.50", time: "0.9s" },
-]
-
 function HeroPhone() {
   const [balance, setBalance] = useState(2480.16)
   useEffect(() => {
-    const id = setInterval(
-      () => setBalance((b) => b + 0.02 + Math.random() * 0.03),
-      2000
-    )
+    const id = setInterval(() => setBalance((b) => b + 0.02 + Math.random() * 0.03), 2000)
     return () => clearInterval(id)
   }, [])
   return (
     <div className="relative mx-auto w-full max-w-sm">
-      {/* balance card */}
       <motion.div
-        initial={{ opacity: 0, y: 32, rotate: -2 }}
-        animate={{ opacity: 1, y: 0, rotate: 0 }}
-        transition={{ duration: 0.7, delay: 0.35 }}
-        className="animate-aero-float relative z-10 rounded-3xl bg-aero-800 p-6 text-white shadow-2xl shadow-aero-800/40"
+        initial={{ opacity: 0, y: 32 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.3 }}
+        className="animate-aero-float relative z-10 border-2 border-aero-950 bg-aero-800 p-6 text-white aero-hard-shadow"
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <BrandIcon className="size-7 rounded-md text-white" />
-            <span className="text-sm font-semibold tracking-wide">
-              @you · USDC
-            </span>
+            <BrandIcon className="size-7 rounded text-white" />
+            <span className="font-mono text-sm font-bold tracking-wide">@you · USDC</span>
           </div>
-          <Badge className="border-white/20 bg-white/10 text-white hover:bg-white/15">
+          <span className="inline-flex items-center gap-1.5 border border-white/30 px-2.5 py-1 font-mono text-[11px] font-bold">
             <span className="relative flex size-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-75" />
-              <span className="relative inline-flex size-1.5 rounded-full bg-emerald-300" />
+              <span className="absolute inline-flex h-full w-full animate-ping bg-emerald-300" />
+              <span className="relative inline-flex size-1.5 bg-emerald-300" />
             </span>
-            Earning 5.24%
-          </Badge>
+            EARNING 5.24%
+          </span>
         </div>
-        <p className="mt-6 text-xs font-medium tracking-widest text-white/60 uppercase">
-          Balance
-        </p>
-        <p className="mt-1 text-5xl font-extrabold tracking-tight tabular-nums">
+        <p className="mt-7 font-mono text-[11px] font-bold tracking-[0.22em] text-white/60 uppercase">Balance</p>
+        <p className="mt-1 font-mono text-5xl font-extrabold tracking-tight tabular-nums">
           ${balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </p>
-        <p className="mt-2 text-sm text-emerald-300">
-          +$3.41 earned this week · automatic
-        </p>
+        <p className="mt-2 font-mono text-xs text-emerald-300">+$3.41 this week · automatic</p>
         <div className="mt-5 grid grid-cols-2 gap-2.5">
-          <Button className="bg-white font-semibold text-aero-800 hover:bg-aero-50">
+          <Button className="h-11 bg-white font-bold text-aero-900 hover:bg-aero-100">
             <Send className="size-4" /> Send
           </Button>
-          <Button
-            variant="outline"
-            className="border-white/25 bg-transparent font-semibold text-white hover:bg-white/10 hover:text-white"
-          >
+          <Button variant="outline" className="h-11 border-white/40 bg-transparent font-bold text-white hover:bg-white/10 hover:text-white">
             <Wallet className="size-4" /> Pay bill
           </Button>
         </div>
+        <div className="mt-5 border-t-2 border-dashed border-white/25 pt-4 font-mono text-xs">
+          {[
+            ["YOU → @MAYA", "$45.00 · 0.8S ✓"],
+            ["@LEO → YOU", "$120.00 · 0.6S ✓"],
+          ].map(([a, b]) => (
+            <div key={a} className="flex items-center justify-between py-1">
+              <span className="font-bold">{a}</span>
+              <span className="text-white/70 tabular-nums">{b}</span>
+            </div>
+          ))}
+        </div>
       </motion.div>
 
-      {/* send confirmation */}
       <motion.div
         initial={{ opacity: 0, x: 40 }}
         animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.7, delay: 0.6 }}
-        className="absolute -right-3 -bottom-10 z-20 w-60 rounded-2xl border border-neutral-200 bg-white p-4 shadow-xl shadow-neutral-900/10 sm:-right-8"
+        transition={{ duration: 0.6, delay: 0.55 }}
+        className="absolute -right-3 -bottom-12 z-20 w-60 border-2 border-aero-950 bg-white p-4 aero-hard-shadow-sm sm:-right-8"
       >
         <div className="flex items-center gap-2.5">
-          <span className="flex size-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-            <Check className="size-5" strokeWidth={3} />
+          <span className="flex size-9 items-center justify-center bg-emerald-500 text-white">
+            <Check className="size-5" strokeWidth={3.5} />
           </span>
           <div>
-            <p className="text-sm font-bold">Sent to @maya</p>
-            <p className="text-xs text-neutral-500">$45.00 · settled in 0.8s</p>
+            <p className="text-sm font-extrabold">Sent to @maya</p>
+            <p className="font-mono text-[11px] text-aero-950/60">$45.00 · SETTLED 0.8S</p>
           </div>
         </div>
       </motion.div>
 
-      {/* yield toast */}
       <motion.div
         initial={{ opacity: 0, x: -40 }}
         animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.7, delay: 0.8 }}
-        className="absolute -top-8 -left-3 z-20 w-56 rounded-2xl border border-neutral-200 bg-white p-4 shadow-xl shadow-neutral-900/10 sm:-left-8"
+        transition={{ duration: 0.6, delay: 0.7 }}
+        className="absolute -top-10 -left-3 z-20 w-60 border-2 border-aero-950 bg-white p-4 aero-hard-shadow-sm sm:-left-8"
       >
         <div className="flex items-center gap-2.5">
-          <span className="flex size-9 items-center justify-center rounded-full bg-aero-50 text-aero-800">
+          <span className="flex size-9 items-center justify-center bg-aero-800 text-white">
             <Sprout className="size-5" />
           </span>
           <div>
-            <p className="text-sm font-bold">Yield routed</p>
-            <p className="text-xs text-neutral-500">Benqi → Trader Joe · best rate</p>
+            <p className="text-sm font-extrabold">Yield routed</p>
+            <p className="font-mono text-[11px] text-aero-950/60">BENQI → TRADER JOE</p>
           </div>
         </div>
       </motion.div>
@@ -201,99 +282,68 @@ function HeroPhone() {
 
 function Hero() {
   return (
-    <section id="top" className="relative overflow-hidden bg-white pt-32 pb-20">
-      {/* backdrop */}
-      <div aria-hidden className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-40 left-1/2 h-[480px] w-[820px] -translate-x-1/2 rounded-full bg-aero-100 blur-3xl" />
-        <div className="absolute top-40 -left-32 h-96 w-96 rounded-full bg-aero-50 blur-3xl" />
-        <div className="absolute top-64 -right-24 h-80 w-80 rounded-full bg-violet-100 blur-3xl" />
-      </div>
-      <div className="relative mx-auto grid max-w-6xl items-center gap-16 px-5 lg:grid-cols-[1.05fr_0.95fr]">
+    <section id="top" className="border-b-2 border-aero-950 bg-white pt-32 pb-24">
+      <div className="mx-auto grid max-w-7xl items-center gap-16 px-5 lg:grid-cols-[1.1fr_0.9fr]">
         <div>
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <Badge className="border-aero-200 bg-aero-50 font-semibold text-aero-800 hover:bg-aero-100">
-              <Snowflake className="size-3.5" />
-              Built on Avalanche · sub-second finality
-            </Badge>
+          <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
+            <Kicker>Live on Avalanche · Sub-second finality</Kicker>
           </motion.div>
           <motion.h1
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 26 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            className="mt-5 text-5xl leading-[1.02] font-extrabold tracking-tight text-neutral-950 sm:text-6xl lg:text-7xl"
+            transition={{ duration: 0.6, delay: 0.08 }}
+            className="mt-5 text-[clamp(3.2rem,8.5vw,6.8rem)] leading-[0.93] font-extrabold tracking-tight text-aero-950 uppercase"
           >
-            Digital dollars that{" "}
-            <span className="text-aero-800">move</span> and{" "}
-            <span className="relative inline-block text-aero-800">
-              work.
-              <svg
-                viewBox="0 0 220 14"
-                aria-hidden
-                className="absolute -bottom-2 left-0 w-full text-aero-200"
-              >
-                <path
-                  d="M3 10 C 60 3, 160 3, 217 8"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="6"
-                  strokeLinecap="round"
-                />
-              </svg>
+            Send it.{" "}
+            <span className="inline-flex items-center gap-[0.08em]">
+              Spend it.
+              <AeroMark className="size-[0.72em] text-aero-800" />
             </span>
+            <br />
+            <span className="text-aero-800">Grow it.</span>
           </motion.h1>
           <motion.p
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 26 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="mt-6 max-w-xl text-lg leading-relaxed text-neutral-600"
+            transition={{ duration: 0.6, delay: 0.18 }}
+            className="mt-6 max-w-xl text-lg leading-relaxed text-aero-950/70"
           >
-            Aero is the consumer payments app on Avalanche. Send USDC to{" "}
-            <span className="font-semibold text-neutral-900">@usernames</span>{" "}
-            instantly, pay bills straight from your balance, and let idle money
-            earn yield automatically. No addresses. No gas confusion. No chain
-            switching.
+            Aero is dollars on Avalanche. Pay any <span className="font-bold text-aero-950">@username</span> in
+            under a second, cover real bills from the same balance, and let the rest earn while you
+            sleep. No addresses. No gas. No chains.
           </motion.p>
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 26 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
+            transition={{ duration: 0.6, delay: 0.28 }}
             className="mt-8 flex flex-wrap items-center gap-3"
           >
-            <Button
-              size="lg"
-              className="h-12 bg-aero-800 px-7 text-base font-semibold text-white hover:bg-aero-900"
-            >
+            <Button size="lg" className="h-13 bg-aero-800 px-7 text-base font-bold text-white hover:bg-aero-900">
               Claim your @username
               <ArrowRight className="size-4 transition-transform duration-300 group-hover/button:translate-x-1" />
             </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="h-12 border-neutral-300 px-7 text-base font-semibold"
-            >
+            <Button size="lg" variant="outline" className="h-13 border-2 border-aero-950 px-7 text-base font-bold text-aero-950 hover:bg-aero-50">
               See how it works
             </Button>
           </motion.div>
-          <motion.div
+          <motion.dl
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.5 }}
-            className="mt-8 flex flex-wrap gap-x-7 gap-y-2 text-sm text-neutral-500"
+            transition={{ duration: 0.6, delay: 0.42 }}
+            className="mt-10 grid max-w-xl grid-cols-3 gap-6 border-t-2 border-aero-950 pt-5"
           >
-            {HERO_FEED.map((s) => (
-              <span key={`${s.to}-${s.amount}`} className="inline-flex items-center gap-1.5">
-                <Zap className="size-3.5 text-aero-700" />
-                <span className="font-semibold text-neutral-700">
-                  {s.from} → {s.to}
-                </span>{" "}
-                {s.amount} · {s.time}
-              </span>
+            {[
+              ["<1s", "finality"],
+              ["$0", "gas confusion"],
+              ["5.31%", "best APY live"],
+            ].map(([v, l]) => (
+              <div key={l}>
+                <dt className="sr-only">{l}</dt>
+                <dd className="font-mono text-2xl font-extrabold text-aero-950 tabular-nums sm:text-3xl">{v}</dd>
+                <dd className="mt-1 font-mono text-[11px] font-bold tracking-[0.18em] text-aero-950/50 uppercase">{l}</dd>
+              </div>
             ))}
-          </motion.div>
+          </motion.dl>
         </div>
         <HeroPhone />
       </div>
@@ -304,30 +354,23 @@ function Hero() {
 /* --------------------------------- ticker --------------------------------- */
 
 const TICKER = [
-  "@priya → @marcus $88.00 · 0.7s",
-  "@you earned +$0.14 while you slept",
-  "@cafe-luna got paid $212.40",
-  "Best route: Trader Joe 5.31%",
-  "@sofia → @ben $25.00 · 0.6s",
-  "Best route: Benqi 4.92%",
-  "@landlord got rent $1,400.00",
-  "@you → @maya $45.00 · 0.8s",
+  "@PRIYA → @MARCUS $88.00 · 0.7S",
+  "@YOU EARNED +$0.14 IN YOUR SLEEP",
+  "@CAFE-LUNA GOT PAID $212.40",
+  "BEST ROUTE: TRADER JOE 5.31%",
+  "@SOFIA → @BEN $25.00 · 0.6S",
+  "@LANDLORD GOT RENT $1,400.00",
 ]
 
 function Ticker() {
   const reduce = useReducedMotion()
   return (
-    <div className="overflow-hidden bg-aero-800 py-3.5 text-white">
-      <div
-        className={cn(
-          "flex w-max items-center gap-10 pr-10 text-sm font-medium whitespace-nowrap",
-          !reduce && "animate-aero-marquee"
-        )}
-      >
+    <div className="overflow-hidden border-b-2 border-aero-950 bg-aero-950 py-3.5 text-white">
+      <div className={cn("flex w-max items-center gap-8 pr-8 font-mono text-xs font-bold tracking-wider whitespace-nowrap", !reduce && "animate-aero-marquee")}>
         {[...TICKER, ...TICKER].map((t, i) => (
-          <span key={i} className="inline-flex items-center gap-2.5">
-            <AeroMark className="size-4 text-white/60" />
+          <span key={i} className="inline-flex items-center gap-8">
             {t}
+            <AeroMark className="size-3.5 text-aero-200" />
           </span>
         ))}
       </div>
@@ -335,77 +378,75 @@ function Ticker() {
   )
 }
 
+/* -------------------------------- manifesto ------------------------------- */
+
+function Manifesto() {
+  return (
+    <section className="border-b-2 border-aero-950 bg-aero-800 py-28 text-white">
+      <div className="mx-auto max-w-5xl px-5">
+        <Kicker tone="light">The pitch</Kicker>
+        <RevealWords
+          className="mt-6 text-3xl leading-[1.15] font-extrabold tracking-tight text-balance sm:text-5xl"
+          text="Wallet addresses are serial numbers. Gas fees are homework. Chains are someone else's problem. Aero is just dollars — moving in under a second, growing while you sleep."
+        />
+        <motion.p {...fadeUp} className="mt-8 max-w-2xl font-mono text-sm leading-relaxed text-white/60">
+          {"// 80+ Avalanche L1s hum underneath via Warp Messaging. You never see them."}
+        </motion.p>
+      </div>
+    </section>
+  )
+}
+
 /* --------------------------------- pillars -------------------------------- */
 
 const PILLARS = [
   {
-    icon: Zap,
-    tag: "Send",
-    title: "Send to @usernames, not addresses",
-    body: "Type @maya, hit send. USDC settles in under a second on Avalanche. No 0x strings, no waiting, no “did it go through?”",
-    points: ["Sub-second finality", "Zero address anxiety", "Works for anyone"],
+    n: "01",
+    tag: "SEND",
+    title: "If you can tag someone, you can pay them.",
+    body: "@maya, $45, done. USDC settles in under a second — no 0x strings, no network picker, no 'did it go through?'",
+    href: "#send",
   },
   {
-    icon: ReceiptText,
-    tag: "Pay",
-    title: "Bills, merchants, freelancers",
-    body: "Pay rent, power, and people straight from your Aero balance. No bank transfers, no delays — money just arrives.",
-    points: ["Rent & utilities", "In-person merchants", "Freelancer payouts"],
+    n: "02",
+    tag: "PAY",
+    title: "One balance for real life.",
+    body: "Rent, power, freelancers — paid straight from Aero. The same dollars that earn in the morning buy dinner at night.",
+    href: "#pay",
   },
   {
-    icon: Sprout,
-    tag: "Earn",
-    title: "Idle money grows itself",
-    body: "Aero's agent routes your USDC across Benqi and Trader Joe to chase the best rate. You do nothing — your balance just grows.",
-    points: ["Automatic routing", "Best-rate hunting", "Withdraw anytime"],
+    n: "03",
+    tag: "EARN",
+    title: "Idle money is a bug. We fixed it.",
+    body: "An agent routes your USDC across Benqi and Trader Joe, always chasing the best rate. You do nothing. It compounds.",
+    href: "#earn",
   },
 ]
 
 function Pillars() {
   return (
-    <section className="bg-white py-24">
-      <div className="mx-auto max-w-6xl px-5">
-        <motion.div {...fadeUp} className="max-w-2xl">
-          <p className="text-sm font-bold tracking-widest text-aero-700 uppercase">
-            Send · Pay · Earn
-          </p>
-          <h2 className="mt-3 text-4xl font-extrabold tracking-tight text-neutral-950 sm:text-5xl">
-            Three things. Zero crypto homework.
-          </h2>
-          <p className="mt-4 text-lg text-neutral-600">
-            Built for normal people who want digital dollars that move fast and
-            don&apos;t sit idle — not for crypto natives.
-          </p>
-        </motion.div>
-        <div className="mt-12 grid gap-5 md:grid-cols-3">
+    <section className="border-b-2 border-aero-950 bg-white py-24">
+      <div className="mx-auto max-w-7xl px-5">
+        <SectionHead index="A" title="Three things. Zero crypto homework." />
+        <div className="mt-12 border-t-2 border-aero-950">
           {PILLARS.map((p, i) => (
-            <motion.div
-              key={p.tag}
+            <motion.a
+              key={p.n}
+              href={p.href}
               {...fadeUp}
-              transition={{ duration: 0.55, delay: i * 0.1 }}
+              transition={{ duration: 0.5, delay: i * 0.06 }}
+              className="group grid items-center gap-4 border-b-2 border-aero-950/10 px-2 py-8 transition-colors duration-200 hover:bg-aero-50 sm:grid-cols-[80px_140px_1fr_auto] sm:gap-8"
             >
-              <Card className="group h-full gap-0 rounded-3xl border-neutral-200 p-7 transition duration-300 hover:-translate-y-1.5 hover:border-aero-200 hover:shadow-xl hover:shadow-aero-800/10">
-                <span className="flex size-12 items-center justify-center rounded-2xl bg-aero-800 text-white transition group-hover:scale-110">
-                  <p.icon className="size-6" />
-                </span>
-                <p className="mt-5 text-xs font-bold tracking-widest text-aero-700 uppercase">
-                  {p.tag}
-                </p>
-                <h3 className="mt-2 text-2xl font-extrabold tracking-tight">
-                  {p.title}
-                </h3>
-                <p className="mt-3 leading-relaxed text-neutral-600">{p.body}</p>
-                <Separator className="my-5" />
-                <ul className="space-y-2 text-sm font-medium text-neutral-700">
-                  {p.points.map((pt) => (
-                    <li key={pt} className="flex items-center gap-2">
-                      <Check className="size-4 text-emerald-600" strokeWidth={3} />
-                      {pt}
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-            </motion.div>
+              <span className="font-mono text-5xl font-extrabold text-aero-800/25 transition-colors group-hover:text-aero-800 sm:text-6xl tabular-nums">
+                {p.n}
+              </span>
+              <span className="w-fit border-2 border-aero-950 bg-white px-3 py-1 font-mono text-xs font-bold tracking-[0.2em]">{p.tag}</span>
+              <span>
+                <span className="block text-2xl font-extrabold tracking-tight text-aero-950 uppercase sm:text-3xl">{p.title}</span>
+                <span className="mt-2 block max-w-2xl leading-relaxed text-aero-950/65">{p.body}</span>
+              </span>
+              <AeroMark className="hidden size-10 text-aero-950 transition-transform duration-300 group-hover:translate-x-2 group-hover:text-aero-800 sm:block" />
+            </motion.a>
           ))}
         </div>
       </div>
@@ -426,138 +467,71 @@ function SendDemo() {
     { to: "@sam", amount: "$12.50" },
   ])
   const ref = useRef<HTMLDivElement>(null)
-  const inView = useInView(ref, { once: true, margin: "-80px" })
+  const inView = useInView(ref, { once: true, margin: "-70px" })
 
   const send = () => {
     if (sending || !to.trim()) return
     setSending(true)
     setTimeout(() => {
-      setFeed((f) =>
-        [{ to: to.startsWith("@") ? to : `@${to}`, amount: `$${amount || "0.00"}` }, ...f].slice(0, 4)
-      )
+      setFeed((f) => [{ to: to.startsWith("@") ? to : `@${to}`, amount: `$${amount || "0.00"}` }, ...f].slice(0, 4))
       setSending(false)
     }, 900)
   }
 
   return (
-    <section id="send" ref={ref} className="bg-aero-50/60 py-24">
-      <div className="mx-auto grid max-w-6xl items-center gap-14 px-5 lg:grid-cols-2">
-        <motion.div {...fadeUp}>
-          <p className="text-sm font-bold tracking-widest text-aero-700 uppercase">
-            01 — Send
-          </p>
-          <h2 className="mt-3 text-4xl font-extrabold tracking-tight text-neutral-950 sm:text-5xl">
-            If you can tag someone, you can pay them.
-          </h2>
-          <p className="mt-4 text-lg leading-relaxed text-neutral-600">
-            No wallet addresses to copy. No network to pick. Just a username
-            and an amount — Aero handles the chain, the gas, and the
-            finality under the hood.
-          </p>
-          <div className="mt-6 flex items-center gap-2 text-sm font-semibold text-aero-800">
-            <BadgeCheck className="size-5" />
-            Try it — this demo actually “sends”
-          </div>
-        </motion.div>
-
-        <motion.div
-          {...fadeUp}
-          transition={{ duration: 0.6, delay: 0.1 }}
-        >
-          <Card className="rounded-3xl border-neutral-200 p-6 shadow-xl shadow-aero-800/10 sm:p-8">
+    <section id="send" ref={ref} className="scroll-mt-16 border-b-2 border-aero-950 bg-aero-50 py-24">
+      <div className="mx-auto grid max-w-7xl items-center gap-14 px-5 lg:grid-cols-2">
+        <SectionHead
+          index="01 / SEND"
+          title="Type a name. Hit send. It's there."
+          body="No address to copy. No chain to pick. No gas setting to google. Aero handles the chain, the fee, and the finality — you handle the @."
+        />
+        <motion.div {...fadeUp} transition={{ duration: 0.55, delay: 0.1 }}>
+          <div className="border-2 border-aero-950 bg-white p-6 aero-hard-shadow sm:p-8">
             <div className="flex items-center justify-between">
-              <p className="font-extrabold tracking-tight">Send USDC</p>
-              <Badge className="bg-emerald-100 font-semibold text-emerald-800 hover:bg-emerald-100">
-                Instant · ~0.8s
-              </Badge>
+              <p className="font-mono text-xs font-bold tracking-[0.22em] uppercase">Send USDC</p>
+              <p className="border border-emerald-600 px-2 py-0.5 font-mono text-[11px] font-bold text-emerald-700">INSTANT · ~0.8S</p>
             </div>
             <div className="mt-5 space-y-3">
               <div>
-                <label htmlFor="send-to" className="text-xs font-bold tracking-wider text-neutral-500 uppercase">
-                  To
-                </label>
-                <Input
-                  id="send-to"
-                  value={to}
-                  onChange={(e) => setTo(e.target.value)}
-                  placeholder="@username"
-                  className="mt-1.5 h-12 rounded-xl text-base font-semibold"
-                />
+                <label htmlFor="send-to" className="font-mono text-[11px] font-bold tracking-[0.2em] text-aero-950/50 uppercase">To</label>
+                <Input id="send-to" value={to} onChange={(e) => setTo(e.target.value)} placeholder="@username"
+                  className="mt-1.5 h-12 rounded-none border-2 border-aero-950 text-base font-bold" />
               </div>
               <div>
-                <label htmlFor="send-amount" className="text-xs font-bold tracking-wider text-neutral-500 uppercase">
-                  Amount (USDC)
-                </label>
+                <label htmlFor="send-amount" className="font-mono text-[11px] font-bold tracking-[0.2em] text-aero-950/50 uppercase">Amount</label>
                 <div className="relative mt-1.5">
-                  <span className="absolute top-1/2 left-4 -translate-y-1/2 text-lg font-bold text-neutral-400">
-                    $
-                  </span>
-                  <Input
-                    id="send-amount"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    inputMode="decimal"
-                    className="h-12 rounded-xl pl-8 text-base font-semibold"
-                  />
+                  <span className="absolute top-1/2 left-4 -translate-y-1/2 text-lg font-extrabold text-aero-950/40">$</span>
+                  <Input id="send-amount" value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal"
+                    className="h-12 rounded-none border-2 border-aero-950 pr-4 pl-8 font-mono text-base font-bold" />
                 </div>
               </div>
-              <Button
-                onClick={send}
-                disabled={sending}
-                className="h-12 w-full bg-aero-800 text-base font-semibold text-white hover:bg-aero-900"
-              >
+              <Button onClick={send} disabled={sending}
+                className="h-12 w-full rounded-none bg-aero-800 text-base font-bold text-white hover:bg-aero-900 active:translate-y-0.5">
                 {sending ? (
-                  <motion.span
-                    key="sending"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="inline-flex items-center gap-2"
-                  >
-                    <motion.span
-                      animate={{ rotate: 360 }}
-                      transition={{ repeat: Infinity, duration: 0.8, ease: "linear" }}
-                      className="inline-block"
-                    >
+                  <motion.span key="s" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="inline-flex items-center gap-2">
+                    <motion.span animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 0.8, ease: "linear" }} className="inline-block">
                       <Send className="size-4" />
                     </motion.span>
-                    Sending…
+                    SENDING…
                   </motion.span>
                 ) : (
-                  <span className="inline-flex items-center gap-2">
-                    <Send className="size-4" /> Send {to || "@someone"}
-                  </span>
+                  <span className="inline-flex items-center gap-2">SEND {to || "@SOMEONE"} <Zap className="size-4" /></span>
                 )}
               </Button>
-              <p className="text-center text-xs text-neutral-400">
-                No address · No gas settings · No chain picker
-              </p>
             </div>
-            <Separator className="my-5" />
-            <div className="space-y-2.5">
+            <div className="mt-5 border-t-2 border-dashed border-aero-950/20 pt-4 font-mono text-xs">
               <AnimatePresence initial={false}>
-                {inView &&
-                  feed.map((f) => (
-                    <motion.div
-                      key={`${f.to}-${f.amount}`}
-                      layout
-                      initial={{ opacity: 0, y: -12, scale: 0.97 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      className="flex items-center justify-between rounded-xl bg-neutral-50 px-4 py-3 text-sm"
-                    >
-                      <span className="font-semibold">
-                        You → <span className="text-aero-800">{f.to}</span>
-                      </span>
-                      <span className="inline-flex items-center gap-2 font-bold tabular-nums">
-                        {f.amount}
-                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700">
-                          <Check className="size-3.5" strokeWidth={3} /> Settled
-                        </span>
-                      </span>
-                    </motion.div>
-                  ))}
+                {inView && feed.map((f) => (
+                  <motion.div key={`${f.to}-${f.amount}`} layout initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center justify-between py-1.5">
+                    <span className="font-bold">YOU → <span className="text-aero-800">{f.to.toUpperCase()}</span></span>
+                    <span className="tabular-nums">{f.amount} <span className="font-bold text-emerald-700">✓ SETTLED</span></span>
+                  </motion.div>
+                ))}
               </AnimatePresence>
             </div>
-          </Card>
+          </div>
         </motion.div>
       </div>
     </section>
@@ -568,125 +542,74 @@ function SendDemo() {
 
 function Earn() {
   const ref = useRef<HTMLDivElement>(null)
-  const inView = useInView(ref, { once: true, margin: "-80px" })
+  const inView = useInView(ref, { once: true, margin: "-70px" })
   const apy = useCountUp(5.31, inView)
   const earned = useCountUp(184.27, inView)
   const [auto, setAuto] = useState(true)
 
   return (
-    <section id="earn" ref={ref} className="relative overflow-hidden bg-aero-950 py-24 text-white">
-      <div aria-hidden className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-32 left-1/4 h-96 w-96 rounded-full bg-aero-700/50 blur-3xl" />
-        <div className="absolute -right-24 -bottom-24 h-96 w-96 rounded-full bg-violet-700/40 blur-3xl" />
-        <AeroMark className="absolute -right-16 top-10 size-[420px] text-white/[0.04]" />
-      </div>
-      <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-5 lg:grid-cols-2">
-        <motion.div {...fadeUp}>
-          <p className="text-sm font-bold tracking-widest text-aero-200 uppercase">
-            03 — Earn
-          </p>
-          <h2 className="mt-3 text-4xl font-extrabold tracking-tight sm:text-5xl">
-            Your balance works the night shift.
-          </h2>
-          <p className="mt-4 text-lg leading-relaxed text-white/70">
-            Leave USDC sitting and Aero&apos;s agent puts it to work across
-            Avalanche DeFi — Benqi, Trader Joe, and beyond — always chasing the
-            best rate. You never lift a finger.
-          </p>
-          <div className="mt-8 flex items-end gap-8">
+    <section id="earn" ref={ref} className="scroll-mt-16 border-b-2 border-aero-950 bg-aero-950 py-24 text-white">
+      <div className="mx-auto grid max-w-7xl items-start gap-14 px-5 lg:grid-cols-[1fr_1fr]">
+        <div>
+          <motion.div {...fadeUp}>
+            <Kicker tone="light">03 / Earn</Kicker>
+            <h2 className="mt-5 text-4xl font-extrabold tracking-tight uppercase sm:text-6xl">
+              Your balance works <span className="text-emerald-300">nights.</span>
+            </h2>
+            <p className="mt-4 max-w-lg text-lg leading-relaxed text-white/65">
+              Leave USDC sitting and the agent puts it to work across Avalanche DeFi — always
+              chasing the best rate. Withdraw anytime. Sleep through all of it.
+            </p>
+          </motion.div>
+          <motion.div {...fadeUp} transition={{ duration: 0.55, delay: 0.1 }} className="mt-10 grid grid-cols-2 gap-8 border-t border-white/15 pt-8">
             <div>
-              <p className="text-xs font-bold tracking-widest text-white/50 uppercase">
-                Live best rate
-              </p>
-              <p className="mt-1 text-6xl font-extrabold tracking-tight text-emerald-300 tabular-nums">
-                {apy.toFixed(2)}%
-              </p>
-              <p className="mt-1 text-sm text-white/60">APY · auto-routed</p>
+              <p className="font-mono text-[11px] font-bold tracking-[0.22em] text-white/45 uppercase">Live best rate</p>
+              <p className="mt-2 font-mono text-6xl font-extrabold text-emerald-300 tabular-nums sm:text-7xl">{apy.toFixed(2)}%</p>
             </div>
-            <div className="pb-1.5">
-              <p className="text-xs font-bold tracking-widest text-white/50 uppercase">
-                Earned to date
-              </p>
-              <p className="mt-1 text-3xl font-extrabold tabular-nums">
-                ${earned.toFixed(2)}
-              </p>
+            <div>
+              <p className="font-mono text-[11px] font-bold tracking-[0.22em] text-white/45 uppercase">Earned to date</p>
+              <p className="mt-2 font-mono text-6xl font-extrabold tabular-nums sm:text-7xl">${earned.toFixed(2)}</p>
+              <button type="button" role="switch" aria-checked={auto} onClick={() => setAuto((a) => !a)}
+                className="mt-4 inline-flex items-center gap-3">
+                <span className={cn("relative h-7 w-12 border border-white/30 transition", auto ? "bg-emerald-400" : "bg-white/10")}>
+                  <motion.span layout animate={{ x: auto ? 20 : 0 }} transition={{ type: "spring", stiffness: 500, damping: 32 }}
+                    className="absolute top-0.5 left-0.5 size-5 bg-white" />
+                </span>
+                <span className="font-mono text-xs font-bold">AUTO-YIELD {auto ? "ON" : "OFF"}</span>
+              </button>
             </div>
-          </div>
-          <div className="mt-8 flex items-center gap-3">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={auto}
-              onClick={() => setAuto((a) => !a)}
-              className={cn(
-                "relative h-7 w-12 rounded-full transition",
-                auto ? "bg-emerald-400" : "bg-white/20"
-              )}
-            >
-              <motion.span
-                layout
-                className="absolute top-1 left-1 size-5 rounded-full bg-white shadow"
-                animate={{ x: auto ? 20 : 0 }}
-                transition={{ type: "spring", stiffness: 500, damping: 32 }}
-              />
-            </button>
-            <span className="text-sm font-semibold">
-              Auto-yield {auto ? "on" : "off"}
-              <span className="text-white/50"> — of course it&apos;s on</span>
-            </span>
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
 
-        <motion.div {...fadeUp} transition={{ duration: 0.6, delay: 0.1 }}>
-          <Card className="gap-0 rounded-3xl border-white/10 bg-white/[0.06] p-6 text-white backdrop-blur sm:p-7">
-            <div className="flex items-center justify-between">
-              <p className="font-extrabold tracking-tight">Agent routing · live</p>
-              <Badge className="border-emerald-300/30 bg-emerald-400/15 text-emerald-200 hover:bg-emerald-400/20">
-                Optimizing
-              </Badge>
+        <motion.div {...fadeUp} transition={{ duration: 0.55, delay: 0.15 }}>
+          <div className="border border-white/15">
+            <div className="flex items-center justify-between border-b border-white/15 px-5 py-4">
+              <p className="font-mono text-xs font-bold tracking-[0.22em] uppercase">Agent routing · Live</p>
+              <p className="font-mono text-[11px] font-bold text-emerald-300">● OPTIMIZING</p>
             </div>
-            <div className="mt-5 space-y-3">
-              {[
-                { name: "Trader Joe", detail: "USDC lending", rate: "5.31%", best: true },
-                { name: "Benqi", detail: "USDC supply", rate: "4.92%", best: false },
-                { name: "Aero reserve", detail: "Instant liquidity", rate: "0.00%", best: false },
-              ].map((r, i) => (
-                <motion.div
-                  key={r.name}
-                  initial={{ opacity: 0, x: 24 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: 0.15 + i * 0.12, duration: 0.5 }}
-                  className={cn(
-                    "flex items-center justify-between rounded-2xl border px-4 py-3.5",
-                    r.best
-                      ? "border-emerald-300/40 bg-emerald-400/10"
-                      : "border-white/10 bg-white/[0.03]"
-                  )}
-                >
-                  <div>
-                    <p className="font-bold">
-                      {r.name}{" "}
-                      {r.best && (
-                        <span className="ml-1.5 rounded-full bg-emerald-400/20 px-2 py-0.5 text-[11px] font-bold text-emerald-200">
-                          BEST
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-xs text-white/55">{r.detail}</p>
-                  </div>
-                  <p className={cn("text-xl font-extrabold tabular-nums", r.best ? "text-emerald-300" : "text-white/70")}>
-                    {r.rate}
-                  </p>
-                </motion.div>
-              ))}
-            </div>
-            <div className="mt-5 rounded-2xl bg-white/[0.04] p-4 text-sm leading-relaxed text-white/65">
-              <span className="font-semibold text-white">2:41 AM —</span> agent
-              moved $1,200 from Benqi to Trader Joe for +0.39%. You were asleep.
-              That&apos;s the point.
-            </div>
-          </Card>
+            {[
+              { rank: "1", name: "TRADER JOE", detail: "USDC lending", rate: "5.31%", best: true },
+              { rank: "2", name: "BENQI", detail: "USDC supply", rate: "4.92%", best: false },
+              { rank: "3", name: "AERO RESERVE", detail: "instant liquidity", rate: "0.00%", best: false },
+            ].map((r, i) => (
+              <motion.div key={r.name} initial={{ opacity: 0, x: 24 }} whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }} transition={{ delay: 0.15 + i * 0.1, duration: 0.45 }}
+                className={cn("flex items-center gap-4 border-b border-white/10 px-5 py-4 last:border-0", r.best && "bg-aero-800")}>
+                <span className="font-mono text-sm font-bold text-white/40 tabular-nums">{r.rank}</span>
+                <span className="flex-1">
+                  <span className="block font-extrabold tracking-tight uppercase">
+                    {r.name}{" "}
+                    {r.best && <span className="ml-1 bg-emerald-300 px-1.5 py-0.5 font-mono text-[10px] font-bold text-aero-950">BEST</span>}
+                  </span>
+                  <span className="font-mono text-[11px] text-white/45 uppercase">{r.detail}</span>
+                </span>
+                <span className={cn("font-mono text-2xl font-extrabold tabular-nums", r.best ? "text-emerald-300" : "text-white/60")}>{r.rate}</span>
+              </motion.div>
+            ))}
+            <p className="border-t border-white/15 px-5 py-4 font-mono text-xs leading-relaxed text-white/50">
+              <span className="text-white">02:41 —</span> agent moved $1,200 Benqi → Trader Joe, +0.39%. You were asleep. That&apos;s the point.
+            </p>
+          </div>
         </motion.div>
       </div>
     </section>
@@ -695,79 +618,39 @@ function Earn() {
 
 /* --------------------------------- network -------------------------------- */
 
-const L1S = ["C-Chain", "Benqi L1", "Gaming L1", "PayFi L1", "DeFi L1", "FX L1", "Social L1", "RWA L1"]
-
 function Network() {
   return (
-    <section id="network" className="bg-white py-24">
-      <div className="mx-auto max-w-6xl px-5 text-center">
-        <motion.div {...fadeUp} className="mx-auto max-w-2xl">
-          <p className="text-sm font-bold tracking-widest text-aero-700 uppercase">
-            Under the hood
-          </p>
-          <h2 className="mt-3 text-4xl font-extrabold tracking-tight text-neutral-950 sm:text-5xl">
-            80+ Avalanche L1s. You see none of them.
-          </h2>
-          <p className="mt-4 text-lg text-neutral-600">
-            Aero runs a cross-L1 intelligence layer on Avalanche Warp Messaging
-            that routes funds to optimize yield and execution. All the user
-            sees: money working.
-          </p>
-        </motion.div>
-        <motion.div
-          {...fadeUp}
-          transition={{ duration: 0.6, delay: 0.1 }}
-          className="relative mx-auto mt-12 max-w-3xl rounded-3xl border border-neutral-200 bg-neutral-950 p-8 text-white shadow-2xl shadow-aero-800/20 sm:p-12"
-        >
-          <div className="flex items-center justify-center gap-3">
-            <span className="flex size-14 items-center justify-center overflow-hidden rounded-2xl bg-aero-700 shadow-lg shadow-aero-700/50">
-              <BrandIcon className="size-10 rounded-md text-white" />
-            </span>
-            <div className="text-left">
-              <p className="font-extrabold">Aero router</p>
-              <p className="text-xs text-white/55">Warp Messaging · live</p>
-            </div>
-          </div>
-          <div className="mt-8 flex flex-wrap justify-center gap-2.5">
-            {L1S.map((l1, i) => (
-              <motion.span
-                key={l1}
-                initial={{ opacity: 0, scale: 0.85 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.07, duration: 0.4 }}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold",
-                  i < 2
-                    ? "border-emerald-300/40 bg-emerald-400/10 text-emerald-200"
-                    : "border-white/15 bg-white/5 text-white/70"
-                )}
-              >
-                {i < 2 && <span className="size-1.5 rounded-full bg-emerald-300" />}
-                {l1}
-              </motion.span>
+    <section id="network" className="scroll-mt-16 border-b-2 border-aero-950 bg-aero-800 py-24 text-white">
+      <div className="mx-auto max-w-7xl px-5">
+        <SectionHead tone="light" index="UNDER THE HOOD"
+          title="80+ Avalanche L1s. You see none of them."
+          body="A cross-L1 intelligence layer on Warp Messaging routes every dollar to wherever execution is fastest and yield is highest — then collapses it back into one simple balance." />
+        <motion.div {...fadeUp} transition={{ duration: 0.55, delay: 0.1 }}
+          className="mt-12 flex flex-col items-stretch gap-4 lg:flex-row lg:items-center">
+          <div className="grid flex-1 grid-cols-2 gap-2.5">
+            {["C-CHAIN", "BENQI L1", "PAYFI L1", "DEFI L1"].map((l1, i) => (
+              <motion.div key={l1} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }} transition={{ delay: i * 0.08 }}
+                className={cn("border px-4 py-3 font-mono text-xs font-bold",
+                  i < 2 ? "border-emerald-300/60 bg-emerald-300/10 text-emerald-200" : "border-white/20 text-white/60")}>
+                {i < 2 ? "● " : "○ "}{l1}
+              </motion.div>
             ))}
           </div>
-          <p className="mx-auto mt-8 max-w-md text-sm leading-relaxed text-white/55">
-            Funds flow to wherever execution is fastest and yield is highest —
-            then collapse back into one simple balance.
-          </p>
+          <div aria-hidden className="hidden h-0.5 min-w-16 flex-1 text-emerald-300 aero-warp-line lg:block" />
+          <div className="flex items-center gap-3 border-2 border-white bg-white px-5 py-4 text-aero-950 aero-hard-shadow-sm">
+            <BrandIcon className="size-9 rounded text-aero-800" />
+            <div>
+              <p className="font-extrabold tracking-tight uppercase">Aero router</p>
+              <p className="font-mono text-[11px] text-aero-950/55">WARP MESSAGING · LIVE</p>
+            </div>
+          </div>
+          <div aria-hidden className="hidden h-0.5 min-w-16 flex-1 text-emerald-300 aero-warp-line lg:block" />
+          <div className="border-2 border-emerald-300 bg-aero-950 px-5 py-4">
+            <p className="font-mono text-[11px] font-bold tracking-[0.2em] text-emerald-300 uppercase">Best execution</p>
+            <p className="mt-1 font-mono text-3xl font-extrabold tabular-nums">0.8s</p>
+          </div>
         </motion.div>
-        <div className="mx-auto mt-10 grid max-w-3xl gap-4 text-left sm:grid-cols-3">
-          {[
-            { icon: Zap, t: "Sub-second", d: "Avalanche finality on every send." },
-            { icon: ShieldCheck, t: "Self-custodied", d: "Your keys, your dollars. Always." },
-            { icon: Sparkles, t: "Invisible crypto", d: "No gas, no chains, no jargon." },
-          ].map((f, i) => (
-            <motion.div key={f.t} {...fadeUp} transition={{ duration: 0.5, delay: i * 0.08 }} className="flex gap-3 rounded-2xl border border-neutral-200 p-5">
-              <f.icon className="mt-0.5 size-5 shrink-0 text-aero-700" />
-              <div>
-                <p className="font-bold">{f.t}</p>
-                <p className="mt-1 text-sm text-neutral-600">{f.d}</p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
       </div>
     </section>
   )
@@ -776,91 +659,59 @@ function Network() {
 /* ----------------------------------- pay ---------------------------------- */
 
 const BILLS = [
-  { id: "rent", name: "Rent · Maple Apartments", detail: "Due May 1", amount: "$1,400.00", icon: "🏠" },
-  { id: "power", name: "City Power & Light", detail: "Due Apr 28", amount: "$86.20", icon: "💡" },
-  { id: "designer", name: "@lena · logo design", detail: "Invoice #042", amount: "$320.00", icon: "🎨" },
+  { id: "rent", name: "Rent · Maple Apartments", detail: "DUE MAY 1", amount: "$1,400.00" },
+  { id: "power", name: "City Power & Light", detail: "DUE APR 28", amount: "$86.20" },
+  { id: "designer", name: "@lena · logo design", detail: "INVOICE #042", amount: "$320.00" },
 ]
 
 function Pay() {
   const [paid, setPaid] = useState<string[]>([])
-  const toggle = (id: string) =>
-    setPaid((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]))
+  const toggle = (id: string) => setPaid((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]))
   return (
-    <section id="pay" className="bg-aero-50/60 py-24">
-      <div className="mx-auto grid max-w-6xl items-center gap-14 px-5 lg:grid-cols-2">
+    <section id="pay" className="scroll-mt-16 border-b-2 border-aero-950 bg-white py-24">
+      <div className="mx-auto grid max-w-7xl items-center gap-14 px-5 lg:grid-cols-2">
         <motion.div {...fadeUp} className="order-2 lg:order-1">
-          <Card className="gap-0 rounded-3xl border-neutral-200 p-3 shadow-xl shadow-aero-800/10 sm:p-4">
-            <AnimatePresence initial={false}>
-              {BILLS.map((b) => {
-                const isPaid = paid.includes(b.id)
-                return (
-                  <motion.div
-                    key={b.id}
-                    layout
-                    className="flex items-center gap-4 rounded-2xl p-4 transition hover:bg-neutral-50"
-                  >
-                    <span className="flex size-12 items-center justify-center rounded-2xl bg-aero-50 text-2xl">
-                      {b.icon}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className={cn("truncate font-bold", isPaid && "text-neutral-400 line-through")}>
-                        {b.name}
-                      </p>
-                      <p className="text-xs text-neutral-500">{b.detail}</p>
-                    </div>
-                    <span className="font-extrabold tabular-nums">{b.amount}</span>
-                    <Button
-                      size="sm"
-                      onClick={() => toggle(b.id)}
-                      className={cn(
-                        "font-semibold",
-                        isPaid
-                          ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100"
-                          : "bg-aero-800 text-white hover:bg-aero-900"
-                      )}
-                    >
-                      {isPaid ? (
-                        <span className="inline-flex items-center gap-1">
-                          <Check className="size-3.5" strokeWidth={3} /> Paid
-                        </span>
-                      ) : (
-                        "Pay"
-                      )}
-                    </Button>
-                  </motion.div>
-                )
-              })}
-            </AnimatePresence>
-            <div className="flex items-center gap-2 rounded-2xl bg-aero-800 p-4 text-sm font-semibold text-white">
-              <Bell className="size-4" />
-              {paid.length === 0
-                ? "3 bills due — pay them all in under a minute."
-                : paid.length === BILLS.length
-                  ? "All clear. Nothing due. Beautiful."
-                  : `${BILLS.length - paid.length} to go — you're almost done.`}
+          <div className="border-2 border-aero-950 bg-white aero-hard-shadow">
+            <div className="flex items-center justify-between border-b-2 border-aero-950 px-5 py-3">
+              <p className="font-mono text-xs font-bold tracking-[0.22em] uppercase">Aero Pay — May</p>
+              <AeroMark className="size-5 text-aero-800" />
             </div>
-          </Card>
+            <div className="px-2 py-2">
+              <AnimatePresence initial={false}>
+                {BILLS.map((b) => {
+                  const isPaid = paid.includes(b.id)
+                  return (
+                    <motion.div key={b.id} layout className="relative flex items-center gap-4 border-b-2 border-dashed border-aero-950/15 px-3 py-4 last:border-0">
+                      <div className="min-w-0 flex-1">
+                        <p className={cn("font-extrabold tracking-tight uppercase", isPaid && "text-aero-950/35 line-through")}>{b.name}</p>
+                        <p className="font-mono text-[11px] text-aero-950/50">{b.detail}</p>
+                      </div>
+                      <span className="font-mono font-extrabold tabular-nums">{b.amount}</span>
+                      {isPaid ? (
+                        <motion.span initial={{ scale: 1.6, opacity: 0, rotate: -18 }} animate={{ scale: 1, opacity: 1, rotate: -12 }}
+                          className="border-2 border-emerald-600 px-2 py-0.5 font-mono text-xs font-extrabold text-emerald-700">
+                          PAID
+                        </motion.span>
+                      ) : (
+                        <Button size="sm" onClick={() => toggle(b.id)} className="rounded-none bg-aero-800 font-bold text-white hover:bg-aero-900">
+                          PAY
+                        </Button>
+                      )}
+                    </motion.div>
+                  )
+                })}
+              </AnimatePresence>
+            </div>
+            <div className="bg-aero-800 px-5 py-3 font-mono text-xs font-bold text-white">
+              {paid.length === 0 ? "3 DUE — CLEAR THEM ALL IN UNDER A MINUTE." : paid.length === BILLS.length ? "ALL CLEAR. NOTHING DUE." : `${BILLS.length - paid.length} TO GO.`}
+            </div>
+          </div>
         </motion.div>
-        <motion.div {...fadeUp} className="order-1 lg:order-2">
-          <p className="text-sm font-bold tracking-widest text-aero-700 uppercase">
-            02 — Pay
-          </p>
-          <h2 className="mt-3 text-4xl font-extrabold tracking-tight text-neutral-950 sm:text-5xl">
-            Your balance pays for real life.
-          </h2>
-          <p className="mt-4 text-lg leading-relaxed text-neutral-600">
-            Rent, power, groceries, freelancers — paid directly from Aero. The
-            same dollars that earn yield in the morning buy dinner at night.
-          </p>
-          <ul className="mt-6 space-y-2.5 text-sm font-medium text-neutral-700">
-            {["No bank transfers, no 3-day waits", "Pay anyone — they don't need Aero", "Every idle dollar still earns until spent"].map((t) => (
-              <li key={t} className="flex items-center gap-2">
-                <Check className="size-4 text-emerald-600" strokeWidth={3} />
-                {t}
-              </li>
-            ))}
-          </ul>
-        </motion.div>
+        <div className="order-1 lg:order-2">
+          <SectionHead index="02 / PAY"
+            title="Your balance pays for real life."
+            body="The same dollars that earn yield in the morning buy dinner at night. No bank transfers, no 3-day waits — and the payee doesn't even need Aero." />
+        </div>
       </div>
     </section>
   )
@@ -870,45 +721,33 @@ function Pay() {
 
 function CTA() {
   const [name, setName] = useState("")
+  const clean = name.trim().replace(/^@+/, "")
   return (
-    <section className="bg-white px-5 py-24">
-      <motion.div
-        {...fadeUp}
-        className="relative mx-auto max-w-6xl overflow-hidden rounded-[2.5rem] bg-aero-800 px-6 py-16 text-center text-white shadow-2xl shadow-aero-800/30 sm:px-12 sm:py-20"
-      >
-        <AeroMark className="pointer-events-none absolute -bottom-20 -left-20 size-72 text-white/[0.06]" />
-        <AeroMark className="pointer-events-none absolute -top-24 -right-16 size-80 text-white/[0.06]" />
-        <div className="relative">
-          <Badge className="border-white/20 bg-white/10 font-semibold text-white hover:bg-white/15">
-            <Sparkles className="size-3.5" /> Early access · usernames are first-come
-          </Badge>
-          <h2 className="mx-auto mt-5 max-w-2xl text-4xl font-extrabold tracking-tight sm:text-6xl">
-            Claim your @username before someone else does.
+    <section className="bg-white">
+      <ArrowStrip />
+      <div className="border-b-2 border-aero-950 bg-aero-800 px-5 py-24 text-center text-white">
+        <motion.div {...fadeUp} className="mx-auto max-w-3xl">
+          <div className="flex justify-center">
+            <BrandWordmark tone="light" height={72} />
+          </div>
+          <h2 className="mx-auto mt-8 max-w-2xl text-4xl font-extrabold tracking-tight text-balance uppercase sm:text-6xl">
+            Claim your @ before someone else does.
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-lg text-white/70">
-            One handle for sending, getting paid, and growing. Free to claim —
-            yours forever.
+            One handle for sending, getting paid, and growing. Free to claim — yours forever.
           </p>
-          <form
-            className="mx-auto mt-8 flex max-w-md flex-col gap-2.5 sm:flex-row"
-            onSubmit={(e) => e.preventDefault()}
-          >
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="@yourname"
-              aria-label="Desired username"
-              className="h-13 rounded-2xl border-white/20 bg-white/10 px-5 text-base font-semibold text-white placeholder:text-white/40"
-            />
-            <Button className="h-13 shrink-0 bg-white px-7 text-base font-bold text-aero-800 hover:bg-aero-50">
-              Claim <ArrowRight className="size-4" />
+          <form className="mx-auto mt-8 flex max-w-md flex-col gap-2.5 sm:flex-row" onSubmit={(e) => e.preventDefault()}>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="@yourname" aria-label="Desired username"
+              className="h-13 rounded-none border-2 border-white bg-white/10 px-5 text-base font-bold text-white placeholder:text-white/40" />
+            <Button className="h-13 shrink-0 rounded-none bg-white px-7 text-base font-extrabold text-aero-900 hover:bg-aero-100">
+              CLAIM <ArrowRight className="size-4 transition-transform duration-300 group-hover/button:translate-x-1" />
             </Button>
           </form>
-          <p className="mt-4 text-xs text-white/50">
-            {name ? `${name.startsWith("@") ? name : `@${name}`} — nice choice. 🎯` : "No wallet needed to reserve."}
+          <p className="mt-4 font-mono text-xs text-white/50">
+            {clean ? `@${clean} — NICE CHOICE.` : "NO WALLET NEEDED TO RESERVE."}
           </p>
-        </div>
-      </motion.div>
+        </motion.div>
+      </div>
     </section>
   )
 }
@@ -917,28 +756,32 @@ function CTA() {
 
 function Footer() {
   return (
-    <footer className="border-t border-neutral-200 bg-white">
-      <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-8 px-5 py-12 sm:flex-row sm:items-center">
-        <div className="text-aero-800">
-          <BrandLockup tone="dark" height={32} />
-          <p className="mt-3 max-w-xs text-sm leading-relaxed text-neutral-500">
-            Consumer payments on Avalanche. Send, pay, earn — without the
-            crypto homework.
+    <footer className="bg-aero-950 text-white">
+      <div className="mx-auto grid max-w-7xl gap-10 px-5 py-14 md:grid-cols-[1.2fr_1fr]">
+        <div>
+          <BrandLockup tone="light" height={34} />
+          <p className="mt-4 max-w-xs leading-relaxed text-white/55">
+            Consumer payments on Avalanche. Send, pay, earn — without the crypto homework.
           </p>
         </div>
-        <div className="flex flex-wrap gap-x-8 gap-y-3 text-sm font-medium text-neutral-600">
-          <a href="#send" className="hover:text-aero-800">Send</a>
-          <a href="#pay" className="hover:text-aero-800">Pay</a>
-          <a href="#earn" className="hover:text-aero-800">Earn</a>
-          <a href="#network" className="hover:text-aero-800">Network</a>
+        <div className="grid grid-cols-2 gap-8 font-mono text-xs font-bold tracking-[0.18em] uppercase">
+          <div className="space-y-3">
+            <p className="text-white/35">Product</p>
+            <a href="#send" className="block hover:text-emerald-300">Send</a>
+            <a href="#pay" className="block hover:text-emerald-300">Pay</a>
+            <a href="#earn" className="block hover:text-emerald-300">Earn</a>
+          </div>
+          <div className="space-y-3">
+            <p className="text-white/35">Company</p>
+            <a href="#network" className="block hover:text-emerald-300">Network</a>
+            <a href="#top" className="block hover:text-emerald-300">Early access</a>
+          </div>
         </div>
       </div>
-      <div className="border-t border-neutral-100">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-5 py-5 text-xs text-neutral-400">
-          <span>© 2026 Aero. All rights reserved.</span>
-          <span className="inline-flex items-center gap-1.5">
-            <Snowflake className="size-3.5" /> Built on Avalanche · USDC
-          </span>
+      <div className="border-t border-white/10">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-5 py-5 font-mono text-[11px] text-white/40">
+          <span>© 2026 AERO</span>
+          <span>BUILT ON AVALANCHE · USDC</span>
         </div>
       </div>
     </footer>
@@ -949,16 +792,18 @@ function Footer() {
 
 export default function AeroLanding() {
   return (
-    <div className="min-h-screen bg-white font-sans text-neutral-950 antialiased">
+    <div className="min-h-screen bg-white font-sans text-aero-950 antialiased">
+      <div aria-hidden className="aero-noise pointer-events-none fixed inset-0 z-[60] opacity-[0.05]" />
       <SiteNav />
       <main>
         <Hero />
         <Ticker />
+        <Manifesto />
         <Pillars />
         <SendDemo />
         <Earn />
-        <Pay />
         <Network />
+        <Pay />
         <CTA />
       </main>
       <Footer />
