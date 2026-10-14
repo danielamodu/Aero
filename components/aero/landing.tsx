@@ -164,7 +164,7 @@ function RevealWords({ text, className }: { text: string; className?: string }) 
 function SiteNav() {
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b-2 border-aero-950 bg-white">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5">
+      <div className="mx-auto flex h-16 w-full max-w-[110rem] items-center justify-between px-5 lg:px-10">
         <a href="#top" aria-label="Aero home">
           <BrandLockup tone="dark" height={30} />
         </a>
@@ -282,8 +282,8 @@ function HeroPhone() {
 
 function Hero() {
   return (
-    <section id="top" className="border-b-2 border-aero-950 bg-white pt-32 pb-24">
-      <div className="mx-auto grid max-w-7xl items-center gap-16 px-5 lg:grid-cols-[1.1fr_0.9fr]">
+    <section id="top" className="flex min-h-svh items-center border-b-2 border-aero-950 bg-white pt-24 pb-20">
+      <div className="mx-auto grid w-full max-w-[110rem] items-center gap-16 px-5 lg:grid-cols-[1.1fr_0.9fr] lg:px-10">
         <div>
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
             <Kicker>Live on Avalanche · Sub-second finality</Kicker>
@@ -292,7 +292,7 @@ function Hero() {
             initial={{ opacity: 0, y: 26 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.08 }}
-            className="mt-5 text-[clamp(3.2rem,8.5vw,6.8rem)] leading-[0.93] font-extrabold tracking-tight text-aero-950 uppercase"
+            className="mt-5 text-[clamp(3.4rem,9vw,10rem)] leading-[0.93] font-extrabold tracking-tight text-aero-950 uppercase"
           >
             Send it.{" "}
             <span className="inline-flex items-center gap-[0.08em]">
@@ -382,11 +382,11 @@ function Ticker() {
 
 function Manifesto() {
   return (
-    <section className="border-b-2 border-aero-950 bg-aero-800 py-28 text-white">
-      <div className="mx-auto max-w-5xl px-5">
+    <section className="flex min-h-svh items-center border-b-2 border-aero-950 bg-aero-800 py-24 text-white">
+      <div className="mx-auto w-full max-w-[110rem] px-5 lg:px-10">
         <Kicker tone="light">The pitch</Kicker>
         <RevealWords
-          className="mt-6 text-3xl leading-[1.15] font-extrabold tracking-tight text-balance sm:text-5xl"
+          className="mt-6 max-w-6xl text-3xl leading-[1.12] font-extrabold tracking-tight text-balance sm:text-6xl"
           text="Wallet addresses are serial numbers. Gas fees are homework. Chains are someone else's problem. Aero is just dollars — moving in under a second, growing while you sleep."
         />
         <motion.p {...fadeUp} className="mt-8 max-w-2xl font-mono text-sm leading-relaxed text-white/60">
@@ -425,8 +425,8 @@ const PILLARS = [
 
 function Pillars() {
   return (
-    <section className="border-b-2 border-aero-950 bg-white py-24">
-      <div className="mx-auto max-w-7xl px-5">
+    <section className="flex min-h-svh items-center border-b-2 border-aero-950 bg-white py-24">
+      <div className="mx-auto w-full max-w-[110rem] px-5 lg:px-10">
         <SectionHead index="A" title="Three things. Zero crypto homework." />
         <div className="mt-12 border-t-2 border-aero-950">
           {PILLARS.map((p, i) => (
@@ -479,8 +479,8 @@ function SendDemo() {
   }
 
   return (
-    <section id="send" ref={ref} className="scroll-mt-16 border-b-2 border-aero-950 bg-aero-50 py-24">
-      <div className="mx-auto grid max-w-7xl items-center gap-14 px-5 lg:grid-cols-2">
+    <section id="send" ref={ref} className="flex min-h-svh scroll-mt-16 items-center border-b-2 border-aero-950 bg-aero-50 py-24">
+      <div className="mx-auto grid w-full max-w-[110rem] items-center gap-14 px-5 lg:grid-cols-2 lg:px-10">
         <SectionHead
           index="01 / SEND"
           title="Type a name. Hit send. It's there."
@@ -548,8 +548,8 @@ function Earn() {
   const [auto, setAuto] = useState(true)
 
   return (
-    <section id="earn" ref={ref} className="scroll-mt-16 border-b-2 border-aero-950 bg-aero-950 py-24 text-white">
-      <div className="mx-auto grid max-w-7xl items-start gap-14 px-5 lg:grid-cols-[1fr_1fr]">
+    <section id="earn" ref={ref} className="flex min-h-svh scroll-mt-16 items-center border-b-2 border-aero-950 bg-aero-950 py-24 text-white">
+      <div className="mx-auto grid w-full max-w-[110rem] items-start gap-14 px-5 lg:grid-cols-[1fr_1fr] lg:px-10">
         <div>
           <motion.div {...fadeUp}>
             <Kicker tone="light">03 / Earn</Kicker>
@@ -620,8 +620,8 @@ function Earn() {
 
 function Network() {
   return (
-    <section id="network" className="scroll-mt-16 border-b-2 border-aero-950 bg-aero-800 py-24 text-white">
-      <div className="mx-auto max-w-7xl px-5">
+    <section id="network" className="flex min-h-svh scroll-mt-16 items-center border-b-2 border-aero-950 bg-aero-800 py-24 text-white">
+      <div className="mx-auto w-full max-w-[110rem] px-5 lg:px-10">
         <SectionHead tone="light" index="UNDER THE HOOD"
           title="80+ Avalanche L1s. You see none of them."
           body="A cross-L1 intelligence layer on Warp Messaging routes every dollar to wherever execution is fastest and yield is highest — then collapses it back into one simple balance." />
@@ -668,8 +668,8 @@ function Pay() {
   const [paid, setPaid] = useState<string[]>([])
   const toggle = (id: string) => setPaid((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]))
   return (
-    <section id="pay" className="scroll-mt-16 border-b-2 border-aero-950 bg-white py-24">
-      <div className="mx-auto grid max-w-7xl items-center gap-14 px-5 lg:grid-cols-2">
+    <section id="pay" className="flex min-h-svh scroll-mt-16 items-center border-b-2 border-aero-950 bg-white py-24">
+      <div className="mx-auto grid w-full max-w-[110rem] items-center gap-14 px-5 lg:grid-cols-2 lg:px-10">
         <motion.div {...fadeUp} className="order-2 lg:order-1">
           <div className="border-2 border-aero-950 bg-white aero-hard-shadow">
             <div className="flex items-center justify-between border-b-2 border-aero-950 px-5 py-3">
@@ -725,8 +725,8 @@ function CTA() {
   return (
     <section className="bg-white">
       <ArrowStrip />
-      <div className="border-b-2 border-aero-950 bg-aero-800 px-5 py-24 text-center text-white">
-        <motion.div {...fadeUp} className="mx-auto max-w-3xl">
+      <div className="flex min-h-[92svh] items-center justify-center border-b-2 border-aero-950 bg-aero-800 px-5 py-24 text-center text-white lg:px-10">
+        <motion.div {...fadeUp} className="mx-auto w-full max-w-3xl">
           <div className="flex justify-center">
             <BrandWordmark tone="light" height={72} />
           </div>
@@ -757,7 +757,7 @@ function CTA() {
 function Footer() {
   return (
     <footer className="bg-aero-950 text-white">
-      <div className="mx-auto grid max-w-7xl gap-10 px-5 py-14 md:grid-cols-[1.2fr_1fr]">
+      <div className="mx-auto grid max-w-[110rem] gap-10 px-5 py-14 md:grid-cols-[1.2fr_1fr] lg:px-10">
         <div>
           <BrandLockup tone="light" height={34} />
           <p className="mt-4 max-w-xs leading-relaxed text-white/55">
@@ -779,7 +779,7 @@ function Footer() {
         </div>
       </div>
       <div className="border-t border-white/10">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-5 py-5 font-mono text-[11px] text-white/40">
+        <div className="mx-auto flex max-w-[110rem] flex-wrap items-center justify-between gap-2 px-5 py-5 font-mono text-[11px] text-white/40 lg:px-10">
           <span>© 2026 AERO</span>
           <span>BUILT ON AVALANCHE · USDC</span>
         </div>
