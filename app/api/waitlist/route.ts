@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { appendFile, mkdir } from "node:fs/promises"
 import { join } from "node:path"
 import { Resend } from "resend"
+import { clientIp, throttle } from "@/lib/rate-limit"
+import { confirmToken } from "@/lib/waitlist"
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
@@ -11,38 +13,34 @@ function cleanUsername(raw: unknown): string | null {
   return /^[a-z0-9_]{3,20}$/.test(u) ? u : null
 }
 
-function confirmationHtml(username: string): string {
+function confirmationHtml(username: string, confirmUrl: string): string {
   return `<!doctype html><html><body style="margin:0;padding:0;background:#f7f7f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-<div style="display:none;max-height:0;overflow:hidden;opacity:0;">Your @${username} username is reserved — invite coming.</div>
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">One tap to lock in your @${username} username.</div>
 <div style="max-width:520px;margin:0 auto;padding:40px 20px;">
 <div style="background:#ffffff;border:1px solid #e5e5e5;border-radius:20px;overflow:hidden;">
 <div style="background:#1800ad;padding:30px 32px;text-align:center;">
 <img src="https://useaero.org/brand/aero-lockup-white-clear.png" alt="Aero" width="140" style="display:inline-block;width:140px;height:auto;border:0;" />
 </div>
 <div style="padding:32px;">
-<p style="margin:0 0 8px;font-size:24px;font-weight:600;letter-spacing:-0.02em;color:#171717;">You're on the list.</p>
-<p style="margin:0 0 24px;font-size:15px;line-height:1.65;color:#525252;">We'll email you the moment your invite is ready — early signups get first pick of handles.</p>
+<p style="margin:0 0 8px;font-size:24px;font-weight:600;letter-spacing:-0.02em;color:#171717;">One tap to lock it in.</p>
+<p style="margin:0 0 24px;font-size:15px;line-height:1.65;color:#525252;">Confirm your email to reserve your handle and get first access when invites open.</p>
 <div style="background:#f7f7f7;border:1px dashed #d4d4d4;border-radius:14px;padding:20px;text-align:center;margin:0 0 24px;">
 <p style="margin:0;font-size:28px;font-weight:700;letter-spacing:-0.01em;color:#1800ad;">@${username}</p>
-<p style="margin:6px 0 0;font-size:11px;font-weight:700;letter-spacing:0.16em;color:#737373;">USERNAME RESERVED</p>
+<p style="margin:6px 0 0;font-size:11px;font-weight:700;letter-spacing:0.16em;color:#737373;">USERNAME RESERVED · PENDING CONFIRMATION</p>
 </div>
-<p style="margin:0 0 12px;font-size:12px;font-weight:700;letter-spacing:0.12em;color:#a3a3a3;">WHAT HAPPENS NEXT</p>
-<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">
-<tr><td style="padding:10px 0;border-top:1px solid #f0f0f0;font-size:15px;color:#404040;"><span style="display:inline-block;width:26px;height:26px;line-height:26px;text-align:center;border-radius:9999px;background:#f3f2fb;color:#1800ad;font-size:13px;font-weight:700;margin-right:10px;">1</span>Invite email when your spot opens</td></tr>
-<tr><td style="padding:10px 0;border-top:1px solid #f0f0f0;font-size:15px;color:#404040;"><span style="display:inline-block;width:26px;height:26px;line-height:26px;text-align:center;border-radius:9999px;background:#f3f2fb;color:#1800ad;font-size:13px;font-weight:700;margin-right:10px;">2</span>Claim @${username} in the app</td></tr>
-<tr><td style="padding:10px 0;border-top:1px solid #f0f0f0;border-bottom:1px solid #f0f0f0;font-size:15px;color:#404040;"><span style="display:inline-block;width:26px;height:26px;line-height:26px;text-align:center;border-radius:9999px;background:#f3f2fb;color:#1800ad;font-size:13px;font-weight:700;margin-right:10px;">3</span>Send, pay, and earn from one balance</td></tr>
-</table>
-<div style="text-align:center;padding-top:28px;">
-<a href="https://useaero.org" style="display:inline-block;background:#1800ad;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:13px 32px;border-radius:9999px;">Visit Aero</a>
+<div style="text-align:center;padding-bottom:8px;">
+<a href="${confirmUrl}" style="display:inline-block;background:#1800ad;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:13px 32px;border-radius:9999px;">Confirm my spot</a>
+</div>
+<p style="margin:16px 0 0;text-align:center;font-size:13px;color:#737373;">Button not working? Paste this link:<br /><a href="${confirmUrl}" style="color:#1800ad;word-break:break-all;">${confirmUrl}</a></p>
+<p style="margin:24px 0 0;border-top:1px solid #f0f0f0;padding-top:20px;font-size:13px;line-height:1.6;color:#a3a3a3;">After confirming: invite email when your spot opens, then send, pay, and earn from one balance.<br /><br />Aero · dollars on Avalanche · useaero.org</p>
 </div>
 </div>
-</div>
-<p style="margin:20px 0 0;text-align:center;font-size:12px;line-height:1.6;color:#a3a3a3;">You got this because you joined the Aero waitlist.<br />Aero · dollars on Avalanche · useaero.org</p>
+<p style="margin:20px 0 0;text-align:center;font-size:12px;line-height:1.6;color:#a3a3a3;">You got this because you joined the Aero waitlist.<br />Didn't sign up? Just ignore this email.</p>
 </div></body></html>`
 }
 
-function confirmationText(username: string): string {
-  return `You're on the Aero waitlist, @${username}.\n\nYour username is reserved. We'll email you the moment your invite is ready.\n\nWhat happens next:\n- Invite email when your spot opens\n- Claim @${username} in the app\n- Send, pay, and earn from one balance\n\nAero · useaero.org`
+function confirmationText(username: string, confirmUrl: string): string {
+  return `One tap to lock in @${username}.\n\nConfirm your email to reserve your handle:\n${confirmUrl}\n\nAfter confirming: invite email when your spot opens, then send, pay, and earn from one balance.\n\nAero · useaero.org\n\nDidn't sign up? Just ignore this email.`
 }
 
 /** Best-effort local record (durable in dev; ephemeral on serverless — the emails are the source of truth there). */
@@ -57,6 +55,13 @@ async function store(entry: Record<string, string>) {
 }
 
 export async function POST(req: Request) {
+  if (!throttle(`wl:${clientIp(req)}`, 5, 10 * 60 * 1000)) {
+    return NextResponse.json(
+      { ok: false, error: "Slow down — too many signups from here. Try again in a few minutes." },
+      { status: 429 }
+    )
+  }
+
   let body: { email?: unknown; username?: unknown }
   try {
     body = await req.json()
@@ -77,7 +82,11 @@ export async function POST(req: Request) {
     )
   }
 
-  await store({ email, username, created_at: new Date().toISOString() })
+  await store({ event: "signup", email, username, created_at: new Date().toISOString() })
+
+  const token = confirmToken(email, username)
+  const origin = new URL(req.url).origin
+  const confirmUrl = `${origin}/api/waitlist/confirm?email=${encodeURIComponent(email)}&username=${encodeURIComponent(username)}&token=${token}`
 
   let emailed = false
   const key = process.env.RESEND_API_KEY
@@ -90,9 +99,9 @@ export async function POST(req: Request) {
         resend.emails.send({
           from,
           to: email,
-          subject: `You're on the Aero waitlist (@${username})`,
-          html: confirmationHtml(username),
-          text: confirmationText(username),
+          subject: `Confirm your Aero spot (@${username})`,
+          html: confirmationHtml(username, confirmUrl),
+          text: confirmationText(username, confirmUrl),
         }),
       ]
       if (notify) {
@@ -101,7 +110,7 @@ export async function POST(req: Request) {
             from,
             to: notify,
             subject: `Waitlist signup: @${username}`,
-            text: `@${username} <${email}> joined the waitlist.`,
+            text: `@${username} <${email}> joined the waitlist (unconfirmed).`,
           })
         )
       }

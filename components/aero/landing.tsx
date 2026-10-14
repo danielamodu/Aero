@@ -1,6 +1,12 @@
 "use client"
 
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react"
+
+declare global {
+  interface Window {
+    plausible?: (event: string) => void
+  }
+}
 import {
   AnimatePresence,
   motion,
@@ -819,9 +825,10 @@ function CTA() {
       }
       setSavedName(username.trim().replace(/^@+/, "").toLowerCase())
       setStatus("done")
+      window.plausible?.("waitlist-signup")
       setMessage(
         data.emailed
-          ? `Confirmation sent to ${email.trim()}.`
+          ? `Confirmation link sent to ${email.trim()} — tap it to lock in your handle.`
           : "You're on the list — email confirmations switch on soon."
       )
     } catch {
