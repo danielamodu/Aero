@@ -12,20 +12,28 @@ function cleanUsername(raw: unknown): string | null {
 }
 
 function confirmationHtml(username: string): string {
-  return `<!doctype html><html><body style="margin:0;background:#f7f7f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-<div style="max-width:520px;margin:0 auto;padding:32px 20px;">
-<div style="background:#1800ad;border-radius:20px 20px 0 0;padding:28px;text-align:center;color:#fff;font-size:22px;font-weight:800;letter-spacing:-0.02em;">AERO</div>
-<div style="background:#fff;border:1px solid #e5e5e5;border-top:0;border-radius:0 0 20px 20px;padding:32px;">
-<p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#171717;">You're on the list, @${username}.</p>
-<p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#525252;">Your username is reserved. We'll email you the moment your invite is ready — early signups get first pick of handles.</p>
-<p style="margin:0 0 6px;font-size:13px;font-weight:700;letter-spacing:0.08em;color:#737373;">WHAT HAPPENS NEXT</p>
-<ul style="margin:0;padding-left:20px;font-size:15px;line-height:1.7;color:#404040;">
-<li>Invite email when your spot opens</li>
-<li>Claim @${username} in the app</li>
-<li>Send, pay, and earn from one balance</li>
-</ul>
-<p style="margin:24px 0 0;font-size:13px;color:#a3a3a3;">Aero · dollars on Avalanche · <a href="https://useaero.org" style="color:#1800ad;">useaero.org</a></p>
-</div></div></body></html>`
+  return `<!doctype html><html><body style="margin:0;padding:0;background:#f7f7f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+<div style="max-width:520px;margin:0 auto;padding:40px 20px;">
+<div style="background:#ffffff;border:1px solid #e5e5e5;border-radius:20px;overflow:hidden;">
+<div style="padding:32px 32px 24px;text-align:center;border-bottom:1px solid #f0f0f0;">
+<img src="https://useaero.org/brand/aero-lockup-blue.png" alt="Aero" width="150" style="display:inline-block;width:150px;height:auto;border:0;" />
+</div>
+<div style="padding:32px;">
+<p style="margin:0 0 8px;font-size:24px;font-weight:600;letter-spacing:-0.02em;color:#171717;">You're on the list, @${username}.</p>
+<p style="margin:0 0 24px;font-size:15px;line-height:1.65;color:#525252;">Your username is reserved. We'll email you the moment your invite is ready — early signups get first pick of handles.</p>
+<p style="margin:0 0 12px;font-size:12px;font-weight:700;letter-spacing:0.12em;color:#a3a3a3;">WHAT HAPPENS NEXT</p>
+<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">
+<tr><td style="padding:10px 0;border-top:1px solid #f0f0f0;font-size:15px;color:#404040;"><span style="display:inline-block;width:26px;height:26px;line-height:26px;text-align:center;border-radius:9999px;background:#f3f2fb;color:#1800ad;font-size:13px;font-weight:700;margin-right:10px;">1</span>Invite email when your spot opens</td></tr>
+<tr><td style="padding:10px 0;border-top:1px solid #f0f0f0;font-size:15px;color:#404040;"><span style="display:inline-block;width:26px;height:26px;line-height:26px;text-align:center;border-radius:9999px;background:#f3f2fb;color:#1800ad;font-size:13px;font-weight:700;margin-right:10px;">2</span>Claim @${username} in the app</td></tr>
+<tr><td style="padding:10px 0;border-top:1px solid #f0f0f0;border-bottom:1px solid #f0f0f0;font-size:15px;color:#404040;"><span style="display:inline-block;width:26px;height:26px;line-height:26px;text-align:center;border-radius:9999px;background:#f3f2fb;color:#1800ad;font-size:13px;font-weight:700;margin-right:10px;">3</span>Send, pay, and earn from one balance</td></tr>
+</table>
+<div style="text-align:center;padding-top:28px;">
+<a href="https://useaero.org" style="display:inline-block;background:#1800ad;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:13px 32px;border-radius:9999px;">Visit Aero</a>
+</div>
+</div>
+</div>
+<p style="margin:20px 0 0;text-align:center;font-size:12px;line-height:1.6;color:#a3a3a3;">You got this because you joined the Aero waitlist.<br />Aero · dollars on Avalanche · useaero.org</p>
+</div></body></html>`
 }
 
 function confirmationText(username: string): string {
