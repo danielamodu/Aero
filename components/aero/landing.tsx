@@ -816,6 +816,7 @@ function CTA() {
   const [position, setPosition] = useState<number | null>(null)
   const [myCode, setMyCode] = useState("")
   const [already, setAlready] = useState(false)
+  const [referrals, setReferrals] = useState(0)
   const [copied, setCopied] = useState(false)
 
   // Stash a referral code from ?ref= for the signup post.
@@ -868,6 +869,7 @@ function CTA() {
       setPosition(typeof data.position === "number" ? data.position : null)
       setMyCode(typeof data.referral_code === "string" ? data.referral_code : "")
       setAlready(!!data.already)
+      setReferrals(typeof data.referrals === "number" ? data.referrals : 0)
       setStatus("done")
       window.plausible?.("waitlist-signup")
       setMessage(
@@ -933,7 +935,11 @@ function CTA() {
                   </button>
                 </div>
               ) : null}
-              <p className="mt-3 text-[13px] text-white/50">Friends who join through your link move you up.</p>
+              <p className="mt-3 text-[13px] text-white/50">
+                {referrals > 0
+                  ? `${referrals} friend${referrals === 1 ? "" : "s"} joined through your link — you've moved up ${referrals} spot${referrals === 1 ? "" : "s"} already.`
+                  : "Friends who join through your link move you up the line."}
+              </p>
               <button
                 type="button"
                 onClick={() => { setStatus("idle"); setMessage("") }}

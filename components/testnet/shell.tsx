@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { motion } from "motion/react"
 import { useDisconnect, useReadContract } from "wagmi"
 import {
   ArrowUpRight,
+  Check,
   LayoutGrid,
   LogOut,
   ReceiptText,
@@ -20,6 +21,7 @@ import { namesAbi, usdcAbi, vaultAbi } from "@/lib/contracts"
 import type { Address } from "viem"
 import { CONTRACTS, FUJI_AVAX_FAUCET, formatUsdc } from "@/lib/testnet"
 import { readActivity, type ActivityItem } from "@/lib/testnet-activity"
+import { fetchOnchainActivity, hasOnchainSends, type ChainActivity } from "@/lib/onchain-activity"
 import type { TestnetTab } from "@/app/testnet/page"
 
 /* ---------------------------------- login --------------------------------- */
@@ -245,6 +247,113 @@ export function MobileTabs({ tab, setTab }: { tab: TestnetTab; setTab: (t: Testn
   )
 }
 
+/* ------------------------------- checklist -------------------------------- */
+
+function timeAgo(ts: number): string {
+  const s = Math.max(1, Math.floor((Date.now() - ts) / 1000))
+  if (s < 60) return `${s}s ago`
+  const m = Math.floor(s / 60)
+  if (m < 60) return `${m}m ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ago`
+  const d = Math.floor(h / 24)
+  return d === 1 ? "Yesterday" : `${d}d ago`
+}
+
+export function Checklist({ address, funded, handle }: { address: Address; funded: boolean; handle: string }) {
+  const [sent, setSent] = useState<boolean>(() =>
+    readActivity().some((a) => /→|sent|paid/i.test(`${a.label} ${a.amount}`))
+  )
+  const [dismissed, setDismissed] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem("aero_check_done") === "1"
+    } catch {
+      return false
+    }
+  })
+  useEffect(() => {
+    let live = true
+    hasOnchainSends(address, CONTRACTS.usdc, CONTRACTS.vault)
+      .then((v) => {
+        if (live && v) setSent(true)
+      })
+      .catch(() => {})
+    return () => {
+      live = false
+    }
+  }, [address])
+
+  const steps = [
+    { done: true, label: "Connect a Fuji wallet" },
+    { done: funded, label: "Claim test dollars" },
+    { done: handle !== "", label: "Claim your @handle" },
+    { done: sent, label: "Send your first payment" },
+  ]
+  const doneCount = steps.filter((s) => s.done).length
+
+  if (doneCount === steps.length) {
+    if (dismissed) return null
+    const hide = () => {
+      try {
+        window.localStorage.setItem("aero_check_done", "1")
+      } catch {
+        /* ignore */
+      }
+      setDismissed(true)
+    }
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mt-6 flex items-center justify-between gap-4 rounded-[20px] bg-aero-800 p-5 text-white"
+      >
+        <div>
+          <p className="font-medium">Testnet complete — you ran the whole loop.</p>
+          <p className="mt-0.5 text-sm text-white/65">Connected, funded, named, and sending. Mainnet will feel familiar.</p>
+        </div>
+        <button type="button" onClick={hide} className="shrink-0 rounded-full border border-white/30 px-4 py-2 text-sm font-medium transition hover:bg-white/10">
+          Hide
+        </button>
+      </motion.div>
+    )
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mt-6 rounded-[20px] border border-neutral-200 bg-white p-5"
+    >
+      <div className="flex items-center justify-between">
+        <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">Getting started</p>
+        <p className="font-mono text-xs text-neutral-400 tabular-nums">{doneCount}/{steps.length}</p>
+      </div>
+      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-neutral-100">
+        <motion.div
+          className="h-full rounded-full bg-aero-800"
+          animate={{ width: `${(doneCount / steps.length) * 100}%` }}
+          transition={{ type: "spring", stiffness: 120, damping: 20 }}
+        />
+      </div>
+      <div className="mt-4 space-y-2.5">
+        {steps.map((s) => (
+          <div key={s.label} className="flex items-center gap-3 text-[15px]">
+            <span
+              className={cn(
+                "flex size-5 shrink-0 items-center justify-center rounded-full border",
+                s.done ? "border-emerald-500 bg-emerald-500 text-white" : "border-neutral-300 text-transparent"
+              )}
+            >
+              <Check className="size-3" strokeWidth={3.5} />
+            </span>
+            <span className={s.done ? "text-neutral-400 line-through" : "font-medium text-neutral-900"}>{s.label}</span>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  )
+}
+
 /* -------------------------------- overview -------------------------------- */
 
 function greeting(): string {
@@ -262,6 +371,30 @@ export function Overview({
   go: (t: TestnetTab) => void
 }) {
   const [activity] = useState(readActivity)
+  const [chain, setChain] = useState<ChainActivity[] | null>(null)
+  useEffect(() => {
+    let live = true
+    fetchOnchainActivity(address, CONTRACTS)
+      .then((r) => {
+        if (live) setChain(r)
+      })
+      .catch(() => {
+        if (live) setChain([])
+      })
+    return () => {
+      live = false
+    }
+  }, [address])
+  const feed = useMemo(() => {
+    const seen = new Set(activity.map((a) => a.hash.toLowerCase()))
+    const merged: ActivityItem[] = [...activity]
+    for (const c of chain ?? []) {
+      if (!seen.has(c.hash.toLowerCase())) {
+        merged.push({ label: c.label, amount: c.amount, hash: c.hash, ts: c.ts })
+      }
+    }
+    return merged.sort((a, b) => b.ts - a.ts)
+  }, [activity, chain])
   const { data: myName } = useReadContract({ address: CONTRACTS.names, abi: namesAbi, functionName: "resolveUsername", args: [address] })
   const { data: usdc } = useReadContract({ address: CONTRACTS.usdc, abi: usdcAbi, functionName: "balanceOf", args: [address] })
   const { data: shares } = useReadContract({ address: CONTRACTS.vault, abi: vaultAbi, functionName: "balanceOf", args: [address] })
@@ -280,6 +413,8 @@ export function Overview({
           {greeting()}{myName ? `, @${myName}` : ""}.
         </h1>
       </motion.div>
+
+      <Checklist address={address} funded={(usdc ?? BigInt(0)) > BigInt(0)} handle={myName ?? ""} />
 
       <motion.div
         initial={{ opacity: 0, y: 16 }}
@@ -325,20 +460,27 @@ export function Overview({
       <div className="mt-5 rounded-[20px] border border-neutral-200 bg-white p-6">
         <div className="flex items-center justify-between">
           <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">Recent activity</p>
-          {activity.length > 0 && (
-            <span className="font-mono text-xs text-neutral-400 tabular-nums">{activity.length}</span>
+          {feed.length > 0 && (
+            <span className="font-mono text-xs text-neutral-400 tabular-nums">{feed.length}</span>
           )}
         </div>
-        {activity.length === 0 ? (
+        {chain === null ? (
+          <div className="mt-3 space-y-2.5" aria-label="Loading activity">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-9 animate-pulse rounded-xl bg-neutral-100" />
+            ))}
+          </div>
+        ) : feed.length === 0 ? (
           <p className="mt-3 text-[15px] leading-relaxed text-neutral-500">
             Nothing yet — send your first payment and it&apos;ll show up here with its receipt.
           </p>
         ) : (
           <div className="mt-2 divide-y divide-neutral-100">
-            {activity.slice(0, 6).map((a) => (
+            {feed.slice(0, 8).map((a) => (
               <div key={a.hash} className="flex items-center justify-between gap-3 py-2.5 text-sm">
                 <span className="min-w-0 truncate font-medium text-neutral-700">
-                  {a.label} · <span className="tabular-nums">{a.amount}</span>
+                  {a.label} · <span className="tabular-nums">{a.amount}</span>{" "}
+                  <span className="font-normal text-neutral-400">{a.ts > 0 ? `· ${timeAgo(a.ts)}` : ""}</span>
                 </span>
                 <a
                   href={`https://testnet.snowtrace.io/tx/${a.hash}`}

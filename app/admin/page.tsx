@@ -5,6 +5,7 @@ import { readSignups } from "@/lib/waitlist-store"
 import { storeKind } from "@/lib/db"
 import { AdminLogin, AdminLogout } from "@/components/aero/admin-login"
 import { AdminRowActions } from "@/components/aero/admin-actions"
+import { AdminBroadcast } from "@/components/aero/admin-broadcast"
 import { BrandLockup } from "@/components/aero/brand-logo"
 import { cn } from "@/lib/utils"
 
@@ -94,6 +95,8 @@ export default async function AdminPage({
             Export CSV
           </a>
         </div>
+
+        <AdminBroadcast confirmedCount={confirmed} />
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-1.5">

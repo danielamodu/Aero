@@ -81,16 +81,22 @@ export async function POST(req: Request) {
     `${origin}/api/waitlist/confirm?email=${encodeURIComponent(e)}&username=${encodeURIComponent(u)}&token=${confirmToken(e, u)}`
 
   // ---- Postgres path ----
+  // Position = signups ahead of you minus confirmed referrals you drove (min 1).
+  const standing = async (id: number, code: string) => {
+    const [{ count }] = (await sql!`SELECT COUNT(*)::int AS count FROM waitlist WHERE id <= ${id}`) as { count: number }[]
+    const [{ refs }] = (await sql!`SELECT COUNT(*)::int AS refs FROM waitlist WHERE referred_by = ${code} AND confirmed = TRUE`) as { refs: number }[]
+    return { position: Math.max(1, count - refs), referrals: refs }
+  }
   if (sql) {
     const existing = (await sql`SELECT id, email, username, referral_code, confirmed FROM waitlist WHERE email = ${email}`) as DbRow[]
     if (existing.length > 0) {
       const row = existing[0]
-      const [{ count }] = (await sql`SELECT COUNT(*)::int AS count FROM waitlist WHERE id <= ${row.id}`) as { count: number }[]
+      const { position, referrals } = await standing(row.id, row.referral_code)
       let emailed = false
       if (!row.confirmed) {
         emailed = await sendConfirmAndNotify(row.email, row.username, confirmUrlFor(row.email, row.username))
       }
-      return NextResponse.json({ ok: true, emailed, already: true, position: count, referral_code: row.referral_code })
+      return NextResponse.json({ ok: true, emailed, already: true, position, referrals, referral_code: row.referral_code })
     }
 
     let referredBy: string | null = null
@@ -112,9 +118,9 @@ export async function POST(req: Request) {
     if (!row) {
       return NextResponse.json({ ok: false, error: "Couldn't save that — try again." }, { status: 500 })
     }
-    const [{ count }] = (await sql`SELECT COUNT(*)::int AS count FROM waitlist WHERE id <= ${row.id}`) as { count: number }[]
+    const { position, referrals } = await standing(row.id, row.referral_code)
     const emailed = await sendConfirmAndNotify(email, username, confirmUrlFor(email, username))
-    return NextResponse.json({ ok: true, emailed, position: count, referral_code: row.referral_code })
+    return NextResponse.json({ ok: true, emailed, position, referrals, referral_code: row.referral_code })
   }
 
   // ---- File fallback (dev without DATABASE_URL) ----
