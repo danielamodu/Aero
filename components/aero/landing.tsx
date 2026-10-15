@@ -310,9 +310,6 @@ function Hero() {
       </div>
 
       <div className="relative mx-auto max-w-4xl px-5 text-center">
-        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
-          <Eyebrow tone="white">Built on Avalanche</Eyebrow>
-        </motion.div>
         <motion.h1
           initial={{ opacity: 0, y: 26 }}
           animate={{ opacity: 1, y: 0 }}
@@ -469,19 +466,22 @@ function HowItWorks() {
 /* ------------------------------ integrations ------------------------------ */
 
 const INTEGRATIONS = [
-  { label: "Avalanche", short: "AVAX", size: 72, x: "50%", y: "2%", dx: "-50%", dy: "0%" },
-  { label: "Benqi", short: "B", size: 64, x: "13%", y: "24%", dx: "-50%", dy: "-50%" },
-  { label: "Trader Joe", short: "TJ", size: 68, x: "87%", y: "24%", dx: "-50%", dy: "-50%" },
-  { label: "USDC", short: "$", size: 60, x: "24%", y: "70%", dx: "-50%", dy: "-50%" },
-  { label: "Warp", short: "W", size: 60, x: "76%", y: "70%", dx: "-50%", dy: "-50%" },
-  { label: "More soon", short: "+", size: 56, x: "50%", y: "94%", dx: "-50%", dy: "-100%", dashed: true },
+  { label: "Avalanche", short: "AVAX", size: 72, x: "50%", y: "4%", dx: "-50%", dy: "0%" },
+  { label: "Benqi", short: "B", size: 64, x: "16%", y: "27%", dx: "-50%", dy: "-50%" },
+  { label: "Trader Joe", short: "TJ", size: 68, x: "84%", y: "27%", dx: "-50%", dy: "-50%" },
+  { label: "USDC", short: "$", size: 60, x: "16%", y: "69%", dx: "-50%", dy: "-50%" },
+  { label: "Warp", short: "W", size: 60, x: "84%", y: "69%", dx: "-50%", dy: "-50%" },
+  { label: "More soon", short: "+", size: 56, x: "50%", y: "92%", dx: "-50%", dy: "-100%", dashed: true },
 ]
 
 function Integrations() {
   return (
     <section className="bg-white py-20 sm:py-28">
       <div className="mx-auto max-w-6xl px-5 lg:px-10">
-        <div className="relative mx-auto hidden max-w-3xl md:block" style={{ height: 380 }}>
+        <div className="relative mx-auto hidden max-w-3xl md:block" style={{ height: 400 }}>
+          <div aria-hidden className="absolute top-1/2 left-1/2 h-[300px] w-[min(88%,640px)] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border border-dashed border-neutral-200" />
+          <div aria-hidden className="absolute top-1/2 left-1/2 h-[180px] w-[min(52%,380px)] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border border-dashed border-neutral-200" />
+          <div aria-hidden className="absolute top-1/2 left-1/2 size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-aero-800" />
           {INTEGRATIONS.map((b, i) => (
             <motion.span
               key={b.label}
@@ -490,15 +490,21 @@ function Integrations() {
               viewport={{ once: true }}
               transition={{ duration: 0.45, delay: i * 0.07 }}
               title={b.label}
-              style={{ left: b.x, top: b.y, width: b.size, height: b.size, transform: `translate(${b.dx}, ${b.dy})` }}
-              className={cn(
-                "absolute flex items-center justify-center rounded-full text-sm font-bold",
-                b.dashed
-                  ? "border-2 border-dashed border-neutral-300 text-neutral-400"
-                  : "border border-neutral-200 bg-white text-aero-900 shadow-[0_10px_30px_-12px_rgba(11,0,78,0.2)]"
-              )}
+              style={{ left: b.x, top: b.y, transform: `translate(${b.dx}, ${b.dy})` }}
+              className="absolute flex flex-col items-center gap-1.5"
             >
-              {b.short}
+              <span
+                style={{ width: b.size, height: b.size }}
+                className={cn(
+                  "flex items-center justify-center rounded-full text-sm font-bold animate-aero-float",
+                  b.dashed
+                    ? "border-2 border-dashed border-neutral-300 text-neutral-400"
+                    : "border border-neutral-200 bg-white text-aero-900 shadow-[0_10px_30px_-12px_rgba(11,0,78,0.2)]"
+                )}
+              >
+                <span style={{ animationDelay: `${i * 0.8}s` }} className="contents">{b.short}</span>
+              </span>
+              <span className="text-[11px] font-medium whitespace-nowrap text-neutral-400">{b.label}</span>
             </motion.span>
           ))}
           <div className="absolute inset-0 flex flex-col items-center justify-center px-8 text-center">
@@ -506,6 +512,9 @@ function Integrations() {
             <h2 className="mt-4 max-w-md font-display text-[clamp(1.9rem,4vw,3rem)] leading-[1.08] text-neutral-900 text-balance">
               Riding rails you already trust.
             </h2>
+            <p className="mx-auto mt-3 max-w-sm text-[15px] leading-relaxed text-neutral-500">
+              Settlement, yield, and messaging — plugged into the best of Avalanche, so you never think about chains.
+            </p>
             <Button
               onClick={(e) => goTo(e, "waitlist")}
               className="mt-6 h-11 rounded-full bg-neutral-900 px-6 text-sm font-medium text-white hover:bg-neutral-800"
