@@ -1,11 +1,12 @@
 "use client"
 
-import { createElement, useState, type ReactElement, type ReactNode } from "react"
-import { createAppKit } from "@reown/appkit/react"
+import { useState, type ReactNode } from "react"
+import { createAppKit, useAppKit } from "@reown/appkit/react"
 import { WagmiAdapter } from "@reown/appkit-adapter-wagmi"
 import { avalancheFuji } from "@reown/appkit/networks"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { WagmiProvider } from "wagmi"
+import { WagmiProvider, useAccount } from "wagmi"
+import { cn } from "@/lib/utils"
 
 const projectId = process.env.NEXT_PUBLIC_REOWN_PROJECT_ID ?? ""
 
@@ -32,9 +33,22 @@ if (reownConfigured) {
   wagmiConfig = adapter.wagmiConfig
 }
 
-/** Reown connect button (web component — created imperatively to dodge JSX typing). */
-export function AppKitConnectButton() {
-  return createElement("appkit-button") as unknown as ReactElement
+/** Our own connect button in Aero blue — opens the Reown modal. */
+export function AppKitConnectButton({ className }: { className?: string }) {
+  const { open } = useAppKit()
+  const { address, isConnected } = useAccount()
+  return (
+    <button
+      type="button"
+      onClick={() => open(isConnected ? { view: "Account" } : undefined)}
+      className={cn(
+        "inline-flex h-11 items-center justify-center gap-2 rounded-full bg-aero-800 px-6 text-[15px] font-medium text-white transition hover:bg-aero-900",
+        className
+      )}
+    >
+      {isConnected && address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "Connect Wallet"}
+    </button>
+  )
 }
 
 export function TestnetProviders({ children }: { children: ReactNode }) {
