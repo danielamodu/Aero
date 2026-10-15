@@ -75,7 +75,7 @@ export function BuySheet({
 
   return (
     <Dialog open={open} onOpenChange={close}>
-      <DialogContent className="rounded-[24px] border-neutral-200 p-6 sm:max-w-md">
+      <DialogContent className="max-h-[90svh] w-[calc(100vw-2rem)] overflow-y-auto rounded-[24px] border-neutral-200 p-6 sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-2xl font-medium tracking-tight">Add test dollars</DialogTitle>
           <DialogDescription className="text-[15px]">

@@ -8,7 +8,7 @@ import {
   useWriteContract,
 } from "wagmi"
 import { maxUint256, zeroAddress, type Address } from "viem"
-import { Check, Droplets, ExternalLink, Send } from "lucide-react"
+import { ArrowUpRight, Check, Copy, Droplets, ExternalLink, Send, Share, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
@@ -29,7 +29,8 @@ import {
 import { pushActivity } from "@/lib/testnet-activity"
 import { buildContacts, getFavorites, toggleFavorite, type Contact } from "@/lib/contacts"
 import { BuySheet } from "./buy-sheet"
-import { ArrowUpRight, Star } from "lucide-react"
+import { QRCodeSVG } from "qrcode.react"
+import type { TestnetTab } from "@/app/testnet/page"
 
 /* ---------------------------------- atoms --------------------------------- */
 
@@ -167,6 +168,14 @@ export function UsernameCard({ address }: { address: Address }) {
     functionName: "resolveUsername",
     args: [address],
   })
+  const clean = normalizeUsername(name)
+  const { data: takenBy } = useReadContract({
+    address: CONTRACTS.names,
+    abi: namesAbi,
+    functionName: "resolveAddress",
+    args: [clean],
+    query: { enabled: isUsername(name) },
+  })
   useEffect(() => {
     if (tx.done) {
       refetch()
@@ -175,7 +184,7 @@ export function UsernameCard({ address }: { address: Address }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tx.done])
 
-  const clean = normalizeUsername(name)
+  const available = isUsername(name) && takenBy !== undefined && takenBy === zeroAddress
   return (
     <div className="rounded-[20px] border border-neutral-200 bg-white p-6">
       <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">Your handle</p>
@@ -195,13 +204,18 @@ export function UsernameCard({ address }: { address: Address }) {
               className="h-12 flex-1 rounded-2xl border-neutral-200 text-base text-neutral-900 placeholder:text-neutral-400"
             />
             <Button
-              disabled={!isUsername(name) || tx.busy}
+              disabled={!available || tx.busy}
               onClick={() => tx.write({ address: CONTRACTS.names, abi: namesAbi, functionName: "register", args: [clean] })}
               className="h-12 shrink-0 rounded-full bg-aero-800 px-6 font-medium text-white hover:bg-aero-900 disabled:opacity-60"
             >
               {tx.busy ? "Claiming…" : "Claim handle"}
             </Button>
           </div>
+          {isUsername(name) && (
+            <p className={`mt-2 text-[13px] font-medium ${available ? "text-emerald-600" : "text-neutral-400"}`}>
+              {takenBy === undefined ? "Checking availability…" : available ? `@${clean} is available` : `@${clean} is taken — try another`}
+            </p>
+          )}
         </>
       )}
       <div className="mt-3">
@@ -619,6 +633,98 @@ export function RouterPanel({ address }: { address: Address }) {
       <p className="mt-3 text-[13px] leading-relaxed text-white/45">
         Splits deposits across live markets by target weight and rebalances past the drift band. Same UX as the vaults below — one balance, one APY.
       </p>
+    </div>
+  )
+}
+
+/* --------------------------------- request -------------------------------- */
+
+export function RequestTab({ address, go }: { address: Address; go: (t: TestnetTab) => void }) {
+  const [amount, setAmount] = useState("")
+  const [copied, setCopied] = useState(false)
+  const { data: myName } = useReadContract({
+    address: CONTRACTS.names,
+    abi: namesAbi,
+    functionName: "resolveUsername",
+    args: [address],
+  })
+
+  const n = Number(amount)
+  const valid = Number.isFinite(n) && n > 0 && n <= 1_000_000
+  const link = myName ? `https://useaero.org/pay/@${myName}${valid ? `/${n}` : ""}` : ""
+
+  const copy = async () => {
+    if (!link) return
+    try {
+      await navigator.clipboard.writeText(link)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      /* clipboard unavailable */
+    }
+  }
+
+  const share = async () => {
+    if (!link) return
+    const nav = navigator as unknown as { share?: (d: { title: string; text: string; url: string }) => Promise<void> }
+    if (typeof nav.share === "function") {
+      try {
+        await nav.share({ title: "Pay me with Aero", text: `Send ${valid ? `$${n}` : "money"} to @${myName}`, url: link })
+        return
+      } catch {
+        /* dismissed — fall through to copy */
+      }
+    }
+    copy()
+  }
+
+  return (
+    <div className="mx-auto max-w-2xl rounded-[20px] border border-neutral-200 bg-white p-6 sm:p-8">
+      <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">Request money</p>
+      {!myName ? (
+        <div className="mt-4 rounded-2xl bg-[#f7f7f7] p-5 text-center">
+          <p className="text-[15px] font-medium text-neutral-900">You need a handle first</p>
+          <p className="mt-1 text-sm text-neutral-500">Payment links point at your @username.</p>
+          <Button onClick={() => go("send")} className="mt-4 h-11 rounded-full bg-aero-800 px-6 font-medium text-white hover:bg-aero-900">
+            Claim a handle
+          </Button>
+        </div>
+      ) : (
+        <>
+          <div className="mt-4">
+            <Field label="Amount (tUSDC, optional)">
+              <Input
+                value={amount}
+                onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, "").slice(0, 12))}
+                inputMode="decimal"
+                placeholder="25.00"
+                className="h-12 rounded-2xl border-neutral-200 text-base tabular-nums placeholder:text-neutral-400"
+              />
+            </Field>
+          </div>
+          <div className="mt-5 rounded-2xl bg-[#f7f7f7] p-5 text-center">
+            <div className="flex justify-center rounded-2xl bg-white p-4">
+              <QRCodeSVG value={link} size={168} bgColor="#ffffff" fgColor="#171717" level="M" />
+            </div>
+            <p className="mt-4 truncate font-mono text-sm text-neutral-700">{link}</p>
+            <div className="mt-4 flex justify-center gap-2.5">
+              <Button onClick={copy} variant="outline" className="h-11 rounded-full border-neutral-300 px-6 font-medium">
+                {copied ? (
+                  <span className="inline-flex items-center gap-1.5"><Check className="size-4" strokeWidth={3} /> Copied</span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5"><Copy className="size-4" /> Copy link</span>
+                )}
+              </Button>
+              <Button onClick={share} className="h-11 rounded-full bg-aero-800 px-6 font-medium text-white hover:bg-aero-900">
+                <Share className="size-4" /> Share
+              </Button>
+            </div>
+          </div>
+          <p className="mt-4 text-center text-[13px] text-neutral-400">
+            Anyone opening the link can pay @{myName} — no app needed to view it.
+          </p>
+        </>
+      )}
     </div>
   )
 }

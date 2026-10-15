@@ -6,6 +6,7 @@ import { useDisconnect, useReadContract } from "wagmi"
 import {
   ArrowUpRight,
   Check,
+  HandCoins,
   LayoutGrid,
   LogOut,
   ReceiptText,
@@ -21,7 +22,7 @@ import { namesAbi, usdcAbi, vaultAbi } from "@/lib/contracts"
 import type { Address } from "viem"
 import { CONTRACTS, FUJI_AVAX_FAUCET, formatUsdc } from "@/lib/testnet"
 import { readActivity, type ActivityItem } from "@/lib/testnet-activity"
-import { fetchOnchainActivity, hasOnchainSends, type ChainActivity } from "@/lib/onchain-activity"
+import { fetchOnchainActivity, fetchMemos, hasOnchainSends, type ChainActivity } from "@/lib/onchain-activity"
 import type { TestnetTab } from "@/app/testnet/page"
 
 /* ---------------------------------- login --------------------------------- */
@@ -129,6 +130,7 @@ export function LoginView() {
 const NAV = [
   { id: "overview", label: "Overview", icon: LayoutGrid },
   { id: "send", label: "Send", icon: Send },
+  { id: "request", label: "Request", icon: HandCoins },
   { id: "pay", label: "Pay", icon: ReceiptText },
   { id: "earn", label: "Earn", icon: Sprout },
 ] as const
@@ -224,7 +226,7 @@ export function MobileTop() {
 
 export function MobileTabs({ tab, setTab }: { tab: TestnetTab; setTab: (t: TestnetTab) => void }) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-neutral-200 bg-white/92 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-neutral-200 bg-white/92 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
       {NAV.map((n) => (
         <button
           key={n.id}
@@ -368,6 +370,7 @@ export function Overview({
 }) {
   const [activity] = useState(readActivity)
   const [chain, setChain] = useState<ChainActivity[] | null>(null)
+  const [memos, setMemos] = useState<Map<string, string>>(new Map())
   useEffect(() => {
     let live = true
     fetchOnchainActivity(address, CONTRACTS)
@@ -377,6 +380,11 @@ export function Overview({
       .catch(() => {
         if (live) setChain([])
       })
+    fetchMemos(address, CONTRACTS.pay)
+      .then((m) => {
+        if (live) setMemos(m)
+      })
+      .catch(() => {})
     return () => {
       live = false
     }
@@ -389,8 +397,10 @@ export function Overview({
         merged.push({ label: c.label, amount: c.amount, hash: c.hash, ts: c.ts })
       }
     }
-    return merged.sort((a, b) => b.ts - a.ts)
-  }, [activity, chain])
+    return merged
+      .map((a) => ({ ...a, memo: a.memo ?? memos.get(a.hash.toLowerCase()) }))
+      .sort((a, b) => b.ts - a.ts)
+  }, [activity, chain, memos])
   const { data: myName } = useReadContract({ address: CONTRACTS.names, abi: namesAbi, functionName: "resolveUsername", args: [address] })
   const { data: usdc } = useReadContract({ address: CONTRACTS.usdc, abi: usdcAbi, functionName: "balanceOf", args: [address] })
   const { data: shares } = useReadContract({ address: CONTRACTS.vault, abi: vaultAbi, functionName: "balanceOf", args: [address] })

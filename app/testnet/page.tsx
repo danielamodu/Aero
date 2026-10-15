@@ -4,11 +4,11 @@ import { useState, type ReactNode } from "react"
 import { useAccount, useSwitchChain } from "wagmi"
 import { Button } from "@/components/ui/button"
 import { LoginView, MobileTabs, MobileTop, Overview, Sidebar } from "@/components/testnet/shell"
-import { EarnTab, FaucetBar, PayTab, SendTab } from "@/components/testnet/views"
+import { EarnTab, FaucetBar, PayTab, RequestTab, SendTab } from "@/components/testnet/views"
 import { reownConfigured } from "@/components/testnet/providers"
 import { contractsConfigured, FUJI_CHAIN_ID, missingContractEnvs } from "@/lib/testnet"
 
-export type TestnetTab = "overview" | "send" | "pay" | "earn"
+export type TestnetTab = "overview" | "send" | "request" | "pay" | "earn"
 
 function SetupNotice({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -110,6 +110,7 @@ function TestnetConnected({
         <main className="mx-auto w-full max-w-3xl px-5 pt-6 pb-28 lg:pb-16">
           {tab === "overview" && <Overview address={address} go={setTab} />}
           {tab === "send" && <SendTab address={address} initialTo={prefill.to} initialAmount={prefill.amount} />}
+          {tab === "request" && <RequestTab address={address} go={setTab} />}
           {tab === "pay" && <PayTab address={address} />}
           {tab === "earn" && <EarnTab address={address} />}
           {tab !== "overview" && (

@@ -13,6 +13,7 @@ const WINDOW_BLOCKS = BigInt(1500000)
 const TRANSFER = parseAbiItem("event Transfer(address indexed from, address indexed to, uint256 value)")
 const DEPOSIT = parseAbiItem("event Deposit(address indexed user, uint256 assets, uint256 shares)")
 const WITHDRAW = parseAbiItem("event Withdraw(address indexed user, uint256 assets, uint256 shares)")
+const PAID = parseAbiItem("event Paid(address indexed from, address indexed to, address indexed token, uint256 amount, string memo, uint256 timestamp)")
 
 export type ChainActivity = {
   hash: string
@@ -96,7 +97,22 @@ export async function fetchOnchainActivity(
     .filter((i) => (seen.has(i.hash.toLowerCase()) ? false : (seen.add(i.hash.toLowerCase()), true)))
 }
 
-/** Has this address ever sent tUSDC (or interacted with the vault)? Cheap first-send check. */
+/** Payment memos by tx hash — follows you across devices (unlike local notes). */
+export async function fetchMemos(user: Address, pay: Address): Promise<Map<string, string>> {
+  const memos = new Map<string, string>()
+  if (pay === "0x0000000000000000000000000000000000000000") return memos
+  try {
+    const latest = await client.getBlockNumber()
+    const fromBlock = latest > WINDOW_BLOCKS ? latest - WINDOW_BLOCKS : BigInt(0)
+    const logs = await client.getLogs({ address: pay, event: PAID, args: { from: user }, fromBlock, toBlock: latest })
+    for (const l of logs) {
+      if (l.args.memo) memos.set(l.transactionHash!.toLowerCase(), l.args.memo)
+    }
+  } catch {
+    /* memos are a nicety */
+  }
+  return memos
+}
 export async function hasOnchainSends(user: Address, usdc: Address, vault: Address): Promise<boolean> {
   const latest = await client.getBlockNumber()
   const fromBlock = latest > WINDOW_BLOCKS ? latest - WINDOW_BLOCKS : BigInt(0)
