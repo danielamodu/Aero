@@ -7,28 +7,29 @@ export const FUJI_AVAX_FAUCET = "https://faucet.avax.network"
 
 type Address = `0x${string}`
 
-function envAddress(key: string): Address {
-  const v = ((process.env[key] ?? "") as string).trim()
+function envAddress(value: string | undefined): Address {
+  // NOTE: callers must pass process.env.NEXT_PUBLIC_* literally —
+  // Next.js only inlines statically-written env access into client bundles.
+  const v = (value ?? "").trim()
   return (v.startsWith("0x") && v.length === 42 ? v : zeroAddress) as Address
 }
 
 export const CONTRACTS = {
-  names: envAddress("NEXT_PUBLIC_AERO_NAMES"),
-  usdc: envAddress("NEXT_PUBLIC_TEST_USDC"),
-  vault: envAddress("NEXT_PUBLIC_AERO_VAULT"),
+  names: envAddress(process.env.NEXT_PUBLIC_AERO_NAMES),
+  usdc: envAddress(process.env.NEXT_PUBLIC_TEST_USDC),
+  vault: envAddress(process.env.NEXT_PUBLIC_AERO_VAULT),
 }
 
 export const contractsConfigured =
   CONTRACTS.names !== zeroAddress && CONTRACTS.usdc !== zeroAddress && CONTRACTS.vault !== zeroAddress
 
-const CONTRACT_ENV_KEYS = ["NEXT_PUBLIC_AERO_NAMES", "NEXT_PUBLIC_TEST_USDC", "NEXT_PUBLIC_AERO_VAULT"] as const
-
 /** Names any contract env var that's missing or malformed — shown on the setup screen. */
 export function missingContractEnvs(): string[] {
-  return CONTRACT_ENV_KEYS.filter((k) => {
-    const v = ((process.env[k] ?? "") as string).trim()
-    return !(v.startsWith("0x") && v.length === 42)
-  })
+  const missing: string[] = []
+  if (CONTRACTS.names === zeroAddress) missing.push("NEXT_PUBLIC_AERO_NAMES")
+  if (CONTRACTS.usdc === zeroAddress) missing.push("NEXT_PUBLIC_TEST_USDC")
+  if (CONTRACTS.vault === zeroAddress) missing.push("NEXT_PUBLIC_AERO_VAULT")
+  return missing
 }
 
 export function snowtraceTx(hash: string): string {
