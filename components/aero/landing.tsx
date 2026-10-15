@@ -441,8 +441,10 @@ const INTEGRATIONS: {
   dashed?: boolean
 }[] = [
   { label: "Avalanche", short: "AVAX", size: 72, x: "50%", y: "0%", dx: "-50%", dy: "0%", img: "/partners/avax.png" },
-  { label: "Benqi", short: "B", size: 68, x: "7%", y: "50%", dx: "-50%", dy: "-50%", img: "/partners/benqi.jpg" },
-  { label: "USDC", short: "$", size: 64, x: "93%", y: "50%", dx: "-50%", dy: "-50%", img: "/partners/usdc.png" },
+  { label: "Benqi", short: "B", size: 64, x: "10%", y: "28%", dx: "-50%", dy: "-50%", img: "/partners/benqi.jpg" },
+  { label: "Trader Joe", short: "TJ", size: 64, x: "90%", y: "28%", dx: "-50%", dy: "-50%" },
+  { label: "USDC", short: "$", size: 60, x: "10%", y: "72%", dx: "-50%", dy: "-50%", img: "/partners/usdc.png" },
+  { label: "Warp", short: "W", size: 60, x: "90%", y: "72%", dx: "-50%", dy: "-50%" },
   { label: "More soon", short: "+", size: 56, x: "50%", y: "100%", dx: "-50%", dy: "-100%", dashed: true },
 ]
 
