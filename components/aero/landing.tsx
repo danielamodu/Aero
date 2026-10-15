@@ -318,7 +318,7 @@ function Hero() {
           initial={{ opacity: 0, y: 26 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.08 }}
-          className="mx-auto mt-6 max-w-3xl font-editorial text-[clamp(2.9rem,7vw,5.2rem)] leading-[1.04] tracking-[-0.01em] text-balance"
+          className="mx-auto mt-6 max-w-3xl font-semibold text-[clamp(2.9rem,7vw,5.2rem)] leading-[1.04] tracking-[-0.01em] text-balance"
         >
           Money that moves like a message.
         </motion.h1>
@@ -441,7 +441,7 @@ function HowItWorks() {
       <div className="mx-auto max-w-6xl px-5 lg:px-10">
         <motion.div {...fadeUp} className="max-w-2xl">
           <Eyebrow>How it works</Eyebrow>
-          <h2 className="mt-4 font-editorial text-[clamp(1.9rem,4vw,3.1rem)] leading-[1.08] tracking-[-0.01em] text-neutral-900 text-balance">
+          <h2 className="mt-4 font-semibold text-[clamp(1.9rem,4vw,3.1rem)] leading-[1.08] tracking-[-0.01em] text-neutral-900 text-balance">
             Three steps. Zero crypto homework.
           </h2>
         </motion.div>
@@ -554,7 +554,7 @@ function Integrations() {
           ))}
           <div className="absolute inset-0 flex flex-col items-center justify-center px-8 text-center">
             <Eyebrow>Plugged in</Eyebrow>
-            <h2 className="mt-4 max-w-md font-editorial text-[clamp(1.9rem,4vw,3rem)] leading-[1.08] text-neutral-900 text-balance">
+            <h2 className="mt-4 max-w-md font-semibold text-[clamp(1.9rem,4vw,3rem)] leading-[1.08] text-neutral-900 text-balance">
               Riding rails you already trust.
             </h2>
             <p className="mx-auto mt-3 max-w-sm text-[15px] leading-relaxed text-neutral-500">
@@ -571,7 +571,7 @@ function Integrations() {
         <div className="md:hidden">
           <div className="mx-auto max-w-xl text-center">
             <Eyebrow>Plugged in</Eyebrow>
-            <h2 className="mt-4 font-editorial text-4xl leading-[1.08] text-neutral-900 text-balance">
+            <h2 className="mt-4 font-semibold text-4xl leading-[1.08] text-neutral-900 text-balance">
               Riding rails you already trust.
             </h2>
           </div>
@@ -655,7 +655,7 @@ function Bento() {
         <div className="grid gap-8 lg:grid-cols-[1fr_340px] lg:items-end">
           <motion.div {...fadeUp}>
             <Eyebrow>Features</Eyebrow>
-            <h2 className="mt-4 max-w-xl font-editorial text-[clamp(1.9rem,4vw,3.1rem)] leading-[1.08] tracking-[-0.01em] text-neutral-900 text-balance">
+            <h2 className="mt-4 max-w-xl font-semibold text-[clamp(1.9rem,4vw,3.1rem)] leading-[1.08] tracking-[-0.01em] text-neutral-900 text-balance">
               Everything money should do, in one balance.
             </h2>
           </motion.div>
@@ -838,7 +838,7 @@ function CTA() {
           <div className="flex justify-center">
             <BrandWordmark tone="light" height={64} />
           </div>
-          <h2 className="mt-8 font-editorial text-[clamp(2.2rem,5vw,3.8rem)] leading-[1.05] text-balance">
+          <h2 className="mt-8 font-semibold text-[clamp(2.2rem,5vw,3.8rem)] leading-[1.05] text-balance">
             Claim your @username
           </h2>
           <p className="mx-auto mt-4 max-w-md text-lg text-white/65">
@@ -964,7 +964,7 @@ function FAQ() {
         <div className="lg:sticky lg:top-28 lg:self-start">
           <motion.div {...fadeUp}>
             <Eyebrow>Questions</Eyebrow>
-            <h2 className="mt-4 font-editorial text-[clamp(1.9rem,4vw,3rem)] leading-[1.08] text-neutral-900 text-balance">
+            <h2 className="mt-4 font-semibold text-[clamp(1.9rem,4vw,3rem)] leading-[1.08] text-neutral-900 text-balance">
               Asked often, answered plainly.
             </h2>
             <p className="mt-4 max-w-sm leading-relaxed text-neutral-600">

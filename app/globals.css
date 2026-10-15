@@ -177,11 +177,6 @@
   animation: aero-marquee 32s linear infinite;
 }
 
-/* Display serif — headlines ONLY. Body and UI copy always inherit Geist. */
-@utility font-editorial {
-  font-family: var(--font-display), Georgia, serif;
-}
-
 @utility animate-aero-float {
   animation: aero-float 7s ease-in-out infinite;
 }
