@@ -7,28 +7,21 @@ declare global {
     plausible?: (event: string) => void
   }
 }
-import {
-  AnimatePresence,
-  motion,
-  useInView,
-  useReducedMotion,
-  useScroll,
-  useTransform,
-  type MotionValue,
-} from "motion/react"
+import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from "motion/react"
 import {
   ArrowRight,
   ArrowUpRight,
+  AtSign,
   Check,
+  FlaskConical,
   Menu,
+  ReceiptText,
+  Route,
   Send,
-  ShieldCheck,
   Sprout,
-  Wallet,
-  Zap,
+  X,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import {
   Accordion,
@@ -38,8 +31,7 @@ import {
 } from "@/components/ui/accordion"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
-import { AeroMark } from "./logo"
-import { BrandIcon, BrandLockup, BrandWordmark } from "./brand-logo"
+import { BrandLockup, BrandWordmark } from "@/components/aero/brand-logo"
 
 /* ---------------------------------- atoms --------------------------------- */
 
@@ -48,8 +40,6 @@ const fadeUp = {
   whileInView: { opacity: 1, y: 0 },
   viewport: { once: true, margin: "-70px" },
 } as const
-
-const SOFT = "shadow-[0_12px_40px_-16px_rgba(11,0,78,0.25)]"
 
 /** Smooth-scroll to a section without putting the hash in the URL. Falls back to home when the target isn't on this page. */
 function goTo(e: { preventDefault: () => void }, id: string) {
@@ -63,67 +53,58 @@ function goTo(e: { preventDefault: () => void }, id: string) {
   }
 }
 
-function Kicker({ children, tone = "dark" }: { children: ReactNode; tone?: "dark" | "light" }) {
+function Eyebrow({ children, tone = "blue" }: { children: ReactNode; tone?: "blue" | "white" }) {
   return (
-    <p className={cn("text-[13px] font-semibold tracking-[0.14em] uppercase", tone === "dark" ? "text-neutral-500" : "text-white/55")}>
-      {children}
-    </p>
-  )
-}
-
-function SectionHead({
-  eyebrow,
-  title,
-  body,
-  tone = "dark",
-}: {
-  eyebrow: string
-  title: ReactNode
-  body?: string
-  tone?: "dark" | "light"
-}) {
-  return (
-    <motion.div {...fadeUp} className="max-w-2xl">
-      <Kicker tone={tone}>{eyebrow}</Kicker>
-      <h2 className={cn("mt-4 text-4xl font-medium tracking-[-0.02em] text-balance sm:text-5xl", tone === "dark" ? "text-neutral-900" : "text-white")}>
-        {title}
-      </h2>
-      {body && (
-        <p className={cn("mt-4 text-lg leading-relaxed", tone === "dark" ? "text-neutral-600" : "text-white/65")}>
-          {body}
-        </p>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.14em] uppercase",
+        tone === "blue" ? "bg-aero-50 text-aero-800" : "border border-white/25 bg-white/10 text-white"
       )}
-    </motion.div>
+    >
+      <span className={cn("size-1.5 rounded-full", tone === "blue" ? "bg-aero-800" : "bg-white")} />
+      {children}
+    </span>
   )
 }
 
-function useCountUp(target: number, active: boolean, duration = 1600) {
-  const [value, setValue] = useState(0)
+function useWaitlistCount(): number | null {
+  const [count, setCount] = useState<number | null>(null)
   useEffect(() => {
-    if (!active) return
-    let raf = 0
-    const start = performance.now()
-    const tick = (now: number) => {
-      const p = Math.min(1, (now - start) / duration)
-      setValue(target * (1 - Math.pow(1 - p, 3)))
-      if (p < 1) raf = requestAnimationFrame(tick)
+    let live = true
+    fetch("/api/waitlist/count")
+      .then((r) => r.json())
+      .then((d) => {
+        if (live && d.ok && typeof d.count === "number") setCount(d.count)
+      })
+      .catch(() => {})
+    return () => {
+      live = false
     }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [active, target, duration])
-  return value
+  }, [])
+  return count
 }
 
 /* --------------------------- scroll word reveal ---------------------------- */
 
-function Word({ progress, range, children }: { progress: MotionValue<number>; range: [number, number]; children: ReactNode }) {
-  const opacity = useTransform(progress, range, [0.12, 1])
+function Word({
+  progress,
+  range,
+  children,
+}: {
+  progress: MotionValue<number>
+  range: [number, number]
+  children: ReactNode
+}) {
+  const opacity = useTransform(progress, range, [0.13, 1])
   return <motion.span style={{ opacity }}>{children} </motion.span>
 }
 
 function RevealWords({ text, className }: { text: string; className?: string }) {
   const ref = useRef<HTMLParagraphElement>(null)
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start 0.85", "end 0.45"] })
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start 0.85", "end 0.45"],
+  })
   const words = text.split(" ")
   return (
     <p ref={ref} className={className}>
@@ -155,26 +136,25 @@ function SiteNav() {
     <header className="fixed inset-x-0 top-0 z-50 px-3 sm:px-5">
       <div
         className={cn(
-          "mx-auto flex h-16 w-full max-w-[110rem] items-center justify-between gap-3 px-4 transition-all duration-300 sm:px-5",
+          "mx-auto flex h-14 w-full max-w-3xl items-center justify-between gap-3 px-4 transition-all duration-300 sm:px-5",
           scrolled
             ? "mt-3 rounded-full border border-neutral-200/80 bg-white/70 shadow-[0_12px_40px_-16px_rgba(11,0,78,0.25)] backdrop-blur-xl"
-            : "mt-0 rounded-none border border-transparent bg-transparent"
+            : "mt-0 border border-transparent bg-transparent"
         )}
       >
         <a href="#top" aria-label="Aero home" onClick={(e) => goTo(e, "top")}>
-          <BrandLockup tone="dark" height={28} />
+          <BrandLockup tone="dark" height={24} />
         </a>
-        <nav className="hidden items-center gap-8 text-[15px] font-medium text-neutral-600 md:flex">
-          <a href="#send" onClick={(e) => goTo(e, "send")} className="transition hover:text-neutral-950">Send</a>
-          <a href="#pay" onClick={(e) => goTo(e, "pay")} className="transition hover:text-neutral-950">Pay</a>
-          <a href="#earn" onClick={(e) => goTo(e, "earn")} className="transition hover:text-neutral-950">Earn</a>
-          <a href="#network" onClick={(e) => goTo(e, "network")} className="transition hover:text-neutral-950">Network</a>
+        <nav className="hidden items-center gap-7 text-sm font-medium text-neutral-600 md:flex">
+          <a href="#how" onClick={(e) => goTo(e, "how")} className="transition hover:text-neutral-950">How it works</a>
+          <a href="#features" onClick={(e) => goTo(e, "features")} className="transition hover:text-neutral-950">Features</a>
+          <a href="#faq" onClick={(e) => goTo(e, "faq")} className="transition hover:text-neutral-950">FAQ</a>
         </nav>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" className="hidden rounded-full font-medium text-neutral-700 hover:bg-neutral-100 sm:inline-flex">
-            Log in
-          </Button>
-          <Button onClick={(e) => goTo(e, "waitlist")} className="rounded-full bg-aero-800 font-medium text-white hover:bg-aero-900">
+          <Button
+            onClick={(e) => goTo(e, "waitlist")}
+            className="h-10 rounded-full bg-aero-800 px-5 text-sm font-medium text-white hover:bg-aero-900"
+          >
             Get early access
             <ArrowUpRight className="size-4 transition-transform duration-300 group-hover/button:translate-x-0.5 group-hover/button:-translate-y-0.5" />
           </Button>
@@ -183,7 +163,7 @@ function SiteNav() {
             variant="ghost"
             aria-label="Open menu"
             onClick={() => setMenuOpen(true)}
-            className="h-11 w-11 rounded-full text-neutral-900 hover:bg-neutral-100 md:hidden"
+            className="h-10 w-10 rounded-full text-neutral-900 hover:bg-neutral-100 md:hidden"
           >
             <Menu className="size-5" />
           </Button>
@@ -193,10 +173,9 @@ function SiteNav() {
             <SheetTitle className="sr-only">Menu</SheetTitle>
             <div className="mt-10 flex flex-col gap-1">
               {[
-                ["Send", "send"],
-                ["Pay", "pay"],
-                ["Earn", "earn"],
-                ["Network", "network"],
+                ["How it works", "how"],
+                ["Features", "features"],
+                ["FAQ", "faq"],
               ].map(([label, id]) => (
                 <a
                   key={id}
@@ -221,259 +200,264 @@ function SiteNav() {
   )
 }
 
-/* ----------------------------------- hero --------------------------------- */
+/* ------------------------------- phone mock ------------------------------- */
 
-function HeroPhone() {
-  const [balance, setBalance] = useState(2480.16)
-  useEffect(() => {
-    const id = setInterval(() => setBalance((b) => b + 0.02 + Math.random() * 0.03), 2000)
-    return () => clearInterval(id)
-  }, [])
+function PhoneShell({ children }: { children: ReactNode }) {
   return (
-    <div className="relative mx-auto w-full max-w-sm">
-      <motion.div
-        initial={{ opacity: 0, y: 28 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.65, delay: 0.3 }}
-        className={cn("animate-aero-float relative z-10 rounded-[24px] border border-neutral-200 bg-white p-6", SOFT)}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <BrandIcon className="size-8 rounded-lg text-aero-800" />
-            <div>
-              <p className="text-[15px] font-semibold text-neutral-900">@you</p>
-              <p className="text-xs text-neutral-500">USDC · Avalanche</p>
-            </div>
-          </div>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
-            <span className="relative flex size-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
-              <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />
-            </span>
-            Earning 5.24%
+    <div className="w-[250px] shrink-0 rounded-[2.4rem] border border-white/25 bg-white/95 p-2 shadow-[0_30px_60px_rgba(0,0,0,0.25)] backdrop-blur sm:w-[270px]">
+      <div className="overflow-hidden rounded-[1.9rem] bg-white">
+        <div className="flex items-center justify-between px-5 pt-3">
+          <span className="font-mono text-[10px] font-bold text-neutral-900">9:41</span>
+          <span className="h-4 w-16 rounded-full bg-neutral-900" />
+          <span className="flex gap-1">
+            <span className="size-1 rounded-full bg-neutral-900" />
+            <span className="size-1 rounded-full bg-neutral-900" />
+            <span className="size-1 rounded-full bg-neutral-300" />
           </span>
         </div>
-        <p className="mt-7 text-[13px] font-medium tracking-wide text-neutral-500">Balance</p>
-        <p className="mt-1 text-[44px] leading-none font-medium tracking-tight text-neutral-900 tabular-nums">
-          ${balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </p>
-        <p className="mt-2 text-[13px] text-neutral-500">+$3.41 earned this week, automatically</p>
-        <div className="mt-5 grid grid-cols-2 gap-2.5">
-          <Button className="h-11 rounded-full bg-aero-800 font-medium text-white hover:bg-aero-900">
-            <Send className="size-4" /> Send
-          </Button>
-          <Button variant="outline" className="h-11 rounded-full border-neutral-200 font-medium text-neutral-900 hover:bg-neutral-50">
-            <Wallet className="size-4" /> Pay bill
-          </Button>
-        </div>
-        <div className="mt-5 border-t border-neutral-100 pt-3 text-[13px]">
-          {[
-            ["You → @maya", "$45.00 · settled"],
-            ["@leo → You", "$120.00 · settled"],
-          ].map(([a, b]) => (
-            <div key={a} className="flex items-center justify-between py-1">
-              <span className="font-medium text-neutral-700">{a}</span>
-              <span className="text-neutral-400 tabular-nums">{b}</span>
-            </div>
-          ))}
-        </div>
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, x: 32 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.6, delay: 0.55 }}
-        className={cn("absolute -right-3 -bottom-10 z-20 w-60 rounded-2xl border border-neutral-200 bg-white p-3.5 sm:-right-8", SOFT)}
-      >
-        <div className="flex items-center gap-2.5">
-          <span className="flex size-8 items-center justify-center rounded-full bg-emerald-500 text-white">
-            <Check className="size-4" strokeWidth={3} />
-          </span>
-          <div>
-            <p className="text-sm font-semibold text-neutral-900">Sent to @maya</p>
-            <p className="text-xs text-neutral-500 tabular-nums">$45.00 · 0.8s</p>
-          </div>
-        </div>
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, x: -32 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.6, delay: 0.7 }}
-        className={cn("absolute -top-8 -left-3 z-20 w-60 rounded-2xl border border-neutral-200 bg-white p-3.5 sm:-left-8", SOFT)}
-      >
-        <div className="flex items-center gap-2.5">
-          <span className="flex size-8 items-center justify-center rounded-full bg-aero-50 text-aero-800">
-            <Sprout className="size-4" />
-          </span>
-          <div>
-            <p className="text-sm font-semibold text-neutral-900">Yield routed</p>
-            <p className="text-xs text-neutral-500">Benqi → Trader Joe · best rate</p>
-          </div>
-        </div>
-      </motion.div>
+        <div className="px-4 pt-3 pb-5">{children}</div>
+      </div>
     </div>
   )
 }
 
-function Hero() {
+function PhoneHome() {
   return (
-    <section id="top" className="flex min-h-svh items-center bg-white pt-24 pb-20">
-      <div className="mx-auto grid w-full max-w-[110rem] items-center gap-10 px-5 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16 lg:px-10">
-        <div>
-          <motion.h1
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.08 }}
-            className="mt-6 max-w-3xl text-[clamp(2.9rem,6.2vw,5.6rem)] leading-[1.02] font-medium tracking-[-0.025em] text-neutral-900 text-balance"
-          >
-            Money that moves like a{" "}
-            <span className="inline-flex items-center gap-[0.1em] text-aero-800">
-              message
-              <AeroMark className="size-[0.62em]" />
-            </span>
-            .
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.18 }}
-            className="mt-6 max-w-xl text-lg leading-relaxed text-neutral-600"
-          >
-            Aero is dollars on Avalanche. Send to any @username in under a second, pay real
-            bills from the same balance, and let the rest earn yield on its own.
-          </motion.p>
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.28 }}
-            className="mt-8 flex flex-wrap items-center gap-3"
-          >
-            <Button size="lg" onClick={(e) => goTo(e, "waitlist")} className="h-12 rounded-full bg-aero-800 px-7 text-[15px] font-medium text-white hover:bg-aero-900">
-              Claim your @username
-              <ArrowRight className="size-4 transition-transform duration-300 group-hover/button:translate-x-1" />
-            </Button>
-            <Button size="lg" variant="outline" onClick={(e) => goTo(e, "features")} className="h-12 rounded-full border-neutral-300 px-7 text-[15px] font-medium text-neutral-900 hover:bg-neutral-50">
-              See how it works
-            </Button>
-          </motion.div>
-          <motion.dl
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.42 }}
-            className="mt-12 grid max-w-xl grid-cols-3 gap-6 border-t border-neutral-200 pt-6"
-          >
-            {[
-              ["<1s", "Settlement time"],
-              ["$0", "Gas fees to think about"],
-              ["5.31%", "Best APY, right now"],
-            ].map(([v, l]) => (
-              <div key={l}>
-                <dt className="sr-only">{l}</dt>
-                <dd className="text-[22px] font-medium tracking-tight text-neutral-900 tabular-nums sm:text-[26px]">{v}</dd>
-                <dd className="mt-1 text-[13px] text-neutral-500">{l}</dd>
-              </div>
-            ))}
-          </motion.dl>
-        </div>
-        <HeroPhone />
+    <PhoneShell>
+      <p className="text-[11px] font-semibold text-neutral-900">@you</p>
+      <p className="mt-0.5 font-mono text-[26px] leading-none font-medium tracking-tight text-neutral-900 tabular-nums">
+        $2,480.42
+      </p>
+      <p className="mt-1 text-[10px] font-medium text-emerald-600">+$3.41 this week · automatic</p>
+      <div className="mt-3 grid grid-cols-2 gap-1.5">
+        <span className="rounded-full bg-aero-800 py-2 text-center text-[11px] font-semibold text-white">Send</span>
+        <span className="rounded-full border border-neutral-200 py-2 text-center text-[11px] font-semibold text-neutral-900">Pay bill</span>
       </div>
-    </section>
-  )
-}
-
-/* --------------------------------- ticker --------------------------------- */
-
-const TICKER = [
-  "@priya → @marcus · $88.00 · 0.7s",
-  "@you earned +$0.14 in your sleep",
-  "@cafe-luna got paid $212.40",
-  "Best route: Trader Joe 5.31%",
-  "@sofia → @ben · $25.00 · 0.6s",
-  "@landlord got rent $1,400.00",
-]
-
-function Ticker() {
-  const reduce = useReducedMotion()
-  return (
-    <div className="overflow-hidden border-y border-neutral-200 bg-white py-3 text-neutral-400">
-      <div
-        className={cn("flex w-max items-center gap-10 pr-10 text-xs whitespace-nowrap tabular-nums", !reduce && "animate-aero-marquee")}
-        style={reduce ? undefined : { animationDuration: "48s" }}
-      >
-        {[...TICKER, ...TICKER].map((t, i) => (
-          <span key={i} className="inline-flex items-center gap-10">
-            {t}
-            <AeroMark className="size-3 text-aero-300" />
-          </span>
+      <div className="mt-3 space-y-1.5 border-t border-neutral-100 pt-2.5 text-[10px]">
+        {[
+          ["You → @maya", "$45.00"],
+          ["@leo → You", "$120.00"],
+          ["Yield routed", "+$0.14"],
+        ].map(([a, b]) => (
+          <div key={a} className="flex items-center justify-between">
+            <span className="font-medium text-neutral-700">{a}</span>
+            <span className="font-mono text-neutral-500 tabular-nums">{b}</span>
+          </div>
         ))}
       </div>
-    </div>
+    </PhoneShell>
   )
 }
 
-/* -------------------------------- manifesto ------------------------------- */
-
-function Manifesto() {
+function PhoneEarn() {
   return (
-    <section className="flex min-h-[80svh] items-center bg-[#f7f7f7] py-16 sm:py-24">
-      <div className="mx-auto w-full max-w-[110rem] px-5 lg:px-10">
-        <Kicker>Why Aero exists</Kicker>
-        <RevealWords
-          className="mt-6 max-w-5xl text-3xl leading-[1.18] font-medium tracking-[-0.02em] text-neutral-900 text-balance sm:text-5xl"
-          text="No wallet addresses. No gas fees to decode. No chains to switch. Just money that arrives in under a second — and quietly grows while you sleep."
-        />
-        <motion.p {...fadeUp} className="mt-8 font-mono text-[13px] text-neutral-400">
-          {"// 80+ Avalanche L1s work underneath via Warp Messaging. You'll never see them."}
+    <PhoneShell>
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+        <span className="size-1 rounded-full bg-emerald-500" /> Earning 5.24%
+      </span>
+      <p className="mt-2 font-mono text-[26px] leading-none font-medium tracking-tight text-neutral-900 tabular-nums">
+        $184.27
+      </p>
+      <p className="mt-1 text-[10px] text-neutral-400">earned to date</p>
+      <div className="mt-3 flex h-16 items-end gap-1">
+        {[35, 45, 40, 55, 50, 65, 60, 75, 70, 88].map((h, i) => (
+          <span
+            key={i}
+            style={{ height: `${h}%` }}
+            className={cn("flex-1 rounded-sm", i >= 8 ? "bg-aero-800" : "bg-aero-100")}
+          />
+        ))}
+      </div>
+      <div className="mt-3 space-y-1.5 border-t border-neutral-100 pt-2.5 text-[10px]">
+        {[
+          ["Trader Joe", "5.31%"],
+          ["Benqi", "4.92%"],
+        ].map(([a, b]) => (
+          <div key={a} className="flex items-center justify-between">
+            <span className="font-medium text-neutral-700">{a}</span>
+            <span className="font-mono font-bold text-emerald-600 tabular-nums">{b}</span>
+          </div>
+        ))}
+      </div>
+    </PhoneShell>
+  )
+}
+
+/* ----------------------------------- hero --------------------------------- */
+
+function Hero() {
+  const [email, setEmail] = useState("")
+  const count = useWaitlistCount()
+  const reduce = useReducedMotion()
+
+  const capture = (e: FormEvent) => {
+    e.preventDefault()
+    try {
+      if (email.trim()) window.localStorage.setItem("aero_email_prefill", email.trim())
+    } catch {
+      /* ignore */
+    }
+    goTo(e, "waitlist")
+  }
+
+  return (
+    <section id="top" className="relative overflow-hidden bg-aero-800 pt-32 text-white">
+      <div aria-hidden className="pointer-events-none absolute inset-0">
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,#0B004E_0%,#1800AD_55%,#3D2BE0_130%)]" />
+        <div className="absolute -top-24 left-[8%] h-72 w-[480px] rounded-full bg-white/15 blur-3xl" />
+        <div className="absolute top-24 right-[4%] h-56 w-[380px] rounded-full bg-white/10 blur-3xl" />
+        <div className="absolute top-[46%] left-[30%] h-40 w-[520px] rounded-full bg-white/[0.07] blur-3xl" />
+      </div>
+
+      <div className="relative mx-auto max-w-4xl px-5 text-center">
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
+          <Eyebrow tone="white">Built on Avalanche</Eyebrow>
+        </motion.div>
+        <motion.h1
+          initial={{ opacity: 0, y: 26 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.08 }}
+          className="mx-auto mt-6 max-w-3xl font-display text-[clamp(2.9rem,7vw,5.2rem)] leading-[1.04] tracking-[-0.01em] text-balance"
+        >
+          Money that moves like a message.
+        </motion.h1>
+        <motion.p
+          initial={{ opacity: 0, y: 26 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.18 }}
+          className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-white/70"
+        >
+          Send dollars to any @username in under a second, pay real bills from the same
+          balance, and let the rest earn while you sleep.
         </motion.p>
+        <motion.form
+          initial={{ opacity: 0, y: 26 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.28 }}
+          onSubmit={capture}
+          className="mx-auto mt-8 flex max-w-md flex-col gap-2.5 sm:flex-row"
+        >
+          <Input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@email.com"
+            aria-label="Email address"
+            type="email"
+            className="h-13 flex-1 rounded-full border-white/25 bg-white/10 px-5 text-base text-white placeholder:text-white/40"
+          />
+          <Button type="submit" className="h-13 shrink-0 rounded-full bg-white px-7 text-[15px] font-medium text-aero-900 hover:bg-aero-50">
+            Get early access <ArrowRight className="size-4" />
+          </Button>
+        </motion.form>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.42 }}
+          className="mt-5 flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 font-mono text-xs text-white/55 tabular-nums"
+        >
+          <span className="inline-flex items-center gap-1.5">
+            <span className="size-1.5 rounded-full bg-emerald-300" />
+            {count === null ? "Join the waitlist" : `${count.toLocaleString()} on the waitlist`}
+          </span>
+          <span>&lt;1s finality</span>
+          <span>$0 gas confusion</span>
+        </motion.div>
+
+        <div className="mt-14 flex items-end justify-center gap-5 sm:gap-8">
+          <motion.div
+            initial={{ opacity: 0, y: 60, rotate: -7 }}
+            animate={{ opacity: 1, y: 0, rotate: -5 }}
+            transition={{ duration: 0.8, delay: 0.35 }}
+            className={cn(!reduce && "animate-aero-float")}
+          >
+            <PhoneHome />
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 60, rotate: 7 }}
+            animate={{ opacity: 1, y: 0, rotate: 4 }}
+            transition={{ duration: 0.8, delay: 0.5 }}
+            className={cn("hidden sm:block", !reduce && "animate-aero-float")}
+            style={{ animationDelay: "1.4s" }}
+          >
+            <PhoneEarn />
+          </motion.div>
+        </div>
+      </div>
+      <div className="h-10 bg-white [border-radius:2rem_2rem_0_0] sm:h-14" />
+    </section>
+  )
+}
+
+/* --------------------------------- intro ---------------------------------- */
+
+function Intro() {
+  return (
+    <section className="bg-white py-20 sm:py-28">
+      <div className="mx-auto grid max-w-6xl gap-8 px-5 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16 lg:px-10">
+        <motion.div {...fadeUp}>
+          <Eyebrow>Why Aero exists</Eyebrow>
+        </motion.div>
+        <div>
+          <RevealWords
+            className="text-2xl leading-[1.25] font-medium tracking-[-0.015em] text-neutral-900 text-balance sm:text-[2rem]"
+            text="No wallet addresses. No gas fees to decode. No chains to switch. Just money that arrives in under a second — and quietly grows while you sleep."
+          />
+          <motion.p {...fadeUp} className="mt-6 font-mono text-[13px] text-neutral-400">
+            {"// 80+ Avalanche networks hum underneath. You'll never see them."}
+          </motion.p>
+        </div>
       </div>
     </section>
   )
 }
 
-/* --------------------------------- pillars -------------------------------- */
+/* ------------------------------- how it works ------------------------------ */
 
-const PILLARS = [
+const STEPS = [
   {
-    icon: Send,
-    tag: "Send",
-    title: "Pay people, not addresses",
-    body: "Type @maya, tap send. USDC settles in under a second — no copied strings, no waiting, no wondering if it arrived.",
+    n: "01",
+    title: "Claim your @username",
+    body: "Free, first-come, first-served. It becomes your address, your payment link, and your identity in one.",
+    chip: "@you",
   },
   {
-    icon: Wallet,
-    tag: "Pay",
-    title: "One balance for real life",
-    body: "Rent, utilities, freelancers — paid straight from Aero. The dollars that earn in the morning buy dinner at night.",
+    n: "02",
+    title: "Move money in a tap",
+    body: "Send to any handle or pay any bill. Settlement finalizes on Avalanche in under a second.",
+    chip: "$45.00 → @maya · 0.8s",
   },
   {
-    icon: Sprout,
-    tag: "Earn",
-    title: "Savings that run themselves",
-    body: "An agent routes idle USDC across Benqi and Trader Joe, always chasing the best rate. Withdraw anytime.",
+    n: "03",
+    title: "Let the rest earn",
+    body: "Idle USDC routes across Benqi and Trader Joe for the best live rate. Withdraw anytime.",
+    chip: "+5.31% APY · auto",
   },
 ]
 
-function Pillars() {
+function HowItWorks() {
   return (
-    <section id="features" className="scroll-mt-16 bg-white py-16 sm:py-24">
-      <div className="mx-auto w-full max-w-[110rem] px-5 lg:px-10">
-        <SectionHead
-          eyebrow="What Aero does"
-          title="Send, spend, and grow — from one balance"
-          body="Built for people who want digital dollars that simply work, not for crypto natives."
-        />
+    <section id="how" className="scroll-mt-20 bg-[#f7f7f7] py-20 sm:py-28">
+      <div className="mx-auto max-w-6xl px-5 lg:px-10">
+        <motion.div {...fadeUp} className="max-w-2xl">
+          <Eyebrow>How it works</Eyebrow>
+          <h2 className="mt-4 font-display text-[clamp(1.9rem,4vw,3.1rem)] leading-[1.08] tracking-[-0.01em] text-neutral-900 text-balance">
+            Three steps. Zero crypto homework.
+          </h2>
+        </motion.div>
         <div className="mt-12 grid gap-5 md:grid-cols-3">
-          {PILLARS.map((p, i) => (
-            <motion.div key={p.tag} {...fadeUp} transition={{ duration: 0.5, delay: i * 0.08 }}>
-              <Card className="h-full gap-0 rounded-[20px] border-neutral-200 p-8 transition duration-300 hover:-translate-y-1 hover:border-aero-200 hover:shadow-[0_20px_50px_-20px_rgba(24,0,173,0.25)]">
-                <span className="flex size-11 items-center justify-center rounded-2xl bg-aero-50 text-aero-800">
-                  <p.icon className="size-5" />
-                </span>
-                <p className="mt-6 text-[13px] font-semibold tracking-[0.12em] text-aero-700 uppercase">{p.tag}</p>
-                <h3 className="mt-2 text-[22px] leading-snug font-semibold tracking-tight text-neutral-900">{p.title}</h3>
-                <p className="mt-2.5 leading-relaxed text-neutral-600">{p.body}</p>
-              </Card>
+          {STEPS.map((s, i) => (
+            <motion.div
+              key={s.n}
+              {...fadeUp}
+              transition={{ duration: 0.5, delay: i * 0.08 }}
+              className="group rounded-[20px] border border-neutral-200 bg-white p-7 transition duration-300 hover:-translate-y-1 hover:shadow-[0_20px_50px_-20px_rgba(24,0,173,0.25)]"
+            >
+              <p className="font-mono text-sm font-bold text-aero-800 tabular-nums">{s.n}</p>
+              <h3 className="mt-3 text-[22px] leading-snug font-medium tracking-tight text-neutral-900">{s.title}</h3>
+              <p className="mt-2.5 leading-relaxed text-neutral-600">{s.body}</p>
+              <p className="mt-5 inline-block rounded-full bg-aero-50 px-3.5 py-1.5 font-mono text-xs font-bold text-aero-800 tabular-nums">
+                {s.chip}
+              </p>
             </motion.div>
           ))}
         </div>
@@ -482,326 +466,245 @@ function Pillars() {
   )
 }
 
-/* -------------------------------- send demo ------------------------------- */
+/* ------------------------------ integrations ------------------------------ */
 
-type FeedItem = { to: string; amount: string }
+const INTEGRATIONS = [
+  { label: "Avalanche", short: "AVAX", size: 72, x: "50%", y: "2%", dx: "-50%", dy: "0%" },
+  { label: "Benqi", short: "B", size: 64, x: "13%", y: "24%", dx: "-50%", dy: "-50%" },
+  { label: "Trader Joe", short: "TJ", size: 68, x: "87%", y: "24%", dx: "-50%", dy: "-50%" },
+  { label: "USDC", short: "$", size: 60, x: "24%", y: "70%", dx: "-50%", dy: "-50%" },
+  { label: "Warp", short: "W", size: 60, x: "76%", y: "70%", dx: "-50%", dy: "-50%" },
+  { label: "More soon", short: "+", size: 56, x: "50%", y: "94%", dx: "-50%", dy: "-100%", dashed: true },
+]
 
-function SendDemo() {
-  const [to, setTo] = useState("@maya")
-  const [amount, setAmount] = useState("45.00")
-  const [sending, setSending] = useState(false)
-  const [feed, setFeed] = useState<FeedItem[]>([
-    { to: "@leo", amount: "$120.00" },
-    { to: "@sam", amount: "$12.50" },
-  ])
-  const ref = useRef<HTMLDivElement>(null)
-  const inView = useInView(ref, { once: true, margin: "-70px" })
-
-  const send = () => {
-    if (sending || !to.trim()) return
-    setSending(true)
-    setTimeout(() => {
-      setFeed((f) => [{ to: to.startsWith("@") ? to : `@${to}`, amount: `$${amount || "0.00"}` }, ...f].slice(0, 4))
-      setSending(false)
-    }, 900)
-  }
-
+function Integrations() {
   return (
-    <section id="send" ref={ref} className="flex min-h-svh scroll-mt-16 items-center bg-[#f7f7f7] py-16 sm:py-24">
-      <div className="mx-auto grid w-full max-w-[110rem] items-center gap-10 lg:gap-14 px-5 lg:grid-cols-2 lg:px-10">
-        <SectionHead
-          eyebrow="Send"
-          title="If you can tag someone, you can pay them"
-          body="No address to copy, no network to pick, no gas setting to look up. This demo actually sends — try it."
-        />
-        <motion.div {...fadeUp} transition={{ duration: 0.55, delay: 0.1 }}>
-          <Card className={cn("gap-0 rounded-[24px] border-neutral-200 bg-white p-6 sm:p-8", SOFT)}>
-            <div className="flex items-center justify-between">
-              <p className="text-[17px] font-semibold text-neutral-900">Send USDC</p>
-              <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-600 tabular-nums">Instant · ~0.8s</span>
+    <section className="bg-white py-20 sm:py-28">
+      <div className="mx-auto max-w-6xl px-5 lg:px-10">
+        <div className="relative mx-auto hidden max-w-3xl md:block" style={{ height: 380 }}>
+          {INTEGRATIONS.map((b, i) => (
+            <motion.span
+              key={b.label}
+              initial={{ opacity: 0, scale: 0.7 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.45, delay: i * 0.07 }}
+              title={b.label}
+              style={{ left: b.x, top: b.y, width: b.size, height: b.size, transform: `translate(${b.dx}, ${b.dy})` }}
+              className={cn(
+                "absolute flex items-center justify-center rounded-full text-sm font-bold",
+                b.dashed
+                  ? "border-2 border-dashed border-neutral-300 text-neutral-400"
+                  : "border border-neutral-200 bg-white text-aero-900 shadow-[0_10px_30px_-12px_rgba(11,0,78,0.2)]"
+              )}
+            >
+              {b.short}
+            </motion.span>
+          ))}
+          <div className="absolute inset-0 flex flex-col items-center justify-center px-8 text-center">
+            <Eyebrow>Plugged in</Eyebrow>
+            <h2 className="mt-4 max-w-md font-display text-[clamp(1.9rem,4vw,3rem)] leading-[1.08] text-neutral-900 text-balance">
+              Riding rails you already trust.
+            </h2>
+            <Button
+              onClick={(e) => goTo(e, "waitlist")}
+              className="mt-6 h-11 rounded-full bg-neutral-900 px-6 text-sm font-medium text-white hover:bg-neutral-800"
+            >
+              Get early access <ArrowRight className="size-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="md:hidden">
+          <div className="mx-auto max-w-xl text-center">
+            <Eyebrow>Plugged in</Eyebrow>
+            <h2 className="mt-4 font-display text-4xl leading-[1.08] text-neutral-900 text-balance">
+              Riding rails you already trust.
+            </h2>
+          </div>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            {INTEGRATIONS.map((b) => (
+              <span
+                key={b.label}
+                className={cn(
+                  "flex size-14 items-center justify-center rounded-full text-sm font-bold",
+                  b.dashed
+                    ? "border-2 border-dashed border-neutral-300 text-neutral-400"
+                    : "border border-neutral-200 bg-white text-aero-900 shadow-sm"
+                )}
+              >
+                {b.short}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/* ---------------------------------- bento --------------------------------- */
+
+function MiniSend() {
+  return (
+    <div className="rounded-2xl border border-neutral-200 bg-white p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-neutral-900">
+            You → <span className="text-aero-800">@maya</span>
+          </p>
+          <p className="font-mono text-xs text-neutral-400 tabular-nums">settled in 0.8s</p>
+        </div>
+        <span className="shrink-0 font-mono text-lg font-medium tabular-nums">$45.00</span>
+      </div>
+      <div className="mt-3 h-11 rounded-full bg-aero-800 text-center text-sm leading-11 font-medium text-white">
+        Sent
+      </div>
+    </div>
+  )
+}
+
+function MiniEarnBars() {
+  return (
+    <div className="flex h-20 items-end gap-1.5">
+      {[30, 42, 38, 55, 50, 68, 62, 80, 76, 92].map((h, i) => (
+        <span key={i} style={{ height: `${h}%` }} className={cn("flex-1 rounded-sm", i >= 8 ? "bg-emerald-300" : "bg-white/20")} />
+      ))}
+    </div>
+  )
+}
+
+const BENTO_SMALL = [
+  {
+    icon: ReceiptText,
+    label: "Pay",
+    title: "Bills pay themselves-ish",
+    body: "Rent, power, freelancers — straight from your balance. The payee never touches crypto.",
+  },
+  {
+    icon: Route,
+    label: "Routing",
+    title: "Always the best rate",
+    body: "An agent watches Benqi and Trader Joe around the clock and moves funds when it matters.",
+  },
+  {
+    icon: AtSign,
+    label: "Usernames",
+    title: "Your money's @handle",
+    body: "Claim it free, keep it forever. No addresses to copy, ever.",
+  },
+  {
+    icon: FlaskConical,
+    label: "Testnet",
+    title: "Try it on Fuji first",
+    body: "Play money, real rails. Claim 10,000 test dollars and run the whole loop today.",
+    href: "https://testnet.useaero.org",
+  },
+]
+
+function Bento() {
+  return (
+    <section id="features" className="scroll-mt-20 bg-[#f7f7f7] py-20 sm:py-28">
+      <div className="mx-auto max-w-6xl px-5 lg:px-10">
+        <div className="grid gap-8 lg:grid-cols-[1fr_340px] lg:items-end">
+          <motion.div {...fadeUp}>
+            <Eyebrow>Features</Eyebrow>
+            <h2 className="mt-4 max-w-xl font-display text-[clamp(1.9rem,4vw,3.1rem)] leading-[1.08] tracking-[-0.01em] text-neutral-900 text-balance">
+              Everything money should do, in one balance.
+            </h2>
+          </motion.div>
+          <motion.div {...fadeUp} transition={{ duration: 0.5, delay: 0.1 }} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+            <div className="rounded-2xl border border-neutral-200 bg-white p-5">
+              <p className="font-mono text-2xl font-medium tabular-nums">&lt;1s</p>
+              <p className="mt-1 text-sm text-neutral-500">Avalanche finality on every send</p>
             </div>
-            <div className="mt-6 space-y-4">
-              <div>
-                <label htmlFor="send-to" className="text-[13px] font-medium text-neutral-500">To</label>
-                <Input id="send-to" value={to} onChange={(e) => setTo(e.target.value)} placeholder="@username"
-                  className="mt-1.5 h-12 rounded-2xl border-neutral-200 bg-white text-base font-medium text-neutral-900 placeholder:text-neutral-400 focus-visible:ring-aero-800/20" />
-              </div>
-              <div>
-                <label htmlFor="send-amount" className="text-[13px] font-medium text-neutral-500">Amount (USDC)</label>
-                <div className="relative mt-1.5">
-                  <span className="absolute top-1/2 left-4 -translate-y-1/2 text-[15px] font-medium text-neutral-400">$</span>
-                  <Input id="send-amount" value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal"
-                    className="h-12 rounded-2xl border-neutral-200 bg-white pr-4 pl-8 text-base font-medium text-neutral-900 tabular-nums placeholder:text-neutral-400 focus-visible:ring-aero-800/20" />
+            <div className="rounded-2xl border border-neutral-200 bg-white p-5">
+              <p className="font-mono text-2xl font-medium text-emerald-600 tabular-nums">5.31%</p>
+              <p className="mt-1 text-sm text-neutral-500">Best live APY, auto-routed</p>
+            </div>
+          </motion.div>
+        </div>
+
+        <div className="mt-12 grid gap-5 lg:grid-cols-3">
+          <motion.div {...fadeUp} className="rounded-[20px] border border-neutral-200 bg-white p-7 transition duration-300 hover:-translate-y-1 hover:shadow-[0_20px_50px_-20px_rgba(24,0,173,0.25)] sm:p-8 lg:col-span-2">
+            <span className="flex size-11 items-center justify-center rounded-2xl bg-aero-50 text-aero-800">
+              <Send className="size-5" />
+            </span>
+            <p className="mt-5 text-[11px] font-semibold tracking-[0.14em] text-aero-700 uppercase">Send</p>
+            <h3 className="mt-2 text-2xl font-medium tracking-tight text-neutral-900">If you can tag someone, you can pay them.</h3>
+            <p className="mt-2 max-w-md leading-relaxed text-neutral-600">Type @maya, hit send. No 0x strings, no waiting, no “did it go through?”</p>
+            <div className="mt-6 max-w-md"><MiniSend /></div>
+          </motion.div>
+
+          <motion.div {...fadeUp} transition={{ duration: 0.5, delay: 0.08 }} className="rounded-[20px] bg-aero-950 p-7 text-white transition duration-300 hover:-translate-y-1 sm:p-8 lg:row-span-2">
+            <span className="flex size-11 items-center justify-center rounded-2xl bg-white/10 text-emerald-300">
+              <Sprout className="size-5" />
+            </span>
+            <p className="mt-5 text-[11px] font-semibold tracking-[0.14em] text-white/50 uppercase">Earn</p>
+            <h3 className="mt-2 text-2xl font-medium tracking-tight">Your balance works nights.</h3>
+            <p className="mt-2 font-mono text-5xl font-medium tracking-tight text-emerald-300 tabular-nums">5.31%</p>
+            <div className="mt-5"><MiniEarnBars /></div>
+            <p className="mt-5 text-[15px] leading-relaxed text-white/60">
+              2:41 AM — the agent moved $1,200 to Trader Joe for +0.39%. You were asleep. That&apos;s the point.
+            </p>
+          </motion.div>
+
+          {BENTO_SMALL.slice(0, 2).map((c, i) => (
+            <BentoCard key={c.label} icon={c.icon} label={c.label} title={c.title} body={c.body} delay={0.05 * (i + 1)} />
+          ))}
+
+          <motion.a
+            href="https://testnet.useaero.org"
+            {...fadeUp}
+            className="group rounded-[20px] border border-neutral-200 bg-white p-7 transition duration-300 hover:-translate-y-1 hover:border-aero-200 hover:shadow-[0_20px_50px_-20px_rgba(24,0,173,0.25)] sm:p-8 lg:col-span-2"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <span className="flex size-11 items-center justify-center rounded-2xl bg-aero-50 text-aero-800">
+                  <FlaskConical className="size-5" />
+                </span>
+                <div>
+                  <p className="text-[11px] font-semibold tracking-[0.14em] text-aero-700 uppercase">Testnet</p>
+                  <h3 className="mt-1 text-2xl font-medium tracking-tight text-neutral-900">Run the whole loop on Fuji today.</h3>
                 </div>
               </div>
-              <Button onClick={send} disabled={sending}
-                className="h-12 w-full rounded-full bg-aero-800 text-[15px] font-medium text-white hover:bg-aero-900">
-                {sending ? (
-                  <motion.span key="sending" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="inline-flex items-center gap-2">
-                    <motion.span animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 0.8, ease: "linear" }} className="inline-block">
-                      <Send className="size-4" />
-                    </motion.span>
-                    Sending…
-                  </motion.span>
-                ) : (
-                  <span className="inline-flex items-center gap-2"><Send className="size-4" /> Send {to || "@someone"}</span>
-                )}
-              </Button>
+              <span className="inline-flex h-11 items-center gap-2 rounded-full bg-neutral-900 px-6 text-sm font-medium text-white transition group-hover:bg-aero-800">
+                Open testnet <ArrowUpRight className="size-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+              </span>
             </div>
-            <div className="mt-6 border-t border-neutral-100 pt-4 text-sm">
-              <AnimatePresence initial={false}>
-                {inView && feed.map((f) => (
-                  <motion.div key={`${f.to}-${f.amount}`} layout initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center justify-between gap-3 py-1.5">
-                    <span className="min-w-0 truncate font-medium text-neutral-700">You → <span className="text-aero-800">{f.to}</span></span>
-                    <span className="shrink-0 tabular-nums text-neutral-900">{f.amount} <span className="ml-1 text-[13px] font-medium text-emerald-600">· Settled</span></span>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-          </Card>
-        </motion.div>
-      </div>
-    </section>
-  )
-}
-
-/* ---------------------------------- earn ---------------------------------- */
-
-function Earn() {
-  const ref = useRef<HTMLDivElement>(null)
-  const inView = useInView(ref, { once: true, margin: "-70px" })
-  const apy = useCountUp(5.31, inView)
-  const earned = useCountUp(184.27, inView)
-  const [auto, setAuto] = useState(true)
-
-  return (
-    <section id="earn" ref={ref} className="flex min-h-svh scroll-mt-16 items-center bg-aero-950 py-16 text-white sm:py-24">
-      <div className="mx-auto grid w-full max-w-[110rem] items-start gap-14 px-5 lg:grid-cols-[1fr_1fr] lg:px-10">
-        <div>
-          <motion.div {...fadeUp}>
-            <Kicker tone="light">Earn</Kicker>
-            <h2 className="mt-4 max-w-md text-4xl font-medium tracking-[-0.02em] text-balance sm:text-5xl">
-              Your balance works the night shift
-            </h2>
-            <p className="mt-4 max-w-md text-lg leading-relaxed text-white/60">
-              Idle USDC is routed across Avalanche DeFi for the best available rate.
-              Withdraw anytime — even at 2:41 AM.
-            </p>
-          </motion.div>
-          <motion.div {...fadeUp} transition={{ duration: 0.55, delay: 0.1 }} className="mt-10 flex items-end gap-10 border-t border-white/10 pt-8">
-            <div>
-              <p className="text-[13px] text-white/45">Live best rate</p>
-              <p className="mt-1 text-6xl font-medium tracking-tight text-emerald-300 tabular-nums sm:text-7xl">{apy.toFixed(2)}%</p>
-              <p className="mt-1.5 text-[13px] text-white/45">APY · auto-routed</p>
-            </div>
-            <div className="pb-1">
-              <p className="text-[13px] text-white/45">Earned to date</p>
-              <p className="mt-1 text-3xl font-medium tabular-nums">${earned.toFixed(2)}</p>
-              <button type="button" role="switch" aria-checked={auto} onClick={() => setAuto((a) => !a)}
-                className="mt-4 inline-flex items-center gap-2.5">
-                <span className={cn("relative h-6 w-11 rounded-full transition", auto ? "bg-emerald-400" : "bg-white/15")}>
-                  <motion.span layout animate={{ x: auto ? 20 : 0 }} transition={{ type: "spring", stiffness: 500, damping: 32 }}
-                    className="absolute top-0.5 left-0.5 size-5 rounded-full bg-white" />
-                </span>
-                <span className="text-[13px] font-medium text-white/70">Auto-yield {auto ? "on" : "off"}</span>
-              </button>
-            </div>
-          </motion.div>
-        </div>
-
-        <motion.div {...fadeUp} transition={{ duration: 0.55, delay: 0.15 }}>
-          <div className="overflow-hidden rounded-[20px] border border-white/10 bg-white/[0.04]">
-            <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
-              <p className="text-sm font-medium">Agent routing · live</p>
-              <p className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-300">
-                <span className="size-1.5 rounded-full bg-emerald-300" /> Optimizing
-              </p>
-            </div>
-            {[
-              { rank: "1", name: "Trader Joe", detail: "USDC lending", rate: "5.31%", best: true },
-              { rank: "2", name: "Benqi", detail: "USDC supply", rate: "4.92%", best: false },
-              { rank: "3", name: "Aero reserve", detail: "Instant liquidity", rate: "0.00%", best: false },
-            ].map((r, i) => (
-              <motion.div key={r.name} initial={{ opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }} transition={{ delay: 0.15 + i * 0.1, duration: 0.45 }}
-                className={cn("flex items-center gap-3 border-b border-white/[0.07] px-5 py-4 last:border-0 sm:gap-4 sm:px-6", r.best && "bg-white/[0.05]")}>
-                <span className="shrink-0 text-sm text-white/30 tabular-nums">{r.rank}</span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[15px] font-medium">
-                    {r.name}{" "}
-                    {r.best && <span className="ml-1.5 rounded-full bg-emerald-400/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-300">Best rate</span>}
-                  </span>
-                  <span className="block truncate text-xs text-white/40">{r.detail}</span>
-                </span>
-                <span className={cn("shrink-0 text-lg tabular-nums sm:text-xl", r.best ? "text-emerald-300" : "text-white/55")}>{r.rate}</span>
-              </motion.div>
-            ))}
-            <p className="border-t border-white/10 px-6 py-4 text-[13px] leading-relaxed text-white/45">
-              02:41 — the agent moved $1,200 from Benqi to Trader Joe for +0.39%. You were asleep. That&apos;s the point.
-            </p>
-          </div>
-        </motion.div>
-      </div>
-    </section>
-  )
-}
-
-/* --------------------------------- network -------------------------------- */
-
-function Network() {
-  return (
-    <section id="network" className="flex min-h-[80svh] scroll-mt-16 items-center bg-white py-16 sm:py-24">
-      <div className="mx-auto w-full max-w-[110rem] px-5 lg:px-10">
-        <SectionHead
-          eyebrow="Under the hood"
-          title="Powered by 80+ Avalanche networks. You'll never notice."
-          body="A routing layer built on Warp Messaging sends every dollar wherever execution is fastest and yield is highest — then shows you one simple balance."
-        />
-        <motion.div {...fadeUp} transition={{ duration: 0.55, delay: 0.1 }}
-          className="mt-12 flex flex-col items-stretch gap-4 lg:flex-row lg:items-center">
-          <div className="grid flex-1 grid-cols-2 gap-2.5">
-            {["C-Chain", "Benqi L1", "PayFi L1", "DeFi L1"].map((l1, i) => (
-              <motion.div key={l1} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }} transition={{ delay: i * 0.07 }}
-                className={cn("rounded-full border px-4 py-2.5 text-center text-[13px] font-medium",
-                  i < 2 ? "border-aero-200 bg-aero-50 text-aero-800" : "border-neutral-200 text-neutral-400")}>
-                {l1}
-              </motion.div>
-            ))}
-          </div>
-          <div aria-hidden className="hidden h-px min-w-14 flex-1 text-aero-200 aero-warp-line lg:block" />
-          <div className={cn("flex items-center gap-3 rounded-[20px] border border-neutral-200 bg-white px-5 py-4", SOFT)}>
-            <BrandIcon className="size-9 rounded-lg text-aero-800" />
-            <div>
-              <p className="text-[15px] font-semibold text-neutral-900">Aero router</p>
-              <p className="text-xs text-neutral-500">Warp Messaging · live</p>
-            </div>
-          </div>
-          <div aria-hidden className="hidden h-px min-w-14 flex-1 text-aero-200 aero-warp-line lg:block" />
-          <div className="rounded-[20px] bg-[#f7f7f7] px-5 py-4">
-            <p className="text-[13px] text-neutral-500">Best execution</p>
-            <p className="mt-0.5 font-mono text-[26px] font-medium text-neutral-900 tabular-nums">0.8s</p>
-          </div>
-        </motion.div>
-      </div>
-    </section>
-  )
-}
-
-/* ----------------------------------- pay ---------------------------------- */
-
-const BILLS = [
-  { id: "rent", initials: "MR", name: "Maple Apartments · rent", detail: "Due May 1", amount: "$1,400.00" },
-  { id: "power", initials: "CP", name: "City Power & Light", detail: "Due Apr 28", amount: "$86.20" },
-  { id: "designer", initials: "@L", name: "@lena · logo design", detail: "Invoice #042", amount: "$320.00" },
-]
-
-function Pay() {
-  const [paid, setPaid] = useState<string[]>([])
-  const toggle = (id: string) => setPaid((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]))
-  return (
-    <section id="pay" className="flex min-h-svh scroll-mt-16 items-center bg-[#f7f7f7] py-16 sm:py-24">
-      <div className="mx-auto grid w-full max-w-[110rem] items-center gap-10 lg:gap-14 px-5 lg:grid-cols-2 lg:px-10">
-        <motion.div {...fadeUp} className="order-2 lg:order-1">
-          <Card className={cn("gap-0 overflow-hidden rounded-[20px] border-neutral-200 bg-white p-0", SOFT)}>
-            <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-4">
-              <p className="text-[15px] font-semibold text-neutral-900">Bills · May</p>
-              <AeroMark className="size-4 text-aero-800" />
-            </div>
-            <div className="px-3 py-2">
-              <AnimatePresence initial={false}>
-                {BILLS.map((b) => {
-                  const isPaid = paid.includes(b.id)
-                  return (
-                    <motion.div key={b.id} layout
-                      className="flex items-center gap-3 border-b border-dashed border-neutral-200 px-3 py-4 last:border-0 sm:gap-4">
-                      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-xs font-semibold text-neutral-600 sm:size-10">
-                        {b.initials}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className={cn("truncate text-sm font-medium text-neutral-900 sm:text-[15px]", isPaid && "text-neutral-400 line-through")}>{b.name}</p>
-                        <p className="truncate text-xs text-neutral-400">{b.detail}</p>
-                      </div>
-                      <span className="shrink-0 text-sm font-medium text-neutral-900 tabular-nums sm:text-[15px]">{b.amount}</span>
-                      {isPaid ? (
-                        <motion.span initial={{ scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                          className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1.5 text-[13px] font-medium text-emerald-700">
-                          <Check className="size-3.5" strokeWidth={3} /> Paid
-                        </motion.span>
-                      ) : (
-                        <Button size="sm" onClick={() => toggle(b.id)} className="rounded-full bg-aero-800 px-5 font-medium text-white hover:bg-aero-900">
-                          Pay
-                        </Button>
-                      )}
-                    </motion.div>
-                  )
-                })}
-              </AnimatePresence>
-            </div>
-            <div className="bg-aero-50 px-6 py-3.5 text-[13px] font-medium text-aero-800">
-              {paid.length === 0
-                ? "3 bills due — clear them all in under a minute."
-                : paid.length === BILLS.length
-                  ? "All clear. Nothing due."
-                  : `${BILLS.length - paid.length} to go.`}
-            </div>
-          </Card>
-        </motion.div>
-        <div className="order-1 lg:order-2">
-          <SectionHead
-            eyebrow="Pay"
-            title="Your balance pays for real life"
-            body="Rent, utilities, freelancers — straight from Aero. The payee doesn't need the app, and every idle dollar keeps earning until the moment it's spent."
-          />
+          </motion.a>
+          <BentoCard icon={AtSign} label="Usernames" title="Your money's @handle" body="Claim it free, keep it forever. No addresses to copy, ever." delay={0.1} />
         </div>
       </div>
     </section>
   )
 }
 
-/* ----------------------------------- faq ---------------------------------- */
-
-const FAQS = [
-  {
-    q: "Do my friends need Aero to receive money?",
-    a: "No. Send to anyone — they'll get a link to claim it with a username, or straight to their own wallet. If they're already on Aero, it just lands in under a second.",
-  },
-  {
-    q: "Where does the yield actually come from?",
-    a: "Your idle USDC is supplied to established Avalanche lending markets like Benqi and Trader Joe. Aero's agent watches the rates and moves funds to wherever pays best. You never touch any of it.",
-  },
-  {
-    q: "Is my money safe?",
-    a: "You stay self-custodied — your keys, your dollars — and funds sit in audited, battle-tested lending markets, never in experimental vaults. Withdraw anytime; liquidity for spending is always reserved first.",
-  },
-  {
-    q: "What can I pay with Aero?",
-    a: "Rent, utilities, merchants, and freelancers — anyone with a bill or an invoice. If they don't use Aero, they still get paid in dollars like any normal transfer.",
-  },
-]
-
-function FAQ() {
+function BentoCard({
+  icon: Icon,
+  label,
+  title,
+  body,
+  delay = 0,
+}: {
+  icon: typeof Send
+  label: string
+  title: string
+  body: string
+  delay?: number
+}) {
   return (
-    <section className="bg-white py-16 sm:py-24">
-      <div className="mx-auto w-full max-w-3xl px-5">
-        <SectionHead eyebrow="Questions" title="Asked often, answered plainly" />
-        <motion.div {...fadeUp} transition={{ duration: 0.5, delay: 0.1 }} className="mt-10">
-          <Accordion className="border-t border-neutral-200">
-            {FAQS.map((f) => (
-              <AccordionItem key={f.q} value={f.q} className="border-b border-neutral-200">
-                <AccordionTrigger className="py-5 text-left text-[17px] font-medium text-neutral-900 hover:no-underline">
-                  {f.q}
-                </AccordionTrigger>
-                <AccordionContent className="pb-5 leading-relaxed text-neutral-600">
-                  {f.a}
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-        </motion.div>
-      </div>
-    </section>
+    <motion.div
+      {...fadeUp}
+      transition={{ duration: 0.5, delay }}
+      className="rounded-[20px] border border-neutral-200 bg-white p-7 transition duration-300 hover:-translate-y-1 hover:shadow-[0_20px_50px_-20px_rgba(24,0,173,0.25)] sm:p-8"
+    >
+      <span className="flex size-11 items-center justify-center rounded-2xl bg-aero-50 text-aero-800">
+        <Icon className="size-5" />
+      </span>
+      <p className="mt-5 text-[11px] font-semibold tracking-[0.14em] text-aero-700 uppercase">{label}</p>
+      <h3 className="mt-2 text-2xl font-medium tracking-tight text-neutral-900">{title}</h3>
+      <p className="mt-2 leading-relaxed text-neutral-600">{body}</p>
+    </motion.div>
   )
 }
 
@@ -809,7 +712,13 @@ function FAQ() {
 
 function CTA() {
   const [username, setUsername] = useState("")
-  const [email, setEmail] = useState("")
+  const [email, setEmail] = useState(() => {
+    try {
+      return window.localStorage.getItem("aero_email_prefill") ?? ""
+    } catch {
+      return ""
+    }
+  })
   const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">("idle")
   const [message, setMessage] = useState("")
   const [savedName, setSavedName] = useState("")
@@ -818,18 +727,7 @@ function CTA() {
   const [already, setAlready] = useState(false)
   const [referrals, setReferrals] = useState(0)
   const [copied, setCopied] = useState(false)
-
-  // Stash a referral code from ?ref= for the signup post.
-  useEffect(() => {
-    try {
-      const q = new URLSearchParams(window.location.search).get("ref")
-      if (q && /^[A-Z2-9]{8}$/i.test(q.trim())) {
-        window.localStorage.setItem("aero_ref", q.trim().toUpperCase())
-      }
-    } catch {
-      /* private mode */
-    }
-  }, [])
+  const count = useWaitlistCount()
 
   const copyLink = async () => {
     const link = `https://useaero.org?ref=${myCode}`
@@ -884,21 +782,24 @@ function CTA() {
   }
 
   return (
-    <section id="waitlist" className="scroll-mt-16 bg-white px-4 pb-24 sm:px-6">
+    <section id="waitlist" className="scroll-mt-20 bg-white px-4 pt-4 pb-24 sm:px-6">
       <motion.div
         {...fadeUp}
-        className="mx-auto max-w-[110rem] rounded-[2.5rem] bg-aero-800 px-6 py-20 text-center text-white sm:px-12"
+        className="mx-auto max-w-[110rem] overflow-hidden rounded-[2.5rem] bg-aero-800 px-6 py-20 text-center text-white sm:px-12"
       >
         <div className="mx-auto max-w-2xl">
           <div className="flex justify-center">
             <BrandWordmark tone="light" height={64} />
           </div>
-          <h2 className="mt-8 text-4xl font-medium tracking-[-0.02em] text-balance sm:text-5xl">
-            Join the waitlist
+          <h2 className="mt-8 font-display text-[clamp(2.2rem,5vw,3.8rem)] leading-[1.05] text-balance">
+            Claim your @username
           </h2>
           <p className="mx-auto mt-4 max-w-md text-lg text-white/65">
-            Reserve your @username and get first access. One email when your invite is ready —
-            nothing else, ever.
+            One handle for sending, getting paid, and growing.{" "}
+            {count !== null && (
+              <span className="font-mono text-white tabular-nums">{count.toLocaleString()} already in line. </span>
+            )}
+            Free to reserve, yours to keep.
           </p>
           {status === "done" ? (
             <motion.div
@@ -940,13 +841,6 @@ function CTA() {
                   ? `${referrals} friend${referrals === 1 ? "" : "s"} joined through your link — you've moved up ${referrals} spot${referrals === 1 ? "" : "s"} already.`
                   : "Friends who join through your link move you up the line."}
               </p>
-              <button
-                type="button"
-                onClick={() => { setStatus("idle"); setMessage("") }}
-                className="mt-4 text-sm text-white/60 underline underline-offset-4 hover:text-white"
-              >
-                Add another email
-              </button>
             </motion.div>
           ) : (
             <form onSubmit={submit} className="mx-auto mt-8 max-w-md space-y-2.5">
@@ -957,7 +851,7 @@ function CTA() {
                   placeholder="@yourname"
                   aria-label="Desired username"
                   autoComplete="username"
-                  className="h-12 flex-1 rounded-full border-white/25 bg-white/10 px-5 text-base text-white placeholder:text-white/40 focus-visible:ring-white/30"
+                  className="h-13 flex-1 rounded-full border-white/25 bg-white/10 px-5 text-base text-white placeholder:text-white/40 focus-visible:ring-white/30"
                 />
                 <Input
                   value={email}
@@ -966,13 +860,13 @@ function CTA() {
                   aria-label="Email address"
                   type="email"
                   autoComplete="email"
-                  className="h-12 flex-1 rounded-full border-white/25 bg-white/10 px-5 text-base text-white placeholder:text-white/40 focus-visible:ring-white/30"
+                  className="h-13 flex-1 rounded-full border-white/25 bg-white/10 px-5 text-base text-white placeholder:text-white/40 focus-visible:ring-white/30"
                 />
               </div>
               <Button
                 type="submit"
                 disabled={status === "sending"}
-                className="h-12 w-full rounded-full bg-white px-7 text-[15px] font-medium text-aero-900 hover:bg-aero-50 disabled:opacity-70"
+                className="h-13 w-full rounded-full bg-white px-7 text-base font-medium text-aero-900 hover:bg-aero-50 disabled:opacity-70"
               >
                 {status === "sending" ? "Joining…" : (
                   <>Join the waitlist <ArrowRight className="size-4 transition-transform duration-300 group-hover/button:translate-x-1" /></>
@@ -985,75 +879,144 @@ function CTA() {
             </form>
           )}
           <div className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 border-t border-white/15 pt-8 text-sm text-white/60">
-            <span className="inline-flex items-center gap-2"><ShieldCheck className="size-4" /> Self-custodied</span>
-            <span className="inline-flex items-center gap-2"><Zap className="size-4" /> Sub-second settlement</span>
-            <span className="inline-flex items-center gap-2"><Sprout className="size-4" /> Withdraw anytime</span>
+            <span className="inline-flex items-center gap-2"><Check className="size-4" strokeWidth={3} /> Self-custodied</span>
+            <span className="inline-flex items-center gap-2"><Check className="size-4" strokeWidth={3} /> Sub-second settlement</span>
+            <span className="inline-flex items-center gap-2"><Check className="size-4" strokeWidth={3} /> Withdraw anytime</span>
           </div>
         </div>
       </motion.div>
     </section>
   )
 }
+
+/* ----------------------------------- faq ---------------------------------- */
+
+const FAQS = [
+  {
+    q: "Do my friends need Aero to receive money?",
+    a: "No. Send to anyone — they'll get a link to claim it with a username, or straight to their own wallet. If they're already on Aero, it just lands in under a second.",
+  },
+  {
+    q: "Where does the yield actually come from?",
+    a: "Your idle USDC is supplied to established Avalanche lending markets like Benqi and Trader Joe. Aero's agent watches the rates and moves funds to wherever pays best. You never touch any of it.",
+  },
+  {
+    q: "Is my money safe?",
+    a: "You stay self-custodied — your keys, your dollars — and funds sit in audited, battle-tested lending markets, never in experimental vaults. Withdraw anytime; liquidity for spending is always reserved first.",
+  },
+  {
+    q: "What can I pay with Aero?",
+    a: "Rent, utilities, merchants, and freelancers — anyone with a bill or an invoice. If they don't use Aero, they still get paid in dollars like any normal transfer.",
+  },
+]
+
+function FAQ() {
+  return (
+    <section id="faq" className="scroll-mt-20 bg-white py-20 sm:py-28">
+      <div className="mx-auto grid max-w-6xl gap-12 px-5 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16 lg:px-10">
+        <div className="lg:sticky lg:top-28 lg:self-start">
+          <motion.div {...fadeUp}>
+            <Eyebrow>Questions</Eyebrow>
+            <h2 className="mt-4 font-display text-[clamp(1.9rem,4vw,3rem)] leading-[1.08] text-neutral-900 text-balance">
+              Asked often, answered plainly.
+            </h2>
+            <p className="mt-4 max-w-sm leading-relaxed text-neutral-600">
+              Anything else on your mind? A human replies — usually within a day.
+            </p>
+            <a
+              href="mailto:support@useaero.org"
+              className="mt-6 inline-flex h-11 items-center gap-2 rounded-full bg-neutral-900 px-6 text-sm font-medium text-white transition hover:bg-aero-800"
+            >
+              Talk to us <ArrowUpRight className="size-4" />
+            </a>
+          </motion.div>
+        </div>
+        <motion.div {...fadeUp} transition={{ duration: 0.5, delay: 0.1 }}>
+          <Accordion className="space-y-3">
+            {FAQS.map((f) => (
+              <AccordionItem key={f.q} value={f.q} className="rounded-2xl border border-neutral-200 bg-white px-6">
+                <AccordionTrigger className="py-5 text-left text-[17px] font-medium text-neutral-900 hover:no-underline">
+                  {f.q}
+                </AccordionTrigger>
+                <AccordionContent className="pb-5 leading-relaxed text-neutral-600">
+                  {f.a}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </motion.div>
+      </div>
+    </section>
+  )
+}
+
 /* ---------------------------------- footer -------------------------------- */
 
 export function Footer() {
   return (
-    <footer className="border-t border-neutral-200 bg-white">
-      <div className="mx-auto grid w-full max-w-[110rem] gap-10 px-5 py-14 md:grid-cols-[1.2fr_1fr_1fr] lg:px-10">
-        <div>
-          <BrandLockup tone="dark" height={28} />
-          <p className="mt-4 max-w-xs text-[15px] leading-relaxed text-neutral-500">
-            Consumer payments on Avalanche. Send, pay, earn — without the crypto homework.
-          </p>
-          <div className="mt-5 flex items-center gap-2.5">
-            <a
-              href="https://x.com/aeroxbx"
-              target="_blank"
-              rel="noreferrer"
-              aria-label="Aero on X"
-              className="flex size-10 items-center justify-center rounded-full border border-neutral-200 text-neutral-600 transition hover:border-aero-800 hover:text-aero-800"
-            >
-              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className="size-4">
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.451-6.231Zm-1.161 17.52h1.833L7.084 4.126H5.117l11.966 15.644Z" />
-              </svg>
-            </a>
-            <a
-              href="https://github.com/danielamodu/Aero"
-              target="_blank"
-              rel="noreferrer"
-              aria-label="Aero on GitHub"
-              className="flex size-10 items-center justify-center rounded-full border border-neutral-200 text-neutral-600 transition hover:border-aero-800 hover:text-aero-800"
-            >
-              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className="size-[18px]">
-                <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
-              </svg>
-            </a>
+    <footer className="overflow-hidden bg-[#f7f7f7]">
+      <div className="mx-auto w-full max-w-6xl px-5 pt-14 lg:px-10">
+        <div className="grid gap-10 pb-12 md:grid-cols-[1.2fr_1fr_1fr]">
+          <div>
+            <BrandLockup tone="dark" height={28} />
+            <p className="mt-4 max-w-xs text-[15px] leading-relaxed text-neutral-500">
+              Consumer payments on Avalanche. Send, pay, earn — without the crypto homework.
+            </p>
+            <div className="mt-5 flex items-center gap-2.5">
+              <a
+                href="https://x.com/aeroxbx"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Aero on X"
+                className="flex size-10 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-600 transition hover:border-aero-800 hover:text-aero-800"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className="size-4">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.451-6.231Zm-1.161 17.52h1.833L7.084 4.126H5.117l11.966 15.644Z" />
+                </svg>
+              </a>
+              <a
+                href="https://github.com/danielamodu/Aero"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Aero on GitHub"
+                className="flex size-10 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-600 transition hover:border-aero-800 hover:text-aero-800"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className="size-[18px]">
+                  <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+                </svg>
+              </a>
+            </div>
           </div>
-        </div>
-        <div className="grid grid-cols-2 gap-8 text-[15px]">
-          <div className="space-y-3">
-            <p className="text-[13px] font-medium text-neutral-400">Product</p>
-            <a href="#send" onClick={(e) => goTo(e, "send")} className="block text-neutral-600 hover:text-neutral-950">Send</a>
-            <a href="#pay" onClick={(e) => goTo(e, "pay")} className="block text-neutral-600 hover:text-neutral-950">Pay</a>
-            <a href="#earn" onClick={(e) => goTo(e, "earn")} className="block text-neutral-600 hover:text-neutral-950">Earn</a>
+          <div className="grid grid-cols-2 gap-8 text-[15px]">
+            <div className="space-y-3">
+              <p className="text-[13px] font-medium text-neutral-400">Product</p>
+              <a href="#how" onClick={(e) => goTo(e, "how")} className="block text-neutral-600 hover:text-neutral-950">How it works</a>
+              <a href="#features" onClick={(e) => goTo(e, "features")} className="block text-neutral-600 hover:text-neutral-950">Features</a>
+              <a href="#faq" onClick={(e) => goTo(e, "faq")} className="block text-neutral-600 hover:text-neutral-950">FAQ</a>
+              <a href="/docs" className="block text-neutral-600 hover:text-neutral-950">Docs</a>
+            </div>
+            <div className="space-y-3">
+              <p className="text-[13px] font-medium text-neutral-400">Company</p>
+              <a href="#waitlist" onClick={(e) => goTo(e, "waitlist")} className="block text-neutral-600 hover:text-neutral-950">Early access</a>
+              <a href="https://testnet.useaero.org" className="block text-neutral-600 hover:text-neutral-950">Testnet</a>
+            </div>
           </div>
-          <div className="space-y-3">
-            <p className="text-[13px] font-medium text-neutral-400">Company</p>
-            <a href="#network" onClick={(e) => goTo(e, "network")} className="block text-neutral-600 hover:text-neutral-950">Network</a>
-            <a href="#waitlist" onClick={(e) => goTo(e, "waitlist")} className="block text-neutral-600 hover:text-neutral-950">Early access</a>
-            <a href="/docs" className="block text-neutral-600 hover:text-neutral-950">Docs</a>
+          <div className="space-y-3 text-[15px]">
+            <p className="text-[13px] font-medium text-neutral-400">Legal</p>
+            <a href="/privacy" className="block text-neutral-600 hover:text-neutral-950">Privacy</a>
+            <a href="/terms" className="block text-neutral-600 hover:text-neutral-950">Terms</a>
           </div>
-        </div>
-        <div className="space-y-3 text-[15px]">
-          <p className="text-[13px] font-medium text-neutral-400">Legal</p>
-          <a href="/privacy" className="block text-neutral-600 hover:text-neutral-950">Privacy</a>
-          <a href="/terms" className="block text-neutral-600 hover:text-neutral-950">Terms</a>
         </div>
       </div>
-      <div className="border-t border-neutral-100">
-        <div className="mx-auto flex w-full max-w-[110rem] flex-wrap items-center justify-between gap-2 px-5 py-5 text-[13px] text-neutral-400 lg:px-10">
-          <span>© 2026 Aero</span>
-          <span>Built on Avalanche · USDC</span>
+      <div aria-hidden className="select-none overflow-hidden">
+        <p className="bg-gradient-to-b from-neutral-900 to-neutral-300 bg-clip-text text-center text-[27vw] leading-[0.82] font-extrabold tracking-[-0.04em] text-transparent">
+          AERO
+        </p>
+        <div className="-mt-[0.24em] border-t border-neutral-200 bg-[#f7f7f7]">
+          <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 px-5 py-4 text-[13px] text-neutral-400 lg:px-10">
+            <span>© 2026 Aero</span>
+            <span>Built on Avalanche · USDC</span>
+          </div>
         </div>
       </div>
     </footer>
@@ -1068,15 +1031,12 @@ export default function AeroLanding() {
       <SiteNav />
       <main>
         <Hero />
-        <Ticker />
-        <Manifesto />
-        <Pillars />
-        <SendDemo />
-        <Earn />
-        <Network />
-        <Pay />
-        <FAQ />
+        <Intro />
+        <HowItWorks />
+        <Integrations />
+        <Bento />
         <CTA />
+        <FAQ />
       </main>
       <Footer />
     </div>
