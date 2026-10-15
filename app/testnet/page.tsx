@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import { AnimatePresence, motion } from "motion/react"
 import {
   useAccount,
@@ -508,90 +508,130 @@ const TABS = [
   { id: "earn", label: "Earn" },
 ] as const
 
+function Shell({ children }: { children: ReactNode }) {
+  return (
+    <>
+      <TestnetHeader />
+      <main className="mx-auto w-full max-w-6xl px-5 pb-24">{children}</main>
+    </>
+  )
+}
+
+function SetupCard({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="mx-auto mt-16 max-w-xl rounded-[20px] border border-neutral-200 bg-white p-8 text-center">
+      <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">Setup needed</p>
+      <h1 className="mt-3 text-3xl font-medium tracking-tight">{title}</h1>
+      <div className="mx-auto mt-5 max-w-md space-y-2.5 text-left text-[15px] leading-relaxed text-neutral-600">
+        {children}
+      </div>
+    </div>
+  )
+}
+
 export default function TestnetPage() {
   const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("send")
+  if (!reownConfigured) {
+    return (
+      <Shell>
+        <SetupCard title="Connect a Reown project">
+          <p><span className="font-mono font-bold text-neutral-900">1.</span> Create a free project at cloud.reown.com</p>
+          <p><span className="font-mono font-bold text-neutral-900">2.</span> Set <span className="font-mono text-[13px] text-neutral-900">NEXT_PUBLIC_REOWN_PROJECT_ID</span> and redeploy</p>
+          <p><span className="font-mono font-bold text-neutral-900">3.</span> Wallets unlock on Avalanche Fuji</p>
+        </SetupCard>
+      </Shell>
+    )
+  }
+  if (!contractsConfigured) {
+    return (
+      <Shell>
+        <SetupCard title="Deploy the contracts first">
+          <p><span className="font-mono font-bold text-neutral-900">1.</span> Fund a throwaway key with Fuji AVAX (faucet.avax.network)</p>
+          <p><span className="font-mono font-bold text-neutral-900">2.</span> <span className="font-mono text-[13px] text-neutral-900">cd contracts && forge script script/Deploy.s.sol --rpc-url fuji --broadcast</span></p>
+          <p><span className="font-mono font-bold text-neutral-900">3.</span> Set <span className="font-mono text-[13px] text-neutral-900">NEXT_PUBLIC_TEST_USDC / _AERO_VAULT / _AERO_NAMES</span> and redeploy</p>
+        </SetupCard>
+      </Shell>
+    )
+  }
+  return <TestnetApp tab={tab} setTab={setTab} />
+}
+
+function TestnetApp({
+  tab,
+  setTab,
+}: {
+  tab: (typeof TABS)[number]["id"]
+  setTab: (t: (typeof TABS)[number]["id"]) => void
+}) {
   const { address, isConnected, chainId } = useAccount()
   const { switchChain, isPending: switching } = useSwitchChain()
   const wrongNetwork = isConnected && chainId !== FUJI_CHAIN_ID
 
+  if (!isConnected || !address) {
+    return (
+      <Shell>
+        <div className="mx-auto mt-16 max-w-xl rounded-[20px] border border-neutral-200 bg-white p-8 text-center">
+          <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">Testnet · Fuji</p>
+          <h1 className="mt-3 text-4xl font-medium tracking-[-0.02em] text-balance">Play money, real rails</h1>
+          <p className="mx-auto mt-3 max-w-md leading-relaxed text-neutral-600">
+            Connect a wallet on Avalanche Fuji to claim test dollars, send to @usernames,
+            pay bills, and earn mock yield. Worthless by design.
+          </p>
+          <div className="mt-6 flex justify-center">
+            <AppKitConnectButton />
+          </div>
+        </div>
+      </Shell>
+    )
+  }
+
+  if (wrongNetwork) {
+    return (
+      <Shell>
+        <div className="mx-auto mt-16 max-w-xl rounded-[20px] border border-neutral-200 bg-white p-8 text-center">
+          <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">Wrong network</p>
+          <h1 className="mt-3 text-3xl font-medium tracking-tight">Switch to Fuji to continue</h1>
+          <Button
+            disabled={switching}
+            onClick={() => switchChain({ chainId: FUJI_CHAIN_ID })}
+            className="mt-6 h-12 rounded-full bg-aero-800 px-7 font-medium text-white hover:bg-aero-900"
+          >
+            {switching ? "Switching…" : "Switch to Avalanche Fuji"}
+          </Button>
+        </div>
+      </Shell>
+    )
+  }
+
   return (
-    <>
-      <TestnetHeader />
-      <main className="mx-auto w-full max-w-6xl px-5 pb-24">
-        {!reownConfigured ? (
-          <div className="mx-auto mt-16 max-w-xl rounded-[20px] border border-neutral-200 bg-white p-8 text-center">
-            <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">Setup needed</p>
-            <h1 className="mt-3 text-3xl font-medium tracking-tight">Connect a Reown project</h1>
-            <ol className="mx-auto mt-5 max-w-md space-y-2.5 text-left text-[15px] leading-relaxed text-neutral-600">
-              <li><span className="font-mono font-bold text-neutral-900">1.</span> Create a free project at cloud.reown.com</li>
-              <li><span className="font-mono font-bold text-neutral-900">2.</span> Set <span className="font-mono text-[13px] text-neutral-900">NEXT_PUBLIC_REOWN_PROJECT_ID</span> and redeploy</li>
-              <li><span className="font-mono font-bold text-neutral-900">3.</span> Wallets unlock on Avalanche Fuji</li>
-            </ol>
-          </div>
-        ) : !contractsConfigured ? (
-          <div className="mx-auto mt-16 max-w-xl rounded-[20px] border border-neutral-200 bg-white p-8 text-center">
-            <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">Setup needed</p>
-            <h1 className="mt-3 text-3xl font-medium tracking-tight">Deploy the contracts first</h1>
-            <ol className="mx-auto mt-5 max-w-md space-y-2.5 text-left text-[15px] leading-relaxed text-neutral-600">
-              <li><span className="font-mono font-bold text-neutral-900">1.</span> Fund a throwaway key with Fuji AVAX (faucet.avax.network)</li>
-              <li><span className="font-mono font-bold text-neutral-900">2.</span> <span className="font-mono text-[13px] text-neutral-900">cd contracts && forge script script/Deploy.s.sol --rpc-url fuji --broadcast</span></li>
-              <li><span className="font-mono font-bold text-neutral-900">3.</span> Set <span className="font-mono text-[13px] text-neutral-900">NEXT_PUBLIC_TEST_USDC / _AERO_VAULT / _AERO_NAMES</span> and redeploy</li>
-            </ol>
-          </div>
-        ) : !isConnected || !address ? (
-          <div className="mx-auto mt-16 max-w-xl rounded-[20px] border border-neutral-200 bg-white p-8 text-center">
-            <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">Testnet · Fuji</p>
-            <h1 className="mt-3 text-4xl font-medium tracking-[-0.02em] text-balance">Play money, real rails</h1>
-            <p className="mx-auto mt-3 max-w-md leading-relaxed text-neutral-600">
-              Connect a wallet on Avalanche Fuji to claim test dollars, send to @usernames,
-              pay bills, and earn mock yield. Worthless by design.
-            </p>
-            <div className="mt-6 flex justify-center">
-              <AppKitConnectButton />
-            </div>
-          </div>
-        ) : wrongNetwork ? (
-          <div className="mx-auto mt-16 max-w-xl rounded-[20px] border border-neutral-200 bg-white p-8 text-center">
-            <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">Wrong network</p>
-            <h1 className="mt-3 text-3xl font-medium tracking-tight">Switch to Fuji to continue</h1>
-            <Button
-              disabled={switching}
-              onClick={() => switchChain({ chainId: FUJI_CHAIN_ID })}
-              className="mt-6 h-12 rounded-full bg-aero-800 px-7 font-medium text-white hover:bg-aero-900"
+    <Shell>
+      <div className="mt-8">
+        <FaucetBar address={address} />
+        <div className="mt-6 inline-flex rounded-full bg-neutral-100 p-1">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              className={cn(
+                "h-10 rounded-full px-6 text-[15px] font-medium transition",
+                tab === t.id ? "bg-aero-800 text-white" : "text-neutral-500 hover:text-neutral-900"
+              )}
             >
-              {switching ? "Switching…" : "Switch to Avalanche Fuji"}
-            </Button>
-          </div>
-        ) : (
-          <div className="mt-8">
-            <FaucetBar address={address} />
-            <div className="mt-6 inline-flex rounded-full bg-neutral-100 p-1">
-              {TABS.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => setTab(t.id)}
-                  className={cn(
-                    "h-10 rounded-full px-6 text-[15px] font-medium transition",
-                    tab === t.id ? "bg-aero-800 text-white" : "text-neutral-500 hover:text-neutral-900"
-                  )}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-            <div className="mt-5">
-              {tab === "send" && <SendTab address={address} />}
-              {tab === "pay" && <PayTab address={address} />}
-              {tab === "earn" && <EarnTab address={address} />}
-            </div>
-            <p className="mt-10 text-center text-[13px] text-neutral-400">
-              Testnet only · tUSDC has no value · mock vault rate, not live markets ·{" "}
-              <a href="https://useaero.org/docs" className="underline underline-offset-4 hover:text-neutral-600">Docs</a>
-            </p>
-          </div>
-        )}
-      </main>
-    </>
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <div className="mt-5">
+          {tab === "send" && <SendTab address={address} />}
+          {tab === "pay" && <PayTab address={address} />}
+          {tab === "earn" && <EarnTab address={address} />}
+        </div>
+        <p className="mt-10 text-center text-[13px] text-neutral-400">
+          Testnet only · tUSDC has no value · mock vault rate, not live markets ·{" "}
+          <a href="https://useaero.org/docs" className="underline underline-offset-4 hover:text-neutral-600">Docs</a>
+        </p>
+      </div>
+    </Shell>
   )
 }

@@ -8,6 +8,9 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 }
 
+// Wallet state can't prerender — always render on demand.
+export const dynamic = "force-dynamic"
+
 export default function TestnetLayout({ children }: { children: ReactNode }) {
   return (
     <TestnetProviders>
