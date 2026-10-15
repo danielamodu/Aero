@@ -68,23 +68,6 @@ function Eyebrow({ children, tone = "blue" }: { children: ReactNode; tone?: "blu
   )
 }
 
-function useWaitlistCount(): number | null {
-  const [count, setCount] = useState<number | null>(null)
-  useEffect(() => {
-    let live = true
-    fetch("/api/waitlist/count")
-      .then((r) => r.json())
-      .then((d) => {
-        if (live && d.ok && typeof d.count === "number") setCount(d.count)
-      })
-      .catch(() => {})
-    return () => {
-      live = false
-    }
-  }, [])
-  return count
-}
-
 /* --------------------------- scroll word reveal ---------------------------- */
 
 function Word({
@@ -287,19 +270,7 @@ function PhoneEarn() {
 /* ----------------------------------- hero --------------------------------- */
 
 function Hero() {
-  const [email, setEmail] = useState("")
-  const count = useWaitlistCount()
   const reduce = useReducedMotion()
-
-  const capture = (e: FormEvent) => {
-    e.preventDefault()
-    try {
-      if (email.trim()) window.localStorage.setItem("aero_email_prefill", email.trim())
-    } catch {
-      /* ignore */
-    }
-    goTo(e, "waitlist")
-  }
 
   return (
     <section id="top" className="relative overflow-hidden bg-[#bcd7f0] pt-32 text-neutral-900">
@@ -331,35 +302,25 @@ function Hero() {
           Send dollars to any @username in under a second, pay real bills from the same
           balance, and let the rest earn while you sleep.
         </motion.p>
-        <motion.form
+        <motion.div
           initial={{ opacity: 0, y: 26 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.28 }}
-          onSubmit={capture}
-          className="mx-auto mt-8 flex max-w-md flex-col gap-2.5 sm:flex-row"
+          className="mt-8 flex justify-center"
         >
-          <Input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@email.com"
-            aria-label="Email address"
-            type="email"
-            className="h-13 flex-1 rounded-full border-white/60 bg-white/70 px-5 text-base text-neutral-900 backdrop-blur placeholder:text-neutral-500"
-          />
-          <Button type="submit" className="h-13 shrink-0 rounded-full bg-neutral-900 px-7 text-[15px] font-medium text-white hover:bg-neutral-800">
-            Get early access <ArrowRight className="size-4" />
-          </Button>
-        </motion.form>
+          <a
+            href="https://testnet.useaero.org"
+            className="inline-flex h-13 items-center gap-2 rounded-full bg-neutral-900 px-8 text-[15px] font-medium text-white transition hover:bg-neutral-800"
+          >
+            Try the testnet <ArrowRight className="size-4" />
+          </a>
+        </motion.div>
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.42 }}
           className="mt-5 flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 font-mono text-xs text-neutral-600 tabular-nums"
         >
-          <span className="inline-flex items-center gap-1.5">
-            <span className="size-1.5 rounded-full bg-emerald-500" />
-            {count === null ? "Join the waitlist" : `${count.toLocaleString()} on the waitlist`}
-          </span>
           <span>&lt;1s finality</span>
           <span>$0 gas confusion</span>
         </motion.div>
@@ -768,7 +729,6 @@ function CTA() {
   const [already, setAlready] = useState(false)
   const [referrals, setReferrals] = useState(0)
   const [copied, setCopied] = useState(false)
-  const count = useWaitlistCount()
 
   const copyLink = async () => {
     const link = `https://useaero.org?ref=${myCode}`
@@ -836,11 +796,7 @@ function CTA() {
             Claim your @username
           </h2>
           <p className="mx-auto mt-4 max-w-md text-lg text-white/65">
-            One handle for sending, getting paid, and growing.{" "}
-            {count !== null && (
-              <span className="font-mono text-white tabular-nums">{count.toLocaleString()} already in line. </span>
-            )}
-            Free to reserve, yours to keep.
+            One handle for sending, getting paid, and growing. Free to reserve, yours to keep.
           </p>
           {status === "done" ? (
             <motion.div
