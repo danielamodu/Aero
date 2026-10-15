@@ -12,10 +12,11 @@ import { Check, Droplets, ExternalLink, Send } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
-import { namesAbi, usdcAbi, vaultAbi } from "@/lib/contracts"
+import { adapterAbi, namesAbi, usdcAbi, vaultAbi } from "@/lib/contracts"
 import {
   CONTRACTS,
   FUJI_AVAX_FAUCET,
+  adapterConfigured,
   formatUsdc,
   isAddress,
   isUsername,
@@ -478,6 +479,120 @@ export function EarnTab({ address }: { address: Address }) {
             <TxStatus hash={withdrawTx.hash} error={withdrawTx.error} />
           </div>
         </div>
+      </div>
+      <AdapterPanel address={address} />
+    </div>
+  )
+}
+
+/* ------------------------- live market (adapter) -------------------------- */
+
+export function AdapterPanel({ address }: { address: Address }) {
+  const [depositAmt, setDepositAmt] = useState("")
+  const [withdrawAmt, setWithdrawAmt] = useState("")
+  const approveTx = useTx()
+  const depositTx = useTx()
+  const withdrawTx = useTx()
+
+  const { data: bps, refetch: refetchApy } = useReadContract({
+    address: CONTRACTS.adapter, abi: adapterAbi, functionName: "liveApyBps",
+  })
+  const { data: tvl, refetch: refetchTvl } = useReadContract({
+    address: CONTRACTS.adapter, abi: adapterAbi, functionName: "balance",
+  })
+  const { data: myShares, refetch: refetchShares } = useReadContract({
+    address: CONTRACTS.adapter, abi: adapterAbi, functionName: "balanceOf", args: [address],
+  })
+  const { data: price } = useReadContract({
+    address: CONTRACTS.adapter, abi: adapterAbi, functionName: "sharePrice",
+  })
+  const { data: allowance, refetch: refetchAllowance } = useReadContract({
+    address: CONTRACTS.usdc, abi: usdcAbi, functionName: "allowance", args: [address, CONTRACTS.adapter],
+  })
+
+  if (!adapterConfigured) return null
+
+  const refresh = () => {
+    refetchApy()
+    refetchTvl()
+    refetchShares()
+    refetchAllowance()
+  }
+  const depositRaw = parseUsdc(depositAmt)
+  const needsApprove = depositRaw !== null && (allowance ?? BigInt(0)) < depositRaw
+  const myAssets = myShares && price ? (myShares * price) / BigInt(1e18) : undefined
+  const apy = bps !== undefined ? (Number(bps) / 100).toFixed(2) : "—"
+
+  const doDeposit = () => {
+    if (depositRaw === null) return
+    if (needsApprove) {
+      approveTx.write({ address: CONTRACTS.usdc, abi: usdcAbi, functionName: "approve", args: [CONTRACTS.adapter, maxUint256] })
+    } else {
+      depositTx.write({ address: CONTRACTS.adapter, abi: adapterAbi, functionName: "deposit", args: [depositRaw] })
+    }
+  }
+
+  const withdrawRaw = parseUsdc(withdrawAmt)
+  const doWithdraw = (all: boolean) => {
+    if (all && myShares) {
+      withdrawTx.write({ address: CONTRACTS.adapter, abi: adapterAbi, functionName: "withdraw", args: [myShares] })
+    } else if (withdrawRaw !== null && price) {
+      withdrawTx.write({ address: CONTRACTS.adapter, abi: adapterAbi, functionName: "withdraw", args: [(withdrawRaw * BigInt(1e18)) / price] })
+    }
+  }
+
+  return (
+    <div className="mt-5 rounded-[20px] border border-aero-200 bg-aero-50/50 p-6 sm:p-8">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="text-[13px] font-semibold tracking-[0.14em] text-aero-800 uppercase">
+          Live market · Benqi adapter
+        </p>
+        <p className="font-mono text-3xl font-medium text-aero-800 tabular-nums">{apy}%</p>
+      </div>
+      <p className="mt-1 max-w-xl text-sm leading-relaxed text-neutral-600">
+        Real on-chain rate from a Compound-style market via our adapter — the same code
+        proven against Benqi&apos;s mainnet qiUSDCn. Your position:{" "}
+        <span className="font-semibold text-neutral-900 tabular-nums">${formatUsdc(myAssets)}</span>
+        {" · "}market TVL: <span className="tabular-nums">${formatUsdc(tvl)}</span>.
+      </p>
+      <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
+        <div className="flex gap-2.5">
+          <Input
+            value={depositAmt}
+            onChange={(e) => { setDepositAmt(e.target.value); refresh() }}
+            inputMode="decimal"
+            placeholder="Deposit tUSDC"
+            aria-label="Deposit amount"
+            className="h-11 flex-1 rounded-2xl border-neutral-200 bg-white text-[15px] tabular-nums placeholder:text-neutral-400"
+          />
+          <Button
+            disabled={depositRaw === null || approveTx.busy || depositTx.busy}
+            onClick={() => { doDeposit(); refresh() }}
+            className="h-11 shrink-0 rounded-full bg-aero-800 px-5 text-sm font-medium text-white hover:bg-aero-900 disabled:opacity-60"
+          >
+            {approveTx.busy ? "…" : depositTx.busy ? "…" : needsApprove ? "Approve" : "Supply"}
+          </Button>
+        </div>
+        <div className="flex gap-2.5">
+          <Input
+            value={withdrawAmt}
+            onChange={(e) => setWithdrawAmt(e.target.value)}
+            inputMode="decimal"
+            placeholder="Withdraw tUSDC"
+            aria-label="Withdraw amount"
+            className="h-11 flex-1 rounded-2xl border-neutral-200 bg-white text-[15px] tabular-nums placeholder:text-neutral-400"
+          />
+          <Button
+            disabled={(!withdrawRaw && !myShares) || withdrawTx.busy}
+            onClick={() => { doWithdraw(!withdrawAmt); refresh() }}
+            className="h-11 shrink-0 rounded-full border border-neutral-300 bg-white px-5 text-sm font-medium text-neutral-900 hover:bg-neutral-50 disabled:opacity-60"
+          >
+            {withdrawTx.busy ? "…" : withdrawAmt ? "Withdraw" : "All"}
+          </Button>
+        </div>
+      </div>
+      <div className="mt-2">
+        <TxStatus hash={approveTx.hash ?? depositTx.hash ?? withdrawTx.hash} error={approveTx.error ?? depositTx.error ?? withdrawTx.error} />
       </div>
     </div>
   )

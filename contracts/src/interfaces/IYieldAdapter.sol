@@ -14,8 +14,10 @@ interface IYieldAdapter {
     function balance() external view returns (uint256);
 
     /// @notice Pull `assets` USDC from the router into the market.
-    function deposit(uint256 assets) external;
+    /// @return shares minted to the depositor, priced off live market balance.
+    function deposit(uint256 assets) external returns (uint256 shares);
 
-    /// @notice Pull `assets` USDC back to the router. Reverts if illiquid.
-    function withdraw(uint256 assets) external;
+    /// @notice Burn `shares`, pull the underlying back to the router. Reverts if illiquid.
+    /// @return assets redeemed to the withdrawer.
+    function withdraw(uint256 shares) external returns (uint256 assets);
 }
