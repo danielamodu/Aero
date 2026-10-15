@@ -21,6 +21,7 @@ import {
   Sprout,
   X,
 } from "lucide-react"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -301,13 +302,16 @@ function Hero() {
   }
 
   return (
-    <section id="top" className="relative overflow-hidden bg-aero-800 pt-32 text-white">
-      <div aria-hidden className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,#0B004E_0%,#1800AD_55%,#3D2BE0_130%)]" />
-        <div className="absolute -top-24 left-[8%] h-72 w-[480px] rounded-full bg-white/15 blur-3xl" />
-        <div className="absolute top-24 right-[4%] h-56 w-[380px] rounded-full bg-white/10 blur-3xl" />
-        <div className="absolute top-[46%] left-[30%] h-40 w-[520px] rounded-full bg-white/[0.07] blur-3xl" />
-      </div>
+    <section id="top" className="relative overflow-hidden bg-[#bcd7f0] pt-32 text-neutral-900">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-cover bg-center"
+        style={{ backgroundImage: "url(/hero-sky.jpg)" }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-gradient-to-b from-transparent via-white/40 to-white"
+      />
 
       <div className="relative mx-auto max-w-4xl px-5 text-center">
         <motion.h1
@@ -322,7 +326,7 @@ function Hero() {
           initial={{ opacity: 0, y: 26 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.18 }}
-          className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-white/70"
+          className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-neutral-600"
         >
           Send dollars to any @username in under a second, pay real bills from the same
           balance, and let the rest earn while you sleep.
@@ -340,9 +344,9 @@ function Hero() {
             placeholder="you@email.com"
             aria-label="Email address"
             type="email"
-            className="h-13 flex-1 rounded-full border-white/25 bg-white/10 px-5 text-base text-white placeholder:text-white/40"
+            className="h-13 flex-1 rounded-full border-white/60 bg-white/70 px-5 text-base text-neutral-900 backdrop-blur placeholder:text-neutral-500"
           />
-          <Button type="submit" className="h-13 shrink-0 rounded-full bg-white px-7 text-[15px] font-medium text-aero-900 hover:bg-aero-50">
+          <Button type="submit" className="h-13 shrink-0 rounded-full bg-neutral-900 px-7 text-[15px] font-medium text-white hover:bg-neutral-800">
             Get early access <ArrowRight className="size-4" />
           </Button>
         </motion.form>
@@ -350,10 +354,10 @@ function Hero() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.42 }}
-          className="mt-5 flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 font-mono text-xs text-white/55 tabular-nums"
+          className="mt-5 flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 font-mono text-xs text-neutral-600 tabular-nums"
         >
           <span className="inline-flex items-center gap-1.5">
-            <span className="size-1.5 rounded-full bg-emerald-300" />
+            <span className="size-1.5 rounded-full bg-emerald-500" />
             {count === null ? "Join the waitlist" : `${count.toLocaleString()} on the waitlist`}
           </span>
           <span>&lt;1s finality</span>
@@ -465,14 +469,60 @@ function HowItWorks() {
 
 /* ------------------------------ integrations ------------------------------ */
 
-const INTEGRATIONS = [
-  { label: "Avalanche", short: "AVAX", size: 72, x: "50%", y: "4%", dx: "-50%", dy: "0%" },
-  { label: "Benqi", short: "B", size: 64, x: "16%", y: "27%", dx: "-50%", dy: "-50%" },
+const INTEGRATIONS: {
+  label: string
+  short: string
+  size: number
+  x: string
+  y: string
+  dx: string
+  dy: string
+  img?: string
+  dashed?: boolean
+}[] = [
+  { label: "Avalanche", short: "AVAX", size: 72, x: "50%", y: "4%", dx: "-50%", dy: "0%", img: "/partners/avax.png" },
+  { label: "Benqi", short: "B", size: 64, x: "16%", y: "27%", dx: "-50%", dy: "-50%", img: "/partners/benqi.jpg" },
+  // Trader Joe's current mark is a seasonal mascot that breaks the set — TJ monogram until they say otherwise.
   { label: "Trader Joe", short: "TJ", size: 68, x: "84%", y: "27%", dx: "-50%", dy: "-50%" },
-  { label: "USDC", short: "$", size: 60, x: "16%", y: "69%", dx: "-50%", dy: "-50%" },
+  { label: "USDC", short: "$", size: 60, x: "16%", y: "69%", dx: "-50%", dy: "-50%", img: "/partners/usdc.png" },
   { label: "Warp", short: "W", size: 60, x: "84%", y: "69%", dx: "-50%", dy: "-50%" },
   { label: "More soon", short: "+", size: 56, x: "50%", y: "92%", dx: "-50%", dy: "-100%", dashed: true },
 ]
+
+function PartnerMark({
+  label,
+  short,
+  size,
+  img,
+  dashed,
+  delay = 0,
+}: {
+  label: string
+  short: string
+  size: number
+  img?: string
+  dashed?: boolean
+  delay?: number
+}) {
+  return (
+    <span
+      title={label}
+      style={{ width: size, height: size, animationDelay: `${delay}s` }}
+      className={cn(
+        "flex items-center justify-center overflow-hidden rounded-full animate-aero-float",
+        dashed
+          ? "border-2 border-dashed border-neutral-300 text-sm font-bold text-neutral-400"
+          : "border border-neutral-200 bg-white shadow-[0_10px_30px_-12px_rgba(11,0,78,0.2)]"
+      )}
+    >
+      {img ? (
+        <Image src={img} alt={label} width={size} height={size} className="h-full w-full object-cover" />
+      ) : (
+        <span className="text-sm font-bold text-aero-900">{short}</span>
+      )}
+    </span>
+  )
+}
 
 function Integrations() {
   return (
@@ -495,14 +545,9 @@ function Integrations() {
             >
               <span
                 style={{ width: b.size, height: b.size }}
-                className={cn(
-                  "flex items-center justify-center rounded-full text-sm font-bold animate-aero-float",
-                  b.dashed
-                    ? "border-2 border-dashed border-neutral-300 text-neutral-400"
-                    : "border border-neutral-200 bg-white text-aero-900 shadow-[0_10px_30px_-12px_rgba(11,0,78,0.2)]"
-                )}
+                className="flex items-center justify-center"
               >
-                <span style={{ animationDelay: `${i * 0.8}s` }} className="contents">{b.short}</span>
+                <PartnerMark label={b.label} short={b.short} size={b.size} img={b.img} dashed={b.dashed} delay={i * 0.8} />
               </span>
               <span className="text-[11px] font-medium whitespace-nowrap text-neutral-400">{b.label}</span>
             </motion.span>
@@ -532,16 +577,9 @@ function Integrations() {
           </div>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             {INTEGRATIONS.map((b) => (
-              <span
-                key={b.label}
-                className={cn(
-                  "flex size-14 items-center justify-center rounded-full text-sm font-bold",
-                  b.dashed
-                    ? "border-2 border-dashed border-neutral-300 text-neutral-400"
-                    : "border border-neutral-200 bg-white text-aero-900 shadow-sm"
-                )}
-              >
-                {b.short}
+              <span key={b.label} className="flex flex-col items-center gap-1.5">
+                <PartnerMark label={b.label} short={b.short} size={56} img={b.img} dashed={b.dashed} />
+                <span className="text-[10px] font-medium text-neutral-400">{b.label}</span>
               </span>
             ))}
           </div>
