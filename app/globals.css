@@ -134,7 +134,11 @@
     }
   html {
     @apply font-sans;
-    }
+    overflow-x: clip;
+  }
+  body {
+    overflow-x: clip;
+  }
   ::selection {
     background: #1800ad;
     color: #fff;

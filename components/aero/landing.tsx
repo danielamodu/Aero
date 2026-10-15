@@ -319,7 +319,7 @@ function HeroPhone() {
 function Hero() {
   return (
     <section id="top" className="flex min-h-svh items-center bg-white pt-24 pb-20">
-      <div className="mx-auto grid w-full max-w-[110rem] items-center gap-16 px-5 lg:grid-cols-[1.05fr_0.95fr] lg:px-10">
+      <div className="mx-auto grid w-full max-w-[110rem] items-center gap-10 px-5 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16 lg:px-10">
         <div>
           <motion.h1
             initial={{ opacity: 0, y: 24 }}
@@ -416,7 +416,7 @@ function Ticker() {
 
 function Manifesto() {
   return (
-    <section className="flex min-h-[80svh] items-center bg-[#f7f7f7] py-24">
+    <section className="flex min-h-[80svh] items-center bg-[#f7f7f7] py-16 sm:py-24">
       <div className="mx-auto w-full max-w-[110rem] px-5 lg:px-10">
         <Kicker>Why Aero exists</Kicker>
         <RevealWords
@@ -456,7 +456,7 @@ const PILLARS = [
 
 function Pillars() {
   return (
-    <section id="features" className="scroll-mt-16 bg-white py-24">
+    <section id="features" className="scroll-mt-16 bg-white py-16 sm:py-24">
       <div className="mx-auto w-full max-w-[110rem] px-5 lg:px-10">
         <SectionHead
           eyebrow="What Aero does"
@@ -507,8 +507,8 @@ function SendDemo() {
   }
 
   return (
-    <section id="send" ref={ref} className="flex min-h-svh scroll-mt-16 items-center bg-[#f7f7f7] py-24">
-      <div className="mx-auto grid w-full max-w-[110rem] items-center gap-14 px-5 lg:grid-cols-2 lg:px-10">
+    <section id="send" ref={ref} className="flex min-h-svh scroll-mt-16 items-center bg-[#f7f7f7] py-16 sm:py-24">
+      <div className="mx-auto grid w-full max-w-[110rem] items-center gap-10 lg:gap-14 px-5 lg:grid-cols-2 lg:px-10">
         <SectionHead
           eyebrow="Send"
           title="If you can tag someone, you can pay them"
@@ -552,9 +552,9 @@ function SendDemo() {
               <AnimatePresence initial={false}>
                 {inView && feed.map((f) => (
                   <motion.div key={`${f.to}-${f.amount}`} layout initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center justify-between py-1.5">
-                    <span className="font-medium text-neutral-700">You → <span className="text-aero-800">{f.to}</span></span>
-                    <span className="tabular-nums text-neutral-900">{f.amount} <span className="ml-1 text-[13px] font-medium text-emerald-600">· Settled</span></span>
+                    className="flex items-center justify-between gap-3 py-1.5">
+                    <span className="min-w-0 truncate font-medium text-neutral-700">You → <span className="text-aero-800">{f.to}</span></span>
+                    <span className="shrink-0 tabular-nums text-neutral-900">{f.amount} <span className="ml-1 text-[13px] font-medium text-emerald-600">· Settled</span></span>
                   </motion.div>
                 ))}
               </AnimatePresence>
@@ -576,7 +576,7 @@ function Earn() {
   const [auto, setAuto] = useState(true)
 
   return (
-    <section id="earn" ref={ref} className="flex min-h-svh scroll-mt-16 items-center bg-aero-950 py-24 text-white">
+    <section id="earn" ref={ref} className="flex min-h-svh scroll-mt-16 items-center bg-aero-950 py-16 text-white sm:py-24">
       <div className="mx-auto grid w-full max-w-[110rem] items-start gap-14 px-5 lg:grid-cols-[1fr_1fr] lg:px-10">
         <div>
           <motion.div {...fadeUp}>
@@ -625,16 +625,16 @@ function Earn() {
             ].map((r, i) => (
               <motion.div key={r.name} initial={{ opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }} transition={{ delay: 0.15 + i * 0.1, duration: 0.45 }}
-                className={cn("flex items-center gap-4 border-b border-white/[0.07] px-6 py-4 last:border-0", r.best && "bg-white/[0.05]")}>
-                <span className="text-sm text-white/30 tabular-nums">{r.rank}</span>
-                <span className="flex-1">
-                  <span className="block text-[15px] font-medium">
+                className={cn("flex items-center gap-3 border-b border-white/[0.07] px-5 py-4 last:border-0 sm:gap-4 sm:px-6", r.best && "bg-white/[0.05]")}>
+                <span className="shrink-0 text-sm text-white/30 tabular-nums">{r.rank}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[15px] font-medium">
                     {r.name}{" "}
                     {r.best && <span className="ml-1.5 rounded-full bg-emerald-400/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-300">Best rate</span>}
                   </span>
-                  <span className="text-xs text-white/40">{r.detail}</span>
+                  <span className="block truncate text-xs text-white/40">{r.detail}</span>
                 </span>
-                <span className={cn("text-xl font-medium tabular-nums", r.best ? "text-emerald-300" : "text-white/55")}>{r.rate}</span>
+                <span className={cn("shrink-0 text-lg tabular-nums sm:text-xl", r.best ? "text-emerald-300" : "text-white/55")}>{r.rate}</span>
               </motion.div>
             ))}
             <p className="border-t border-white/10 px-6 py-4 text-[13px] leading-relaxed text-white/45">
@@ -651,7 +651,7 @@ function Earn() {
 
 function Network() {
   return (
-    <section id="network" className="flex min-h-[80svh] scroll-mt-16 items-center bg-white py-24">
+    <section id="network" className="flex min-h-[80svh] scroll-mt-16 items-center bg-white py-16 sm:py-24">
       <div className="mx-auto w-full max-w-[110rem] px-5 lg:px-10">
         <SectionHead
           eyebrow="Under the hood"
@@ -701,8 +701,8 @@ function Pay() {
   const [paid, setPaid] = useState<string[]>([])
   const toggle = (id: string) => setPaid((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]))
   return (
-    <section id="pay" className="flex min-h-svh scroll-mt-16 items-center bg-[#f7f7f7] py-24">
-      <div className="mx-auto grid w-full max-w-[110rem] items-center gap-14 px-5 lg:grid-cols-2 lg:px-10">
+    <section id="pay" className="flex min-h-svh scroll-mt-16 items-center bg-[#f7f7f7] py-16 sm:py-24">
+      <div className="mx-auto grid w-full max-w-[110rem] items-center gap-10 lg:gap-14 px-5 lg:grid-cols-2 lg:px-10">
         <motion.div {...fadeUp} className="order-2 lg:order-1">
           <Card className={cn("gap-0 overflow-hidden rounded-[20px] border-neutral-200 bg-white p-0", SOFT)}>
             <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-4">
@@ -715,15 +715,15 @@ function Pay() {
                   const isPaid = paid.includes(b.id)
                   return (
                     <motion.div key={b.id} layout
-                      className="flex items-center gap-4 border-b border-dashed border-neutral-200 px-3 py-4 last:border-0">
-                      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-xs font-semibold text-neutral-600">
+                      className="flex items-center gap-3 border-b border-dashed border-neutral-200 px-3 py-4 last:border-0 sm:gap-4">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-xs font-semibold text-neutral-600 sm:size-10">
                         {b.initials}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className={cn("truncate text-[15px] font-medium text-neutral-900", isPaid && "text-neutral-400 line-through")}>{b.name}</p>
-                        <p className="text-xs text-neutral-400">{b.detail}</p>
+                        <p className={cn("truncate text-sm font-medium text-neutral-900 sm:text-[15px]", isPaid && "text-neutral-400 line-through")}>{b.name}</p>
+                        <p className="truncate text-xs text-neutral-400">{b.detail}</p>
                       </div>
-                      <span className="font-medium text-neutral-900 tabular-nums">{b.amount}</span>
+                      <span className="shrink-0 text-sm font-medium text-neutral-900 tabular-nums sm:text-[15px]">{b.amount}</span>
                       {isPaid ? (
                         <motion.span initial={{ scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
                           className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1.5 text-[13px] font-medium text-emerald-700">
@@ -783,7 +783,7 @@ const FAQS = [
 
 function FAQ() {
   return (
-    <section className="bg-white py-24">
+    <section className="bg-white py-16 sm:py-24">
       <div className="mx-auto w-full max-w-3xl px-5">
         <SectionHead eyebrow="Questions" title="Asked often, answered plainly" />
         <motion.div {...fadeUp} transition={{ duration: 0.5, delay: 0.1 }} className="mt-10">
