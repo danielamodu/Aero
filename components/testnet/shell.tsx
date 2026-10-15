@@ -37,12 +37,6 @@ export function LoginView() {
     <div className="grid min-h-svh lg:h-svh lg:grid-cols-2 lg:overflow-hidden">
       <div className="relative flex flex-col justify-center overflow-hidden bg-aero-800 px-8 py-10 text-white sm:px-12 lg:py-0">
         <AeroMark aria-hidden className="pointer-events-none absolute -right-20 -bottom-24 size-[380px] text-white/[0.07]" />
-        <div className="relative flex items-center gap-2.5">
-          <BrandWordmark tone="light" height={30} />
-          <span className="rounded-full bg-white/15 px-2.5 py-1 font-mono text-[11px] font-bold tracking-wider">
-            TESTNET
-          </span>
-        </div>
         <div className="relative py-10 lg:py-12">
           <motion.h1
             initial={{ opacity: 0, y: 24 }}
