@@ -7,7 +7,6 @@
 @theme inline {
     --font-heading: var(--font-sans);
     --font-sans: var(--font-sans);
-    --font-display: var(--font-display);
     --color-aero-50: #f3f2fb;
     --color-aero-100: #e3e0f5;
     --color-aero-200: #beb7e8;
@@ -176,6 +175,11 @@
 
 @utility animate-aero-marquee {
   animation: aero-marquee 32s linear infinite;
+}
+
+/* Display serif — headlines ONLY. Body and UI copy always inherit Geist. */
+@utility font-editorial {
+  font-family: var(--font-display), Georgia, serif;
 }
 
 @utility animate-aero-float {
