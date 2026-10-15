@@ -34,8 +34,8 @@ const LOGIN_STEPS = [
 
 export function LoginView() {
   return (
-    <div className="grid min-h-svh lg:grid-cols-2">
-      <div className="relative flex flex-col justify-between overflow-hidden bg-aero-800 px-8 py-10 text-white sm:px-12">
+    <div className="grid min-h-svh lg:h-svh lg:grid-cols-2 lg:overflow-hidden">
+      <div className="relative flex flex-col justify-center overflow-hidden bg-aero-800 px-8 py-10 text-white sm:px-12 lg:py-0">
         <AeroMark aria-hidden className="pointer-events-none absolute -right-20 -bottom-24 size-[380px] text-white/[0.07]" />
         <div className="relative flex items-center gap-2.5">
           <BrandWordmark tone="light" height={30} />
@@ -43,12 +43,12 @@ export function LoginView() {
             TESTNET
           </span>
         </div>
-        <div className="relative py-14">
+        <div className="relative py-10 lg:py-12">
           <motion.h1
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="max-w-md text-5xl leading-[1.02] font-medium tracking-[-0.025em] text-balance sm:text-6xl"
+            className="max-w-md text-4xl leading-[1.02] font-medium tracking-[-0.025em] text-balance sm:text-5xl xl:text-6xl"
           >
             Play money, real rails.
           </motion.h1>
@@ -61,7 +61,7 @@ export function LoginView() {
             The full Aero experience on Avalanche Fuji — send, pay, and earn with test
             dollars before a single real cent moves.
           </motion.p>
-          <div className="mt-10 space-y-6">
+          <div className="mt-8 space-y-5">
             {LOGIN_STEPS.map((s, i) => (
               <motion.div
                 key={s.n}
@@ -79,24 +79,26 @@ export function LoginView() {
             ))}
           </div>
         </div>
-        <p className="relative font-mono text-xs text-white/40">
+        <p className="relative mt-8 font-mono text-xs text-white/40">
           FUJI · CHAIN 43113 · CONTRACTS UNVERIFIED EXPERIMENTS
         </p>
       </div>
 
-      <div className="flex items-center justify-center bg-white px-5 py-14">
+      <div className="flex items-center justify-center bg-white px-5 py-10 lg:py-0">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, delay: 0.15 }}
           className="w-full max-w-sm text-center"
         >
-          <BrandLockup tone="dark" height={32} />
-          <h2 className="mt-8 text-3xl font-medium tracking-[-0.02em] text-neutral-900">
+          <div className="flex justify-center">
+            <BrandLockup tone="dark" height={30} />
+          </div>
+          <h2 className="mt-7 text-3xl font-medium tracking-[-0.02em] text-neutral-900">
             Get started
           </h2>
           <p className="mx-auto mt-3 max-w-xs text-[15px] leading-relaxed text-neutral-500">
-            Connect a wallet on Avalanche Fuji. Returning users land straight in the dashboard.
+            Connect a wallet on Avalanche Fuji.
           </p>
           <div className="mt-7 flex justify-center">
             <AppKitConnectButton />
