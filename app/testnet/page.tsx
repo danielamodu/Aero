@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { LoginView, MobileTabs, MobileTop, Overview, Sidebar } from "@/components/testnet/shell"
 import { EarnTab, FaucetBar, PayTab, SendTab } from "@/components/testnet/views"
 import { reownConfigured } from "@/components/testnet/providers"
-import { contractsConfigured, FUJI_CHAIN_ID } from "@/lib/testnet"
+import { contractsConfigured, FUJI_CHAIN_ID, missingContractEnvs } from "@/lib/testnet"
 
 export type TestnetTab = "overview" | "send" | "pay" | "earn"
 
@@ -57,11 +57,18 @@ export default function TestnetPage() {
     )
   }
   if (!contractsConfigured) {
+    const missing = missingContractEnvs()
     return (
       <SetupNotice title="Deploy the contracts first">
         <p><span className="font-mono font-bold text-neutral-900">1.</span> Fund a throwaway key with Fuji AVAX (faucet.avax.network)</p>
         <p><span className="font-mono font-bold text-neutral-900">2.</span> <span className="font-mono text-[13px] text-neutral-900">cd contracts && forge script script/Deploy.s.sol --rpc-url fuji --broadcast</span></p>
         <p><span className="font-mono font-bold text-neutral-900">3.</span> Set the three <span className="font-mono text-[13px] text-neutral-900">NEXT_PUBLIC_*</span> addresses and redeploy</p>
+        {missing.length > 0 && (
+          <p className="rounded-2xl bg-amber-50 p-3.5 text-sm leading-relaxed text-amber-800">
+            This build can&apos;t see: <span className="font-mono text-[13px]">{missing.join(", ")}</span> — check
+            the values (no extra spaces) and redeploy.
+          </p>
+        )}
       </SetupNotice>
     )
   }

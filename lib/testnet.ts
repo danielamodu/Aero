@@ -8,7 +8,7 @@ export const FUJI_AVAX_FAUCET = "https://faucet.avax.network"
 type Address = `0x${string}`
 
 function envAddress(key: string): Address {
-  const v = (process.env[key] ?? "") as string
+  const v = ((process.env[key] ?? "") as string).trim()
   return (v.startsWith("0x") && v.length === 42 ? v : zeroAddress) as Address
 }
 
@@ -20,6 +20,16 @@ export const CONTRACTS = {
 
 export const contractsConfigured =
   CONTRACTS.names !== zeroAddress && CONTRACTS.usdc !== zeroAddress && CONTRACTS.vault !== zeroAddress
+
+const CONTRACT_ENV_KEYS = ["NEXT_PUBLIC_AERO_NAMES", "NEXT_PUBLIC_TEST_USDC", "NEXT_PUBLIC_AERO_VAULT"] as const
+
+/** Names any contract env var that's missing or malformed — shown on the setup screen. */
+export function missingContractEnvs(): string[] {
+  return CONTRACT_ENV_KEYS.filter((k) => {
+    const v = ((process.env[k] ?? "") as string).trim()
+    return !(v.startsWith("0x") && v.length === 42)
+  })
+}
 
 export function snowtraceTx(hash: string): string {
   return `${FUJI_EXPLORER}/tx/${hash}`
