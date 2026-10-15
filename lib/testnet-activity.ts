@@ -3,6 +3,8 @@ export type ActivityItem = {
   amount: string
   hash: string
   ts: number
+  to?: string
+  memo?: string
 }
 
 const KEY = "aero_activity"

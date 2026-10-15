@@ -15,7 +15,7 @@ contract BenqiAdapterTest is Test {
     function setUp() public {
         vm.warp(100 days);
         usdc = new TestUSDC();
-        market = new MockQiToken(usdc, 1584400000); // ≈5% APR
+        market = new MockQiToken(usdc, 1584400000, "Mock Benqi USDC", "mqiUSDC"); // ≈5% APR
         adapter = new BenqiAdapter(market, "benqi-usdc-fuji-mock");
         vm.prank(alice);
         usdc.faucet();

@@ -20,6 +20,7 @@ export type ChainActivity = {
   amount: string
   ts: number
   kind: "in" | "out" | "deposit" | "withdraw" | "faucet"
+  counterparty: string | null
 }
 
 const ZERO = "0x0000000000000000000000000000000000000000"
@@ -50,7 +51,7 @@ export async function fetchOnchainActivity(
   const items: (ChainActivity & { block: bigint })[] = []
   for (const l of sent) {
     if (!l.args.to || l.args.value === undefined) continue
-    items.push({ hash: l.transactionHash!, label: `Sent → ${short(l.args.to)}`, amount: fmt(l.args.value), ts: 0, kind: "out", block: l.blockNumber })
+    items.push({ hash: l.transactionHash!, label: `Sent → ${short(l.args.to)}`, amount: fmt(l.args.value), ts: 0, kind: "out", counterparty: l.args.to, block: l.blockNumber })
   }
   for (const l of received) {
     if (!l.args.from || l.args.value === undefined) continue
@@ -61,16 +62,17 @@ export async function fetchOnchainActivity(
       amount: `+${fmt(l.args.value)}`,
       ts: 0,
       kind: faucet ? "faucet" : "in",
+      counterparty: faucet ? null : l.args.from,
       block: l.blockNumber,
     })
   }
   for (const l of deposits) {
     if (l.args.assets === undefined) continue
-    items.push({ hash: l.transactionHash!, label: "Vault deposit", amount: fmt(l.args.assets), ts: 0, kind: "deposit", block: l.blockNumber })
+    items.push({ hash: l.transactionHash!, label: "Vault deposit", amount: fmt(l.args.assets), ts: 0, kind: "deposit", counterparty: null, block: l.blockNumber })
   }
   for (const l of withdrawals) {
     if (l.args.assets === undefined) continue
-    items.push({ hash: l.transactionHash!, label: "Vault withdraw", amount: `+${fmt(l.args.assets)}`, ts: 0, kind: "withdraw", block: l.blockNumber })
+    items.push({ hash: l.transactionHash!, label: "Vault withdraw", amount: `+${fmt(l.args.assets)}`, ts: 0, kind: "withdraw", counterparty: null, block: l.blockNumber })
   }
 
   // Attach timestamps (unique blocks only).

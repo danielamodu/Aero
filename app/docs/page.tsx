@@ -124,9 +124,17 @@ export default function DocsPage() {
             </p>
             <p>
               <strong className="font-semibold text-neutral-900">3. Claim a handle, then play.</strong>{" "}
-              Register a @username on-chain, send to friends, pay the demo bills, and park
-              funds in the mock vault. Contracts are unverified experiments — expect resets
-              between testnet phases.
+              Register a @username on-chain, send to friends (add a note — it travels
+              on-chain with the payment), pay the demo bills, and park funds in the
+              auto-router or the mock vault. Contracts are unverified experiments —
+              expect resets between testnet phases.
+            </p>
+            <p>
+              <strong className="font-semibold text-neutral-900">Need test dollars two ways.</strong>{" "}
+              Claim 10,000 tUSDC daily from the in-app faucet, or “buy” a pack with the
+              sandbox card checkout — no real charge, settled from the on-chain till.
+              Owe someone off-app? Send them your link:{" "}
+              <span className="font-mono text-[15px] text-neutral-900">useaero.org/pay/@you/25</span>
             </p>
           </DocSection>
 

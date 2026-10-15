@@ -18,7 +18,7 @@ contract DeployBenqi is Script {
         uint256 key = vm.envUint("DEPLOYER_KEY");
         address usdcAddr = vm.envAddress("TEST_USDC_ADDR");
         vm.startBroadcast(key);
-        MockQiToken market = new MockQiToken(IERC20(usdcAddr), RATE_5PCT);
+        MockQiToken market = new MockQiToken(IERC20(usdcAddr), RATE_5PCT, "Mock Benqi USDC", "mqiUSDC");
         BenqiAdapter adapter = new BenqiAdapter(market, "benqi-usdc-fuji-mock");
         // Seed market liquidity if the deployer holds anything (faucet may be cooling down).
         uint256 bal = TestUSDC(usdcAddr).balanceOf(msg.sender);

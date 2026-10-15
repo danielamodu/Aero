@@ -16,12 +16,11 @@ contract MockQiToken is ERC20, Ownable, IQiToken {
     using SafeERC20 for IERC20;
 
     IERC20 public immutable underlyingAsset;
-    uint8 private constant UDEC = 6;
     uint8 private constant QDEC = 8;
-    /// @notice Converts qi units to underlying: assets = qi * rate / RATE_SCALE.
-    uint256 private constant RATE_SCALE = 100 * 1e18;
 
-    /// @notice Exchange rate (underlying per qi), grows with accrual. Starts at 0.02.
+    /// @notice Exchange rate: underlying units per qi unit, 1e18-scaled.
+    ///         Starts at 0.02 (like cUSDC: 2e16). Matches Compound convention
+    ///         exactly: assets = qi * rate / 1e18, no extra decimals factor.
     uint256 public exchangeRateStored;
     /// @notice Simulated per-second growth, 1e18-scaled (≈5% APR default).
     uint256 public ratePerSecond;
@@ -31,9 +30,11 @@ contract MockQiToken is ERC20, Ownable, IQiToken {
     event Redeem(address indexed redeemer, uint256 redeemTokens, uint256 redeemAmount);
     event RateUpdated(uint256 ratePerSecond);
 
-    constructor(IERC20 _underlying, uint256 _ratePerSecond) ERC20("Mock Benqi USDC", "mqiUSDC") Ownable(msg.sender) {
-        underlyingAsset = _underlying;
-        exchangeRateStored = 2e18;
+    constructor(IERC20 _underlying, uint256 _ratePerSecond, string memory name_, string memory symbol_)
+        ERC20(name_, symbol_)
+        Ownable(msg.sender)
+    {        underlyingAsset = _underlying;
+        exchangeRateStored = 2e16;
         ratePerSecond = _ratePerSecond;
         lastAccrual = block.timestamp;
     }
@@ -70,12 +71,12 @@ contract MockQiToken is ERC20, Ownable, IQiToken {
     }
 
     function balanceOfUnderlying(address owner) external view returns (uint256) {
-        return (balanceOf(owner) * exchangeRateStored) / RATE_SCALE;
+        return (balanceOf(owner) * exchangeRateStored) / 1e18;
     }
 
     function mint(uint256 mintAmount) external returns (uint256) {
         accrue();
-        uint256 mintTokens = (mintAmount * RATE_SCALE) / exchangeRateStored;
+        uint256 mintTokens = (mintAmount * 1e18) / exchangeRateStored;
         require(mintTokens > 0, "ZERO_TOKENS");
         underlyingAsset.safeTransferFrom(msg.sender, address(this), mintAmount);
         _mint(msg.sender, mintTokens);
@@ -85,7 +86,7 @@ contract MockQiToken is ERC20, Ownable, IQiToken {
 
     function redeem(uint256 redeemTokens) external returns (uint256) {
         accrue();
-        uint256 redeemAmount = (redeemTokens * exchangeRateStored) / RATE_SCALE;
+        uint256 redeemAmount = (redeemTokens * exchangeRateStored) / 1e18;
         require(redeemAmount > 0, "ZERO_AMOUNT");
         _burn(msg.sender, redeemTokens);
         underlyingAsset.safeTransfer(msg.sender, redeemAmount);
@@ -95,7 +96,7 @@ contract MockQiToken is ERC20, Ownable, IQiToken {
 
     function redeemUnderlying(uint256 redeemAmount) external returns (uint256) {
         accrue();
-        uint256 redeemTokens = (redeemAmount * RATE_SCALE) / exchangeRateStored;
+        uint256 redeemTokens = (redeemAmount * 1e18) / exchangeRateStored;
         require(redeemTokens > 0, "ZERO_TOKENS");
         _burn(msg.sender, redeemTokens);
         underlyingAsset.safeTransfer(msg.sender, redeemAmount);

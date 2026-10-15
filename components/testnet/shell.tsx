@@ -481,6 +481,7 @@ export function Overview({
                 <span className="min-w-0 truncate font-medium text-neutral-700">
                   {a.label} · <span className="tabular-nums">{a.amount}</span>{" "}
                   <span className="font-normal text-neutral-400">{a.ts > 0 ? `· ${timeAgo(a.ts)}` : ""}</span>
+                  {a.memo && <span className="block truncate font-normal text-neutral-400">“{a.memo}”</span>}
                 </span>
                 <a
                   href={`https://testnet.snowtrace.io/tx/${a.hash}`}

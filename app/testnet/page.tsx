@@ -44,7 +44,19 @@ function WrongNetwork() {
 }
 
 export default function TestnetPage() {
-  const [tab, setTab] = useState<TestnetTab>("overview")
+  // Payment-link prefill (?to=@x&amount=1.5) — read once, land on Send.
+  const [prefill] = useState(() => {
+    try {
+      const q = new URLSearchParams(window.location.search)
+      return {
+        to: (q.get("to") ?? "").slice(0, 42),
+        amount: (q.get("amount") ?? "").slice(0, 20),
+      }
+    } catch {
+      return { to: "", amount: "" }
+    }
+  })
+  const [tab, setTab] = useState<TestnetTab>(prefill.to ? "send" : "overview")
 
   // No wallet hooks before these gates: without a provider they throw.
   if (!reownConfigured) {
@@ -73,15 +85,17 @@ export default function TestnetPage() {
     )
   }
 
-  return <TestnetConnected tab={tab} setTab={setTab} />
+  return <TestnetConnected tab={tab} setTab={setTab} prefill={prefill} />
 }
 
 function TestnetConnected({
   tab,
   setTab,
+  prefill,
 }: {
   tab: TestnetTab
   setTab: (t: TestnetTab) => void
+  prefill: { to: string; amount: string }
 }) {
   const { address, isConnected, chainId } = useAccount()
 
@@ -95,7 +109,7 @@ function TestnetConnected({
         <MobileTop />
         <main className="mx-auto w-full max-w-3xl px-5 pt-6 pb-28 lg:pb-16">
           {tab === "overview" && <Overview address={address} go={setTab} />}
-          {tab === "send" && <SendTab address={address} />}
+          {tab === "send" && <SendTab address={address} initialTo={prefill.to} initialAmount={prefill.amount} />}
           {tab === "pay" && <PayTab address={address} />}
           {tab === "earn" && <EarnTab address={address} />}
           {tab !== "overview" && (

@@ -19,12 +19,18 @@ export const CONTRACTS = {
   usdc: envAddress(process.env.NEXT_PUBLIC_TEST_USDC),
   vault: envAddress(process.env.NEXT_PUBLIC_AERO_VAULT),
   adapter: envAddress(process.env.NEXT_PUBLIC_BENQI_ADAPTER),
+  router: envAddress(process.env.NEXT_PUBLIC_ROUTER),
+  pay: envAddress(process.env.NEXT_PUBLIC_AEROPAY),
+  bank: envAddress(process.env.NEXT_PUBLIC_BANK),
 }
 
 export const contractsConfigured =
   CONTRACTS.names !== zeroAddress && CONTRACTS.usdc !== zeroAddress && CONTRACTS.vault !== zeroAddress
 
 export const adapterConfigured = CONTRACTS.adapter !== zeroAddress
+export const routerConfigured = CONTRACTS.router !== zeroAddress
+export const payConfigured = CONTRACTS.pay !== zeroAddress
+export const bankConfigured = CONTRACTS.bank !== zeroAddress
 
 /** Names any contract env var that's missing or malformed — shown on the setup screen. */
 export function missingContractEnvs(): string[] {
