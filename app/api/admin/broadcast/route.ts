@@ -33,7 +33,24 @@ ${paras}
 </div></body></html>`
 }
 
-type Payload = { subject?: unknown; heading?: unknown; body?: unknown; test_email?: unknown; dry_run?: unknown }
+type Payload = {
+  subject?: unknown
+  heading?: unknown
+  body?: unknown
+  test_email?: unknown
+  dry_run?: unknown
+  from?: unknown
+  reply_to?: unknown
+  to?: unknown
+}
+
+const OWN_DOMAIN = "useaero.org"
+
+function cleanAddress(raw: unknown): string | null {
+  if (typeof raw !== "string") return null
+  const v = raw.trim().toLowerCase()
+  return /^[a-z0-9._%+-]+@useaero\.org$/.test(v) ? v : null
+}
 
 export async function POST(req: Request) {
   const authed = verifyAdminCookie((await cookies()).get(ADMIN_COOKIE)?.value)
@@ -52,6 +69,16 @@ export async function POST(req: Request) {
   const heading = typeof p.heading === "string" ? p.heading.trim() : ""
   const body = typeof p.body === "string" ? p.body.trim() : ""
   const testEmail = typeof p.test_email === "string" ? p.test_email.trim().toLowerCase() : ""
+  const from = cleanAddress(p.from) ?? process.env.WAITLIST_FROM ?? "Aero <hello@useaero.org>"
+  const replyTo = cleanAddress(p.reply_to) ?? undefined
+  const customTo = Array.isArray(p.to)
+    ? [...new Set(
+        p.to
+          .filter((e): e is string => typeof e === "string")
+          .map((e) => e.trim().toLowerCase())
+          .filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e))
+      )].slice(0, 500)
+    : null
 
   if (subject.length < 3 || subject.length > 120) {
     return NextResponse.json({ ok: false, error: "Subject must be 3–120 characters." }, { status: 400 })
@@ -64,29 +91,35 @@ export async function POST(req: Request) {
   }
 
   const confirmed = (await readSignups()).filter((s) => s.confirmed).map((s) => s.email)
-  if (p.dry_run) return NextResponse.json({ ok: true, count: confirmed.length })
+  const audience = customTo ?? confirmed
+  if (p.dry_run) return NextResponse.json({ ok: true, count: audience.length })
 
   const key = process.env.RESEND_API_KEY
   if (!key) return NextResponse.json({ ok: false, error: "Email is not configured." }, { status: 503 })
 
-  const recipients = testEmail ? [testEmail] : confirmed
+  const recipients = testEmail ? [testEmail] : audience
   if (recipients.length === 0) {
-    return NextResponse.json({ ok: false, error: "No confirmed signups yet." }, { status: 400 })
+    return NextResponse.json({ ok: false, error: "No recipients — pick an audience with signups or paste addresses." }, { status: 400 })
   }
 
   const resend = new Resend(key)
-  const from = process.env.WAITLIST_FROM ?? "Aero <hello@useaero.org>"
   const html = broadcastHtml(heading, body)
   let sent = 0
   for (let i = 0; i < recipients.length; i += 100) {
     try {
       const result = await resend.batch.send(
-        recipients.slice(i, i + 100).map((to) => ({ from, to, subject, html }))
+        recipients.slice(i, i + 100).map((to) => ({
+          from,
+          to,
+          ...(replyTo ? { reply_to: replyTo } : {}),
+          subject,
+          html,
+        }))
       )
       if (!result.error) sent += Math.min(100, recipients.length - i)
     } catch (err) {
       console.error("Broadcast batch failed:", err)
     }
   }
-  return NextResponse.json({ ok: sent > 0, sent, total: recipients.length })
+  return NextResponse.json({ ok: sent > 0, sent, total: recipients.length, from: typeof from === "string" ? from : "default" })
 }

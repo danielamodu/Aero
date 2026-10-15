@@ -440,10 +440,10 @@ const INTEGRATIONS: {
   img?: string
   dashed?: boolean
 }[] = [
-  { label: "Avalanche", short: "AVAX", size: 76, x: "50%", y: "2%", dx: "-50%", dy: "0%", img: "/partners/avax.png" },
-  { label: "Benqi", short: "B", size: 68, x: "19%", y: "42%", dx: "-50%", dy: "-50%", img: "/partners/benqi.jpg" },
-  { label: "USDC", short: "$", size: 64, x: "81%", y: "42%", dx: "-50%", dy: "-50%", img: "/partners/usdc.png" },
-  { label: "More soon", short: "+", size: 56, x: "50%", y: "92%", dx: "-50%", dy: "-100%", dashed: true },
+  { label: "Avalanche", short: "AVAX", size: 72, x: "50%", y: "0%", dx: "-50%", dy: "0%", img: "/partners/avax.png" },
+  { label: "Benqi", short: "B", size: 68, x: "7%", y: "50%", dx: "-50%", dy: "-50%", img: "/partners/benqi.jpg" },
+  { label: "USDC", short: "$", size: 64, x: "93%", y: "50%", dx: "-50%", dy: "-50%", img: "/partners/usdc.png" },
+  { label: "More soon", short: "+", size: 56, x: "50%", y: "100%", dx: "-50%", dy: "-100%", dashed: true },
 ]
 
 function PartnerMark({
@@ -485,10 +485,8 @@ function Integrations() {
   return (
     <section className="bg-white py-20 sm:py-28">
       <div className="mx-auto max-w-6xl px-5 lg:px-10">
-        <div className="relative mx-auto hidden max-w-3xl md:block" style={{ height: 400 }}>
-          <div aria-hidden className="absolute top-1/2 left-1/2 h-[300px] w-[min(88%,640px)] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border border-dashed border-neutral-200" />
-          <div aria-hidden className="absolute top-1/2 left-1/2 h-[180px] w-[min(52%,380px)] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border border-dashed border-neutral-200" />
-          <div aria-hidden className="absolute top-1/2 left-1/2 size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-aero-800" />
+        <div className="relative mx-auto hidden max-w-4xl md:block" style={{ height: 440 }}>
+          <div aria-hidden className="absolute top-1/2 left-1/2 h-[340px] w-[min(92%,700px)] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border border-dashed border-neutral-200" />
           {INTEGRATIONS.map((b, i) => (
             <motion.span
               key={b.label}
@@ -509,8 +507,8 @@ function Integrations() {
               <span className="text-[11px] font-medium whitespace-nowrap text-neutral-400">{b.label}</span>
             </motion.span>
           ))}
-          <div className="absolute inset-0 flex flex-col items-center justify-center px-8 text-center">
-            <h2 className="max-w-md font-semibold text-[clamp(1.9rem,4vw,3rem)] leading-[1.08] text-neutral-900 text-balance">
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center px-8 text-center">
+            <h2 className="max-w-sm font-semibold text-[clamp(1.9rem,4vw,3rem)] leading-[1.08] text-neutral-900 text-balance">
               Riding rails you already trust.
             </h2>
             <p className="mx-auto mt-3 max-w-sm text-[15px] leading-relaxed text-neutral-500">
