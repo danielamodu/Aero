@@ -105,6 +105,31 @@ export default function DocsPage() {
             </p>
           </DocSection>
 
+          <DocSection id="testnet" eyebrow="Testnet" title="Try it on Fuji first">
+            <p>
+              The live testnet runs at{" "}
+              <a href="https://testnet.useaero.org" className="font-medium text-aero-800 hover:underline">
+                testnet.useaero.org
+              </a>{" "}
+              on Avalanche Fuji (chain ID 43113). Everything there uses worthless test
+              dollars — perfect for learning the ropes.
+            </p>
+            <p>
+              <strong className="font-semibold text-neutral-900">1. Get gas.</strong>{" "}
+              Grab Fuji AVAX from faucet.avax.network — you need a little for transaction fees.
+            </p>
+            <p>
+              <strong className="font-semibold text-neutral-900">2. Claim test dollars.</strong>{" "}
+              Hit “Claim 10,000 tUSDC” in the app (once every 24 hours per wallet).
+            </p>
+            <p>
+              <strong className="font-semibold text-neutral-900">3. Claim a handle, then play.</strong>{" "}
+              Register a @username on-chain, send to friends, pay the demo bills, and park
+              funds in the mock vault. Contracts are unverified experiments — expect resets
+              between testnet phases.
+            </p>
+          </DocSection>
+
           <DocSection id="support" eyebrow="Support" title="Talk to a human">
             <p>
               Stuck on something? Write to <span className="font-medium text-neutral-900">support@useaero.org</span> with

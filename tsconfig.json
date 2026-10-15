@@ -26,9 +26,10 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
+    "**/*.json",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "contracts/lib", "contracts/out", "contracts/cache", "contracts/broadcast"]
 }

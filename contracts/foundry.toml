@@ -4,3 +4,6 @@ out = "out"
 libs = ["lib"]
 solc_version = "0.8.24"
 evm_version = "cancun"
+
+[rpc_endpoints]
+fuji = "https://api.avax-test.network/ext/bc/C/rpc"
