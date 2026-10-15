@@ -45,8 +45,8 @@ function WrongNetwork() {
 
 export default function TestnetPage() {
   const [tab, setTab] = useState<TestnetTab>("overview")
-  const { address, isConnected, chainId } = useAccount()
 
+  // No wallet hooks before these gates: without a provider they throw.
   if (!reownConfigured) {
     return (
       <SetupNotice title="Connect a Reown project">
@@ -65,6 +65,18 @@ export default function TestnetPage() {
       </SetupNotice>
     )
   }
+
+  return <TestnetConnected tab={tab} setTab={setTab} />
+}
+
+function TestnetConnected({
+  tab,
+  setTab,
+}: {
+  tab: TestnetTab
+  setTab: (t: TestnetTab) => void
+}) {
+  const { address, isConnected, chainId } = useAccount()
 
   if (!isConnected || !address) return <LoginView />
   if (chainId !== FUJI_CHAIN_ID) return <WrongNetwork />
