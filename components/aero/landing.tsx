@@ -310,10 +310,10 @@ function Hero() {
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-gradient-to-b from-transparent via-white/40 to-white"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-72 bg-gradient-to-b from-transparent via-white/50 to-white"
       />
 
-      <div className="relative mx-auto max-w-4xl px-5 text-center">
+      <div className="relative mx-auto max-w-4xl px-5 pb-20 text-center">
         <motion.h1
           initial={{ opacity: 0, y: 26 }}
           animate={{ opacity: 1, y: 0 }}
@@ -384,7 +384,6 @@ function Hero() {
           </motion.div>
         </div>
       </div>
-      <div className="h-10 bg-white [border-radius:2rem_2rem_0_0] sm:h-14" />
     </section>
   )
 }
@@ -480,12 +479,9 @@ const INTEGRATIONS: {
   img?: string
   dashed?: boolean
 }[] = [
-  { label: "Avalanche", short: "AVAX", size: 72, x: "50%", y: "4%", dx: "-50%", dy: "0%", img: "/partners/avax.png" },
-  { label: "Benqi", short: "B", size: 64, x: "16%", y: "27%", dx: "-50%", dy: "-50%", img: "/partners/benqi.jpg" },
-  // Trader Joe's current mark is a seasonal mascot that breaks the set — TJ monogram until they say otherwise.
-  { label: "Trader Joe", short: "TJ", size: 68, x: "84%", y: "27%", dx: "-50%", dy: "-50%" },
-  { label: "USDC", short: "$", size: 60, x: "16%", y: "69%", dx: "-50%", dy: "-50%", img: "/partners/usdc.png" },
-  { label: "Warp", short: "W", size: 60, x: "84%", y: "69%", dx: "-50%", dy: "-50%" },
+  { label: "Avalanche", short: "AVAX", size: 76, x: "50%", y: "2%", dx: "-50%", dy: "0%", img: "/partners/avax.png" },
+  { label: "Benqi", short: "B", size: 68, x: "19%", y: "42%", dx: "-50%", dy: "-50%", img: "/partners/benqi.jpg" },
+  { label: "USDC", short: "$", size: 64, x: "81%", y: "42%", dx: "-50%", dy: "-50%", img: "/partners/usdc.png" },
   { label: "More soon", short: "+", size: 56, x: "50%", y: "92%", dx: "-50%", dy: "-100%", dashed: true },
 ]
 
@@ -553,8 +549,7 @@ function Integrations() {
             </motion.span>
           ))}
           <div className="absolute inset-0 flex flex-col items-center justify-center px-8 text-center">
-            <Eyebrow>Plugged in</Eyebrow>
-            <h2 className="mt-4 max-w-md font-semibold text-[clamp(1.9rem,4vw,3rem)] leading-[1.08] text-neutral-900 text-balance">
+            <h2 className="max-w-md font-semibold text-[clamp(1.9rem,4vw,3rem)] leading-[1.08] text-neutral-900 text-balance">
               Riding rails you already trust.
             </h2>
             <p className="mx-auto mt-3 max-w-sm text-[15px] leading-relaxed text-neutral-500">
@@ -570,8 +565,7 @@ function Integrations() {
         </div>
         <div className="md:hidden">
           <div className="mx-auto max-w-xl text-center">
-            <Eyebrow>Plugged in</Eyebrow>
-            <h2 className="mt-4 font-semibold text-4xl leading-[1.08] text-neutral-900 text-balance">
+            <h2 className="font-semibold text-4xl leading-[1.08] text-neutral-900 text-balance">
               Riding rails you already trust.
             </h2>
           </div>
