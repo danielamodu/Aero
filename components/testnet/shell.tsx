@@ -14,6 +14,7 @@ import {
   ArrowUpRight,
   Bell,
   Check,
+  ChevronDown,
   Copy,
   HandCoins,
   LayoutGrid,
@@ -226,6 +227,12 @@ export function Sidebar({
     functionName: "resolveUsername",
     args: [address],
   })
+  const { data: sidebarUsdc } = useReadContract({
+    address: CONTRACTS.usdc,
+    abi: usdcAbi,
+    functionName: "balanceOf",
+    args: [address],
+  })
   return (
     <aside className="sticky top-0 hidden h-svh w-[260px] shrink-0 flex-col border-r border-neutral-200 bg-white px-4 py-5 lg:flex">
       <div className="flex items-center gap-2 px-2">
@@ -266,6 +273,12 @@ export function Sidebar({
         })}
       </nav>
       <div className="mt-auto space-y-3">
+        <Checklist
+          address={address}
+          funded={(sidebarUsdc ?? BigInt(0)) > BigInt(0)}
+          handle={handle ?? ""}
+          compact
+        />
         <a
           href="https://useaero.org/docs#testnet"
           className="flex h-11 items-center gap-3 rounded-2xl px-3.5 text-[15px] font-medium text-neutral-500 transition hover:bg-neutral-50 hover:text-neutral-900"
@@ -379,11 +392,14 @@ export function Checklist({
   address,
   funded,
   handle,
+  compact = false,
 }: {
   address: Address
   funded: boolean
   handle: string
+  compact?: boolean
 }) {
+  const [open, setOpen] = useState(false)
   const [sent, setSent] = useState<boolean>(() =>
     readActivity().some((a) => /→|sent|paid/i.test(`${a.label} ${a.amount}`))
   )
@@ -424,11 +440,27 @@ export function Checklist({
       }
       setDismissed(true)
     }
+    if (compact) {
+      return (
+        <div className="rounded-2xl bg-emerald-50 p-3.5">
+          <p className="flex items-center gap-1.5 text-[13px] font-semibold text-emerald-800">
+            <Check className="size-3.5" strokeWidth={3.5} /> Setup complete
+          </p>
+          <button
+            type="button"
+            onClick={hide}
+            className="mt-1.5 text-xs font-medium text-emerald-700 hover:underline"
+          >
+            Hide
+          </button>
+        </div>
+      )
+    }
     return (
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mt-6 flex items-center justify-between gap-4 rounded-[20px] bg-aero-800 p-5 text-white"
+        className="flex items-center justify-between gap-4 rounded-[20px] bg-aero-800 p-5 text-white"
       >
         <div>
           <p className="font-medium">
@@ -449,11 +481,75 @@ export function Checklist({
     )
   }
 
+  if (compact) {
+    return (
+      <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          aria-label="Setup progress"
+          className="flex w-full items-center gap-2.5 px-3.5 py-3 text-left"
+        >
+          <span className="shrink-0 text-xs font-semibold text-neutral-900">
+            Setup
+          </span>
+          <span className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-neutral-100">
+            <motion.span
+              className="block h-full rounded-full bg-aero-800"
+              animate={{ width: `${(doneCount / steps.length) * 100}%` }}
+              transition={{ type: "spring", stiffness: 120, damping: 20 }}
+            />
+          </span>
+          <span className="shrink-0 font-mono text-[11px] text-neutral-400 tabular-nums">
+            {doneCount}/{steps.length}
+          </span>
+          <ChevronDown
+            className={cn(
+              "size-3.5 shrink-0 text-neutral-400 transition-transform",
+              open && "rotate-180"
+            )}
+          />
+        </button>
+        {open && (
+          <div className="space-y-2 px-3.5 pb-3.5">
+            {steps.map((s) => (
+              <div
+                key={s.label}
+                className="flex items-center gap-2.5 text-[13px]"
+              >
+                <span
+                  className={cn(
+                    "flex size-4 shrink-0 items-center justify-center rounded-full border",
+                    s.done
+                      ? "border-emerald-500 bg-emerald-500 text-white"
+                      : "border-neutral-300 text-transparent"
+                  )}
+                >
+                  <Check className="size-2.5" strokeWidth={3.5} />
+                </span>
+                <span
+                  className={
+                    s.done
+                      ? "text-neutral-400 line-through"
+                      : "font-medium text-neutral-800"
+                  }
+                >
+                  {s.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mt-6 rounded-[20px] border border-neutral-200 bg-white p-5"
+      className="rounded-[20px] border border-neutral-200 bg-white p-5"
     >
       <div className="flex items-center justify-between">
         <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
@@ -956,12 +1052,6 @@ export function Overview({
         </h1>
       </motion.div>
 
-      <Checklist
-        address={address}
-        funded={(usdc ?? BigInt(0)) > BigInt(0)}
-        handle={myName ?? ""}
-      />
-
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -1148,6 +1238,13 @@ export function Overview({
           />
           <FaucetBar address={address} />
         </div>
+      </div>
+      <div className="mt-5 lg:hidden">
+        <Checklist
+          address={address}
+          funded={(usdc ?? BigInt(0)) > BigInt(0)}
+          handle={myName ?? ""}
+        />
       </div>
     </div>
   )
