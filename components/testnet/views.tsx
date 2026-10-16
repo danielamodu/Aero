@@ -410,6 +410,7 @@ export function SendTab({
       Number(favs.includes(b.address.toLowerCase())) -
       Number(favs.includes(a.address.toLowerCase()))
   )
+  const showSide = rail.length > 0 || receipts.length > 0
 
   const { data: payAllowance, refetch: refetchPayAllowance } = useReadContract({
     address: CONTRACTS.usdc,
@@ -507,10 +508,15 @@ export function SendTab({
         <UsernameCard address={address} />
       )}
 
-      <div className="grid items-start gap-5 xl:grid-cols-[1fr_360px]">
+      <div
+        className={cn(
+          "grid items-start gap-5",
+          showSide && "xl:grid-cols-[1fr_360px]"
+        )}
+      >
         <div className="rounded-2xl border border-neutral-200/80 bg-white p-6 sm:p-8">
-          <div className="flex items-start justify-center">
-            <span className="mt-4 text-3xl font-medium text-neutral-300 select-none">
+          <div className="flex items-start justify-start">
+            <span className="mt-2 text-2xl font-medium text-neutral-300 select-none">
               $
             </span>
             <input
@@ -522,16 +528,18 @@ export function SendTab({
               style={{
                 width: `${Math.max(1.2, (amount || "0").length + 0.3)}ch`,
               }}
-              className="max-w-full min-w-0 bg-transparent text-center text-7xl font-medium tracking-tight text-neutral-900 tabular-nums outline-none placeholder:text-neutral-200"
+              className="max-w-full min-w-0 bg-transparent text-left text-6xl font-medium tracking-tight text-neutral-900 tabular-nums outline-none placeholder:text-neutral-200"
             />
           </div>
-          <p className="mt-1 text-center text-[13px] text-neutral-400 tabular-nums">
-            {walletBal !== undefined
-              ? `$${formatUsdc(walletBal)} available`
-              : "Checking balance…"}
+          <p className="mt-2 text-left text-[13px] text-neutral-400 tabular-nums">
+            {walletBal === undefined
+              ? "Checking balance…"
+              : walletBal === BigInt(0)
+                ? "Empty — claim test dollars from the sidebar faucet to start"
+                : `$${formatUsdc(walletBal)} available`}
           </p>
 
-          <div className="mt-4 flex flex-wrap justify-center gap-2">
+          <div className="mt-4 flex flex-wrap justify-start gap-2">
             {["10", "25", "50", "100"].map((q) => (
               <button
                 key={q}
@@ -558,7 +566,7 @@ export function SendTab({
             )}
           </div>
 
-          <div className="mt-8 border-t border-neutral-200 pt-6">
+          <div className="mt-6">
             {resolved.address ? (
               <div className="flex items-center gap-3 py-1">
                 <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
@@ -595,10 +603,10 @@ export function SendTab({
                   onChange={(e) => setTo(e.target.value)}
                   placeholder="Who's getting it? @username or 0x…"
                   aria-label="Recipient"
-                  className="h-14 w-full border-b border-neutral-200 bg-transparent text-center text-lg text-neutral-900 outline-none placeholder:text-neutral-300 focus:border-aero-800"
+                  className="h-14 w-full border-b border-neutral-200 bg-transparent text-left text-lg text-neutral-900 outline-none placeholder:text-neutral-300 focus:border-aero-800"
                 />
                 {resolved.hint && (
-                  <p className="mt-2 text-center text-[13px] text-neutral-400">
+                  <p className="mt-2 text-left text-[13px] text-neutral-400">
                     {resolved.hint}
                   </p>
                 )}
@@ -606,8 +614,8 @@ export function SendTab({
             )}
           </div>
 
-          <div className="mt-6 border-t border-neutral-200 pt-6">
-            <div className="flex flex-wrap justify-center gap-2">
+          <div className="mt-6">
+            <div className="flex flex-wrap justify-start gap-2">
               {["Dinner", "Rent", "Drinks", "Gift", "Payback"].map((m) => (
                 <button
                   key={m}
@@ -630,7 +638,7 @@ export function SendTab({
               placeholder="Add a note…"
               maxLength={140}
               aria-label="Note"
-              className="mt-3 h-12 w-full border-b border-neutral-200 bg-transparent text-center text-[15px] text-neutral-900 outline-none placeholder:text-neutral-300 focus:border-aero-800"
+              className="mt-3 h-12 w-full border-b border-neutral-200 bg-transparent text-left text-[15px] text-neutral-900 outline-none placeholder:text-neutral-300 focus:border-aero-800"
             />
           </div>
 
