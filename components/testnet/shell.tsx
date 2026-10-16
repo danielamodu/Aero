@@ -175,7 +175,7 @@ export function Sidebar({
           TESTNET
         </span>
         <span className="ml-auto">
-          <NotificationBell address={address} />
+          <NotificationBell address={address} align="left" />
         </span>
       </div>
       <nav className="mt-8 space-y-1">
@@ -472,7 +472,7 @@ function saveYieldBaseline(ts: number, value: number): void {
   }
 }
 
-export function NotificationBell({ address }: { address: Address }) {
+export function NotificationBell({ address, align = "right" }: { address: Address; align?: "left" | "right" }) {
   const [open, setOpen] = useState(false)
   const [notices, setNotices] = useState<Notice[]>(() => readNotices())
   const [unread, setUnread] = useState<number>(() => unreadCount())
@@ -572,7 +572,7 @@ export function NotificationBell({ address }: { address: Address }) {
         )}
       </button>
       {open && (
-        <div className="absolute top-12 right-0 z-50 w-80 overflow-hidden rounded-[20px] border border-neutral-200 bg-white shadow-[0_20px_50px_-20px_rgba(11,0,78,0.3)]">
+        <div className={`absolute top-12 z-50 w-80 overflow-hidden rounded-[20px] border border-neutral-200 bg-white shadow-[0_20px_50px_-20px_rgba(11,0,78,0.3)] ${align === "left" ? "left-0" : "right-0"}`}>
           <p className="border-b border-neutral-100 px-5 py-3.5 text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
             Notifications
           </p>
