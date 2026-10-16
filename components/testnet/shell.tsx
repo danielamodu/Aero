@@ -123,7 +123,9 @@ export function LoginView() {
       </motion.div>
 
       <header className="relative flex items-center justify-between px-5 py-5 sm:px-8">
-        <BrandLockup tone="light" height={26} />
+        <a href="https://useaero.org" aria-label="Back to useaero.org">
+          <BrandLockup tone="light" height={26} />
+        </a>
         <span className="font-mono text-[11px] font-bold tracking-[0.18em] text-white/50">
           FUJI · 43113
         </span>
