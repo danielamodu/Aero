@@ -11,6 +11,7 @@ import { maxUint256, zeroAddress, type Address } from "viem"
 import {
   ArrowUpRight,
   Check,
+  ChevronDown,
   Copy,
   Droplets,
   ExternalLink,
@@ -161,7 +162,7 @@ export function useRecipient(input: string): {
 
 /* --------------------------------- faucet --------------------------------- */
 
-export function FaucetBar({ address }: { address: Address }) {
+export function FaucetMini({ address }: { address: Address }) {
   const tx = useTx()
   const [buyOpen, setBuyOpen] = useState(false)
   const { data: balance, refetch } = useReadContract({
@@ -202,58 +203,58 @@ export function FaucetBar({ address }: { address: Address }) {
   const ready = nextIn <= 0
 
   return (
-    <div className="flex flex-col gap-3 rounded-[20px] border border-neutral-200 bg-[#f7f7f7] p-5 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <p className="text-[13px] font-medium text-neutral-500">Test balance</p>
-        <p className="mt-0.5 text-3xl font-medium tracking-tight tabular-nums">
-          {formatUsdc(balance)}{" "}
-          <span className="text-base text-neutral-400">tUSDC</span>
+    <div className="rounded-2xl bg-[#f7f7f7] p-3.5">
+      <div className="flex items-center justify-between gap-2">
+        <p className="flex items-center gap-1.5 text-xs font-medium text-neutral-500">
+          <Droplets className="size-3.5" /> Test dollars
         </p>
-        <p className="mt-1 text-[13px] text-neutral-500">
-          Worthless by design ·{" "}
-          <a
-            href={FUJI_AVAX_FAUCET}
-            target="_blank"
-            rel="noreferrer"
-            className="font-medium text-aero-800 hover:underline"
-          >
-            Get Fuji AVAX for gas <ArrowUpRight className="inline size-3.5" />
-          </a>
+        <p className="font-mono text-sm font-semibold text-neutral-900 tabular-nums">
+          ${formatUsdc(balance)}
         </p>
       </div>
-      <div className="shrink-0">
-        <div className="flex gap-2.5">
-          <Button
-            disabled={!ready || tx.busy}
-            onClick={() =>
-              tx.write({
-                address: CONTRACTS.usdc,
-                abi: usdcAbi,
-                functionName: "faucet",
-              })
-            }
-            className="h-11 rounded-full bg-aero-800 px-6 font-medium text-white hover:bg-aero-900 disabled:opacity-60"
-          >
-            <Droplets className="size-4" />
-            {tx.busy
-              ? "Claiming…"
-              : ready
-                ? "Claim 10,000 tUSDC"
-                : `Next claim in ${Math.ceil(nextIn / 3600)}h`}
-          </Button>
-          <Button
-            onClick={() => setBuyOpen(true)}
-            variant="outline"
-            className="pressable h-11 rounded-full border-neutral-300 px-6 font-medium text-neutral-900 hover:bg-neutral-50"
-          >
-            Buy
-          </Button>
-        </div>
-        <div className="mt-2">
+      <div className="mt-2.5 flex gap-1.5">
+        <Button
+          disabled={!ready || tx.busy}
+          onClick={() =>
+            tx.write({
+              address: CONTRACTS.usdc,
+              abi: usdcAbi,
+              functionName: "faucet",
+            })
+          }
+          className="h-8 flex-1 rounded-full bg-aero-800 px-3 text-xs font-medium text-white hover:bg-aero-900 disabled:bg-neutral-200 disabled:text-neutral-400"
+        >
+          {tx.busy
+            ? "Claiming…"
+            : ready
+              ? "Claim 10,000"
+              : `Next in ${Math.ceil(nextIn / 3600)}h`}
+        </Button>
+        <Button
+          onClick={() => setBuyOpen(true)}
+          variant="outline"
+          className="h-8 rounded-full border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
+        >
+          Buy
+        </Button>
+      </div>
+      <p className="mt-2 text-[11px] leading-relaxed text-neutral-400">
+        Free every 24h · worthless ·{" "}
+        <a
+          href={FUJI_AVAX_FAUCET}
+          target="_blank"
+          rel="noreferrer"
+          className="font-medium text-aero-800 hover:underline"
+        >
+          AVAX for gas <ArrowUpRight className="inline size-2.5" />
+        </a>
+      </p>
+      {(tx.hash || tx.error) && (
+        <div className="mt-1.5">
           <TxStatus hash={tx.hash} error={tx.error} />
         </div>
-        <BuySheet open={buyOpen} onOpenChange={setBuyOpen} />
-      </div>
+      )}
+      <BuySheet open={buyOpen} onOpenChange={setBuyOpen} />
     </div>
   )
 }
@@ -507,7 +508,7 @@ export function SendTab({
       )}
 
       <div className="grid items-start gap-5 xl:grid-cols-[1fr_360px]">
-        <div className="rounded-[28px] border border-neutral-200 bg-white p-6 sm:p-10">
+        <div className="px-1 py-2 sm:px-8">
           <div className="flex items-start justify-center">
             <span className="mt-4 text-3xl font-medium text-neutral-300 select-none">
               $
@@ -557,9 +558,9 @@ export function SendTab({
             )}
           </div>
 
-          <div className="mt-7">
+          <div className="mt-8 border-t border-neutral-200 pt-6">
             {resolved.address ? (
-              <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 px-4 py-3.5">
+              <div className="flex items-center gap-3 py-1">
                 <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
                   <Check className="size-4" strokeWidth={3} />
                 </span>
@@ -582,19 +583,19 @@ export function SendTab({
                 <button
                   type="button"
                   onClick={() => setTo("")}
-                  className="shrink-0 rounded-full px-3 py-1.5 text-[13px] font-medium text-neutral-500 transition hover:bg-emerald-100 hover:text-neutral-800"
+                  className="shrink-0 rounded-full px-3 py-1.5 text-[13px] font-medium text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-800"
                 >
                   Change
                 </button>
               </div>
             ) : (
               <>
-                <Input
+                <input
                   value={to}
                   onChange={(e) => setTo(e.target.value)}
                   placeholder="Who's getting it? @username or 0x…"
                   aria-label="Recipient"
-                  className="h-13 rounded-2xl border-neutral-200 p-3.5 text-center text-base text-neutral-900 placeholder:text-neutral-400"
+                  className="h-14 w-full border-b border-neutral-200 bg-transparent text-center text-lg text-neutral-900 outline-none placeholder:text-neutral-300 focus:border-aero-800"
                 />
                 {resolved.hint && (
                   <p className="mt-2 text-center text-[13px] text-neutral-400">
@@ -605,7 +606,7 @@ export function SendTab({
             )}
           </div>
 
-          <div className="mt-5">
+          <div className="mt-6 border-t border-neutral-200 pt-6">
             <div className="flex flex-wrap justify-center gap-2">
               {["Dinner", "Rent", "Drinks", "Gift", "Payback"].map((m) => (
                 <button
@@ -623,20 +624,20 @@ export function SendTab({
                 </button>
               ))}
             </div>
-            <Input
+            <input
               value={memo}
               onChange={(e) => setMemo(e.target.value.slice(0, 140))}
               placeholder="Add a note…"
               maxLength={140}
               aria-label="Note"
-              className="mt-2.5 h-11 rounded-2xl border-neutral-200 text-center text-[15px] text-neutral-900 placeholder:text-neutral-400"
+              className="mt-3 h-12 w-full border-b border-neutral-200 bg-transparent text-center text-[15px] text-neutral-900 outline-none placeholder:text-neutral-300 focus:border-aero-800"
             />
           </div>
 
           <Button
             disabled={!resolved.address || raw === null || tx.busy}
             onClick={send}
-            className="mt-6 h-13 w-full rounded-full bg-aero-800 p-3.5 text-[16px] font-medium text-white hover:bg-aero-900 disabled:opacity-60"
+            className="mt-6 h-13 w-full rounded-full bg-aero-800 p-3.5 text-[16px] font-medium text-white hover:bg-aero-900 disabled:bg-neutral-100 disabled:text-neutral-400"
           >
             <Send className="size-4" />{" "}
             {tx.busy
@@ -654,11 +655,11 @@ export function SendTab({
 
         <div className="space-y-5">
           {rail.length > 0 && (
-            <div className="rounded-[20px] border border-neutral-200 bg-white p-4">
-              <p className="px-2 text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
+            <div>
+              <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
                 People
               </p>
-              <div className="mt-1">
+              <div className="mt-1 divide-y divide-neutral-200 border-y border-neutral-200">
                 {rail.slice(0, 8).map((c) => {
                   const fav = favs.includes(c.address.toLowerCase())
                   const initials = c.label.startsWith("@")
@@ -723,14 +724,17 @@ export function SendTab({
           )}
 
           {receipts.length > 0 && (
-            <div className="space-y-2">
+            <div>
+              <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
+                Sent
+              </p>
               <AnimatePresence initial={false}>
                 {receipts.map((r) => (
                   <motion.div
                     key={r.hash}
                     initial={{ opacity: 0, y: -8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center justify-between gap-3 rounded-2xl border-l-4 border-l-emerald-500 bg-white px-4 py-3 text-sm shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+                    className="flex items-center justify-between gap-3 border-t border-neutral-200 py-3 text-sm last:border-b"
                   >
                     <span className="min-w-0 truncate font-medium text-neutral-700">
                       {r.label} ·{" "}
@@ -1266,16 +1270,17 @@ export function RequestTab({
         </div>
       ) : (
         <div className="grid items-start gap-5 xl:grid-cols-[320px_1fr_320px]">
-          <div className="h-fit rounded-[20px] border border-neutral-200 bg-white p-6">
+          <div className="h-fit py-1">
             <Field label="Amount (tUSDC, optional)">
-              <Input
+              <input
                 value={amount}
                 onChange={(e) =>
                   setAmount(e.target.value.replace(/[^0-9.]/g, "").slice(0, 12))
                 }
                 inputMode="decimal"
                 placeholder="25.00"
-                className="h-13 rounded-2xl border-neutral-200 p-3.5 text-lg tabular-nums placeholder:text-neutral-400"
+                aria-label="Amount in tUSDC"
+                className="h-14 w-full border-b border-neutral-200 bg-transparent text-3xl font-medium tabular-nums outline-none placeholder:text-neutral-300 focus:border-aero-800"
               />
             </Field>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -1338,15 +1343,15 @@ export function RequestTab({
             </div>
           </div>
 
-          <div className="h-fit rounded-[20px] border border-neutral-200 bg-white p-5 lg:sticky lg:top-6">
+          <div className="h-fit py-1 lg:sticky lg:top-6">
             <p className="mb-3 flex items-center gap-1.5 text-[13px] font-medium text-neutral-500">
               <QrCode className="size-3.5" /> Scan or share
             </p>
-            <div className="flex justify-center rounded-2xl bg-[#f7f7f7] p-4">
+            <div className="flex justify-center py-2">
               <QRCodeSVG
                 value={link}
                 size={168}
-                bgColor="#f7f7f7"
+                bgColor="#ffffff"
                 fgColor="#171717"
                 level="M"
               />
@@ -1502,7 +1507,7 @@ function AutoEarn({ address }: { address: Address }) {
   }
 
   return (
-    <div className="rounded-[20px] border border-neutral-200 bg-white p-5 sm:p-6">
+    <div className="border-y border-neutral-200 py-5">
       <div className="flex items-center justify-between gap-4">
         <div>
           <p className="text-[15px] font-semibold text-neutral-900">
@@ -1543,7 +1548,7 @@ function AutoEarn({ address }: { address: Address }) {
       </div>
 
       {autoOn && (
-        <div className="mt-4 rounded-2xl bg-[#f7f7f7] p-4">
+        <div className="mt-4">
           {idle ? (
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-[15px] leading-relaxed text-neutral-700">
@@ -1558,7 +1563,7 @@ function AutoEarn({ address }: { address: Address }) {
               <Button
                 disabled={approveTx.busy || depositTx.busy}
                 onClick={addAll}
-                className="h-11 shrink-0 rounded-full bg-aero-800 px-6 font-medium text-white hover:bg-aero-900 disabled:opacity-60"
+                className="h-11 shrink-0 rounded-full bg-aero-800 px-6 font-medium text-white hover:bg-aero-900 disabled:bg-neutral-100 disabled:text-neutral-400"
               >
                 {approveTx.busy
                   ? "Approving…"
@@ -1790,199 +1795,232 @@ export function EarnTab({ address }: { address: Address }) {
   }
 
   return (
-    <div className="space-y-5">
-      <div className="rounded-[28px] border border-emerald-100 bg-emerald-50/60 p-6 sm:p-8">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="flex items-center gap-1.5 text-[13px] font-semibold tracking-[0.14em] text-emerald-800 uppercase">
-              <Zap className="size-3.5" /> Earning across venues
-            </p>
-            <p className="mt-2 text-6xl font-medium tracking-tight text-neutral-900 tabular-nums">
-              ${formatUsdc(earning)}
-            </p>
-          </div>
-          {bestRow?.apr !== null && bestRow?.apr !== undefined && (
-            <span className="rounded-full bg-emerald-500 px-3.5 py-1.5 text-[13px] font-semibold text-white tabular-nums">
-              Best · {bestRow.label} {bestRow.apr.toFixed(2)}%
+    <div>
+      <p className="flex items-center gap-1.5 text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
+        <Zap className="size-3.5" /> Earning across venues
+      </p>
+      <div className="mt-2 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+        <p className="text-6xl font-medium tracking-tight text-neutral-900 tabular-nums">
+          ${formatUsdc(earning)}
+        </p>
+        {bestRow?.apr != null && (
+          <p className="pb-2 text-[15px] text-neutral-500">
+            <span className="mr-1.5 inline-block size-2 rounded-full bg-emerald-500 align-middle" />
+            Best ·{" "}
+            <span className="font-semibold text-neutral-900">
+              {bestRow.label}
+            </span>{" "}
+            <span className="font-mono tabular-nums">
+              {bestRow.apr.toFixed(2)}%
             </span>
-          )}
-        </div>
-        <div className="mt-5 space-y-2.5">
-          {venueRows.map((v) => {
-            const share =
-              earning > BigInt(0)
-                ? (Number(v.assets) / Number(earning)) * 100
-                : 0
-            return (
-              <button
-                key={v.id}
-                type="button"
-                onClick={() => setVenue(v.id)}
-                className="block w-full text-left"
-              >
-                <div className="flex items-baseline justify-between text-sm">
-                  <span
-                    className={cn(
-                      "font-medium",
-                      venue === v.id ? "text-neutral-900" : "text-neutral-500"
-                    )}
-                  >
-                    {v.label}
-                  </span>
-                  <span className="tabular-nums">
-                    <span className="font-medium text-neutral-800">
-                      ${formatUsdc(v.assets)}
-                    </span>{" "}
-                    <span className="font-mono text-neutral-400">
-                      · {v.apr === null ? "—" : `${v.apr.toFixed(2)}%`}
-                    </span>
-                  </span>
-                </div>
-                <div className="mt-1.5 h-2 rounded-full bg-emerald-900/10">
-                  <div
-                    className={cn(
-                      "h-full rounded-full transition-all",
-                      venue === v.id ? "bg-emerald-500" : "bg-emerald-900/25"
-                    )}
-                    style={{
-                      width: `${Math.max(share, v.assets > BigInt(0) ? 3 : 0)}%`,
-                    }}
-                  />
-                </div>
-              </button>
-            )
-          })}
-        </div>
+          </p>
+        )}
       </div>
 
-      <div className="grid items-start gap-5 xl:grid-cols-[1fr_360px]">
-        <div className="min-w-0 space-y-5">
-          <div className="flex rounded-full bg-[#f1f1f1] p-1">
-            {venueRows.map((v) => (
+      <div className="mt-6 flex h-2.5 w-full overflow-hidden rounded-full bg-neutral-100">
+        {venueRows.map((v) => {
+          const pct =
+            earning > BigInt(0) ? (Number(v.assets) / Number(earning)) * 100 : 0
+          if (pct <= 0) return null
+          return (
+            <div
+              key={v.id}
+              style={{ width: `${pct}%` }}
+              className={cn(
+                "h-full",
+                v.id === "router"
+                  ? "bg-aero-800"
+                  : v.id === "vault"
+                    ? "bg-emerald-500"
+                    : "bg-neutral-300"
+              )}
+            />
+          )
+        })}
+      </div>
+
+      <div className="mt-4 border-b border-neutral-200">
+        {venueRows.map((v) => {
+          const expanded = venue === v.id
+          return (
+            <div key={v.id} className="border-t border-neutral-200">
               <button
-                key={v.id}
                 type="button"
                 onClick={() => setVenue(v.id)}
-                className={cn(
-                  "h-10 flex-1 rounded-full text-sm font-medium transition",
-                  venue === v.id
-                    ? "bg-white text-neutral-900 shadow-sm"
-                    : "text-neutral-500 hover:text-neutral-800"
-                )}
+                aria-expanded={expanded}
+                className="flex w-full items-center gap-3 py-4 text-left"
               >
-                {v.label}
+                <span
+                  className={cn(
+                    "size-2.5 shrink-0 rounded-full",
+                    v.id === "router"
+                      ? "bg-aero-800"
+                      : v.id === "vault"
+                        ? "bg-emerald-500"
+                        : "bg-neutral-300"
+                  )}
+                />
+                <span
+                  className={cn(
+                    "text-[15px]",
+                    expanded
+                      ? "font-semibold text-neutral-900"
+                      : "font-medium text-neutral-500"
+                  )}
+                >
+                  {v.label}
+                </span>
+                {bestRow?.id === v.id && bestRow?.apr != null && (
+                  <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                    Best
+                  </span>
+                )}
+                <span className="ml-auto shrink-0 tabular-nums">
+                  <span className="text-[15px] font-medium text-neutral-900">
+                    ${formatUsdc(v.assets)}
+                  </span>{" "}
+                  <span className="font-mono text-[13px] text-neutral-400">
+                    · {v.apr === null ? "—" : `${v.apr.toFixed(2)}%`}
+                  </span>
+                </span>
+                <ChevronDown
+                  className={cn(
+                    "size-4 shrink-0 text-neutral-400 transition-transform",
+                    expanded && "rotate-180"
+                  )}
+                />
               </button>
-            ))}
-          </div>
-
-          {venue === "router" && routerConfigured && (
-            <RouterPanel address={address} />
-          )}
-          {venue === "vault" && (
-            <div className="grid gap-5 lg:grid-cols-2">
-              <div className="rounded-[20px] border border-neutral-200 bg-white p-6 sm:p-8">
-                <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
-                  Mock vault
-                </p>
-                <p className="mt-2 font-mono text-6xl font-medium tracking-tight text-aero-800 tabular-nums">
-                  {rate === undefined
-                    ? "—"
-                    : `${(((Number(rate) * 31_557_600) / 1e18) * 100).toFixed(2)}%`}
-                </p>
-                <p className="mt-1.5 text-sm text-neutral-500">
-                  APR · simulated by contract, not live markets
-                </p>
-                <div className="mt-6 grid grid-cols-2 gap-4 border-t border-neutral-100 pt-5 tabular-nums">
-                  <div>
-                    <p className="text-[13px] text-neutral-500">
-                      Your position
-                    </p>
-                    <p className="mt-1 text-xl font-medium">
-                      ${formatUsdc(myAssets)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[13px] text-neutral-500">Vault TVL</p>
-                    <p className="mt-1 text-xl font-medium">
-                      ${formatUsdc(tvl)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-5">
-                <div className="rounded-[20px] border border-neutral-200 bg-white p-6">
-                  <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
-                    Deposit
-                  </p>
-                  <div className="mt-3 flex gap-2.5">
-                    <Input
-                      value={depositAmt}
-                      onChange={(e) => setDepositAmt(e.target.value)}
-                      inputMode="decimal"
-                      placeholder="0.00"
-                      className="h-12 flex-1 rounded-2xl border-neutral-200 text-base tabular-nums placeholder:text-neutral-400"
-                    />
-                    <Button
-                      disabled={
-                        depositRaw === null || approveTx.busy || depositTx.busy
-                      }
-                      onClick={doDeposit}
-                      className="h-12 shrink-0 rounded-full bg-aero-800 px-6 font-medium text-white hover:bg-aero-900 disabled:opacity-60"
-                    >
-                      {approveTx.busy
-                        ? "Approving…"
-                        : depositTx.busy
-                          ? "Depositing…"
-                          : needsApprove
-                            ? "Approve + deposit"
-                            : "Deposit"}
-                    </Button>
-                  </div>
-                  <div className="mt-2">
-                    <TxStatus
-                      hash={approveTx.hash ?? depositTx.hash}
-                      error={approveTx.error ?? depositTx.error}
-                    />
-                  </div>
-                </div>
-                <div className="rounded-[20px] border border-neutral-200 bg-white p-6">
-                  <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
-                    Withdraw
-                  </p>
-                  <div className="mt-3 flex gap-2.5">
-                    <Input
-                      value={withdrawAmt}
-                      onChange={(e) => setWithdrawAmt(e.target.value)}
-                      inputMode="decimal"
-                      placeholder="0.00"
-                      className="h-12 flex-1 rounded-2xl border-neutral-200 text-base tabular-nums placeholder:text-neutral-400"
-                    />
-                    <Button
-                      disabled={(!withdrawShares && !shares) || withdrawTx.busy}
-                      onClick={() => doWithdraw(!withdrawAmt)}
-                      className="h-12 shrink-0 rounded-full border border-neutral-300 px-6 font-medium text-neutral-900 hover:bg-neutral-50 disabled:opacity-60"
-                    >
-                      {withdrawTx.busy
-                        ? "…"
-                        : withdrawAmt
-                          ? "Withdraw"
-                          : "Withdraw all"}
-                    </Button>
-                  </div>
-                  <div className="mt-2">
-                    <TxStatus hash={withdrawTx.hash} error={withdrawTx.error} />
-                  </div>
-                </div>
-              </div>
+              {expanded && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {v.id === "router" && routerConfigured && (
+                    <div className="pb-8">
+                      <RouterPanel address={address} />
+                    </div>
+                  )}
+                  {v.id === "vault" && (
+                    <div className="grid gap-6 pb-8 lg:grid-cols-2">
+                      <div>
+                        <p className="font-mono text-6xl font-medium tracking-tight text-aero-800 tabular-nums">
+                          {rate === undefined
+                            ? "—"
+                            : `${(((Number(rate) * 31_557_600) / 1e18) * 100).toFixed(2)}%`}
+                        </p>
+                        <p className="mt-1.5 text-sm text-neutral-500">
+                          APR · simulated by contract, not live markets
+                        </p>
+                        <div className="mt-4 flex gap-8 tabular-nums">
+                          <div>
+                            <p className="text-[13px] text-neutral-500">
+                              Your position
+                            </p>
+                            <p className="mt-1 text-xl font-medium">
+                              ${formatUsdc(myAssets)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[13px] text-neutral-500">
+                              Vault TVL
+                            </p>
+                            <p className="mt-1 text-xl font-medium">
+                              ${formatUsdc(tvl)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-5">
+                        <div>
+                          <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
+                            Deposit
+                          </p>
+                          <div className="mt-2 flex items-end gap-3">
+                            <input
+                              value={depositAmt}
+                              onChange={(e) => setDepositAmt(e.target.value)}
+                              inputMode="decimal"
+                              placeholder="0.00"
+                              aria-label="Deposit amount"
+                              className="h-12 min-w-0 flex-1 border-b border-neutral-200 bg-transparent text-base tabular-nums outline-none placeholder:text-neutral-300 focus:border-aero-800"
+                            />
+                            <Button
+                              disabled={
+                                depositRaw === null ||
+                                approveTx.busy ||
+                                depositTx.busy
+                              }
+                              onClick={doDeposit}
+                              className="h-11 shrink-0 rounded-full bg-aero-800 px-6 font-medium text-white hover:bg-aero-900 disabled:bg-neutral-100 disabled:text-neutral-400"
+                            >
+                              {approveTx.busy
+                                ? "Approving…"
+                                : depositTx.busy
+                                  ? "Depositing…"
+                                  : needsApprove
+                                    ? "Approve + deposit"
+                                    : "Deposit"}
+                            </Button>
+                          </div>
+                          <div className="mt-2">
+                            <TxStatus
+                              hash={approveTx.hash ?? depositTx.hash}
+                              error={approveTx.error ?? depositTx.error}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
+                            Withdraw
+                          </p>
+                          <div className="mt-2 flex items-end gap-3">
+                            <input
+                              value={withdrawAmt}
+                              onChange={(e) => setWithdrawAmt(e.target.value)}
+                              inputMode="decimal"
+                              placeholder="0.00"
+                              aria-label="Withdraw amount"
+                              className="h-12 min-w-0 flex-1 border-b border-neutral-200 bg-transparent text-base tabular-nums outline-none placeholder:text-neutral-300 focus:border-aero-800"
+                            />
+                            <Button
+                              disabled={
+                                (!withdrawShares && !shares) || withdrawTx.busy
+                              }
+                              onClick={() => doWithdraw(!withdrawAmt)}
+                              className="h-11 shrink-0 rounded-full border border-neutral-300 px-6 font-medium text-neutral-900 hover:bg-neutral-50 disabled:border-neutral-200 disabled:text-neutral-300"
+                            >
+                              {withdrawTx.busy
+                                ? "…"
+                                : withdrawAmt
+                                  ? "Withdraw"
+                                  : "Withdraw all"}
+                            </Button>
+                          </div>
+                          <div className="mt-2">
+                            <TxStatus
+                              hash={withdrawTx.hash}
+                              error={withdrawTx.error}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {v.id === "market" && adapterConfigured && (
+                    <div className="pb-8">
+                      <AdapterPanel address={address} />
+                    </div>
+                  )}
+                </motion.div>
+              )}
             </div>
-          )}
-          {venue === "market" && adapterConfigured && (
-            <AdapterPanel address={address} />
-          )}
-        </div>
-        <div className="xl:sticky xl:top-6">
-          <AutoEarn address={address} />
-        </div>
+          )
+        })}
+      </div>
+
+      <div className="mt-8">
+        <AutoEarn address={address} />
       </div>
     </div>
   )
@@ -2098,7 +2136,7 @@ export function AdapterPanel({ address }: { address: Address }) {
   if (!adapterConfigured) return null
 
   return (
-    <div className="rounded-[20px] border border-aero-200 bg-aero-50/50 p-6 sm:p-8">
+    <div className="pb-2">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="text-[13px] font-semibold tracking-[0.14em] text-aero-800 uppercase">
           Live market · Benqi adapter
@@ -2116,15 +2154,15 @@ export function AdapterPanel({ address }: { address: Address }) {
         {" · "}market TVL:{" "}
         <span className="tabular-nums">${formatUsdc(tvl)}</span>.
       </p>
-      <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
-        <div className="flex gap-2.5">
-          <Input
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div className="flex items-end gap-2.5">
+          <input
             value={depositAmt}
             onChange={(e) => setDepositAmt(e.target.value)}
             inputMode="decimal"
             placeholder="Deposit tUSDC"
             aria-label="Deposit amount"
-            className="h-11 flex-1 rounded-2xl border-neutral-200 bg-white text-[15px] tabular-nums placeholder:text-neutral-400"
+            className="h-11 min-w-0 flex-1 border-b border-neutral-200 bg-transparent text-[15px] tabular-nums outline-none placeholder:text-neutral-300 focus:border-aero-800"
           />
           <Button
             disabled={depositRaw === null || approveTx.busy || depositTx.busy}
@@ -2132,7 +2170,7 @@ export function AdapterPanel({ address }: { address: Address }) {
               doDeposit()
               refresh()
             }}
-            className="h-11 shrink-0 rounded-full bg-aero-800 px-5 text-sm font-medium text-white hover:bg-aero-900 disabled:opacity-60"
+            className="h-11 shrink-0 rounded-full bg-aero-800 px-5 text-sm font-medium text-white hover:bg-aero-900 disabled:bg-neutral-100 disabled:text-neutral-400"
           >
             {approveTx.busy
               ? "…"
@@ -2143,14 +2181,14 @@ export function AdapterPanel({ address }: { address: Address }) {
                   : "Supply"}
           </Button>
         </div>
-        <div className="flex gap-2.5">
-          <Input
+        <div className="flex items-end gap-2.5">
+          <input
             value={withdrawAmt}
             onChange={(e) => setWithdrawAmt(e.target.value)}
             inputMode="decimal"
             placeholder="Withdraw tUSDC"
             aria-label="Withdraw amount"
-            className="h-11 flex-1 rounded-2xl border-neutral-200 bg-white text-[15px] tabular-nums placeholder:text-neutral-400"
+            className="h-11 min-w-0 flex-1 border-b border-neutral-200 bg-transparent text-[15px] tabular-nums outline-none placeholder:text-neutral-300 focus:border-aero-800"
           />
           <Button
             disabled={(!withdrawRaw && !myShares) || withdrawTx.busy}
@@ -2158,7 +2196,7 @@ export function AdapterPanel({ address }: { address: Address }) {
               doWithdraw(!withdrawAmt)
               refresh()
             }}
-            className="h-11 shrink-0 rounded-full border border-neutral-300 bg-white px-5 text-sm font-medium text-neutral-900 hover:bg-neutral-50 disabled:opacity-60"
+            className="h-11 shrink-0 rounded-full border border-neutral-300 px-5 text-sm font-medium text-neutral-900 hover:bg-neutral-50 disabled:border-neutral-200 disabled:text-neutral-300"
           >
             {withdrawTx.busy ? "…" : withdrawAmt ? "Withdraw" : "All"}
           </Button>

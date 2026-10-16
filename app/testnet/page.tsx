@@ -13,7 +13,6 @@ import {
 } from "@/components/testnet/shell"
 import {
   EarnTab,
-  FaucetBar,
   PayTab,
   RequestTab,
   SendTab,
@@ -159,19 +158,37 @@ function TestnetConnected({
   prefill: { to: string; amount: string }
 }) {
   const { address, isConnected, chainId } = useAccount()
+  const isTerm = tab === "terminal"
 
   if (!isConnected || !address) return <LoginView />
   if (chainId !== FUJI_CHAIN_ID) return <WrongNetwork />
 
   return (
-    <div className="min-h-svh bg-white lg:flex">
+    <div
+      className={
+        isTerm
+          ? "flex h-svh flex-col overflow-hidden bg-white lg:flex-row"
+          : "min-h-svh bg-white lg:flex"
+      }
+    >
       <Sidebar tab={tab} setTab={setTab} address={address} />
-      <div className="min-w-0 flex-1">
+      <div
+        className={
+          isTerm ? "flex min-h-0 min-w-0 flex-1 flex-col" : "min-w-0 flex-1"
+        }
+      >
         <MobileTop address={address} />
-        <main className="mx-auto w-full px-5 pt-6 pb-28 lg:px-8 lg:pb-16">
+        <main
+          className={
+            isTerm
+              ? "flex min-h-0 w-full flex-1 flex-col px-5 pt-6 pb-24 lg:px-8 lg:pb-8"
+              : "mx-auto w-full px-5 pt-6 pb-28 lg:px-8 lg:pb-16"
+          }
+        >
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={tab}
+              className={isTerm ? "flex min-h-0 flex-1 flex-col" : undefined}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
@@ -191,11 +208,6 @@ function TestnetConnected({
               {tab === "pay" && <PayTab address={address} />}
               {tab === "earn" && <EarnTab address={address} />}
               {tab === "terminal" && <TerminalView address={address} />}
-              {tab !== "overview" && (
-                <div className="mt-6">
-                  <FaucetBar address={address} />
-                </div>
-              )}
             </motion.div>
           </AnimatePresence>
         </main>

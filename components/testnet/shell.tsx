@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils"
 import { AeroMark } from "@/components/aero/logo"
 import { BrandLockup } from "@/components/aero/brand-logo"
 import { AppKitConnectButton } from "@/components/testnet/providers"
-import { FaucetBar } from "./views"
+import { FaucetMini } from "./views"
 import {
   adapterAbi,
   namesAbi,
@@ -273,6 +273,7 @@ export function Sidebar({
         })}
       </nav>
       <div className="mt-auto space-y-3">
+        <FaucetMini address={address} />
         <Checklist
           address={address}
           funded={(sidebarUsdc ?? BigInt(0)) > BigInt(0)}
@@ -638,8 +639,8 @@ export function Portfolio({
   const total = chains.reduce((n, c) => n + (c.balance ?? 0), 0)
 
   return (
-    <div className="mt-5 rounded-[20px] border border-neutral-200 bg-white p-6">
-      <div className="flex items-baseline justify-between">
+    <div className="mt-5">
+      <div className="flex items-baseline justify-between gap-3">
         <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
           Your Avalanche portfolio
         </p>
@@ -651,21 +652,19 @@ export function Portfolio({
           })}
         </p>
       </div>
-      <div className="mt-3 divide-y divide-neutral-100">
+      <div className="mt-1 divide-y divide-neutral-200 border-y border-neutral-200">
         {chains.map((c) => (
-          <div key={c.name} className="flex items-center gap-3 py-3">
+          <div key={c.name} className="flex items-center gap-3 py-3.5">
             <span className={cn("size-2.5 shrink-0 rounded-full", c.dot)} />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[15px] font-medium text-neutral-900">
-                {c.name}{" "}
-                {!c.live && (
-                  <span className="ml-1 rounded-full bg-neutral-100 px-2 py-0.5 align-middle font-mono text-[10px] font-bold text-neutral-500">
-                    SIMULATED
-                  </span>
-                )}
-              </p>
-            </div>
-            <span className="font-mono tabular-nums">
+            <p className="min-w-0 flex-1 truncate text-[15px] font-medium text-neutral-900">
+              {c.name}{" "}
+              {!c.live && (
+                <span className="ml-1 rounded-full bg-neutral-100 px-2 py-0.5 align-middle font-mono text-[10px] font-bold text-neutral-500">
+                  SIMULATED
+                </span>
+              )}
+            </p>
+            <span className="shrink-0 font-mono tabular-nums">
               {c.balance === null
                 ? "—"
                 : `$${c.balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
@@ -674,17 +673,16 @@ export function Portfolio({
               type="button"
               disabled={c.balance === null || c.balance <= 0}
               onClick={() => c.balance !== null && goSend(c.balance.toFixed(2))}
-              className="shrink-0 rounded-full border border-neutral-200 px-3.5 py-1.5 text-[13px] font-medium text-neutral-700 transition hover:border-aero-800 hover:text-aero-800 disabled:opacity-40"
+              className="shrink-0 rounded-full px-2 py-1 text-[13px] font-medium text-neutral-400 transition hover:text-aero-800 disabled:opacity-30"
             >
-              Move
+              Move →
             </button>
           </div>
         ))}
       </div>
-      <p className="mt-2 text-[13px] leading-relaxed text-neutral-400">
-        Beam and DFK balances are simulated on testnet — those chains have no
-        testnet of their own. Moves settle on Fuji for now; Warp messaging
-        handles it on mainnet.
+      <p className="mt-2.5 text-xs leading-relaxed text-neutral-400">
+        Beam and DFK balances are simulated — those chains have no testnet.
+        Moves settle on Fuji for now.
       </p>
     </div>
   )
@@ -1111,7 +1109,7 @@ export function Overview({
       </motion.div>
 
       <div className="mt-5 grid items-start gap-5 xl:grid-cols-[1.8fr_1fr]">
-        <div className="rounded-[20px] border border-neutral-200 bg-white p-6">
+        <div>
           <div className="flex items-center justify-between">
             <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
               Recent activity
@@ -1164,7 +1162,7 @@ export function Overview({
               </button>
             </div>
           ) : (
-            <div className="mt-2 divide-y divide-neutral-100">
+            <div className="divide-y divide-neutral-200 border-y border-neutral-200">
               {feed.slice(0, 10).map((a) => {
                 const peerLabel = a.peer
                   ? (names.get(a.peer.toLowerCase()) ??
@@ -1236,10 +1234,10 @@ export function Overview({
               go("send")
             }}
           />
-          <FaucetBar address={address} />
         </div>
       </div>
-      <div className="mt-5 lg:hidden">
+      <div className="mt-5 space-y-5 lg:hidden">
+        <FaucetMini address={address} />
         <Checklist
           address={address}
           funded={(usdc ?? BigInt(0)) > BigInt(0)}

@@ -401,7 +401,7 @@ export function TerminalView({ address }: { address: Address }) {
   }
 
   return (
-    <div className="overflow-hidden rounded-[20px] bg-aero-950 text-white">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[20px] bg-aero-950 text-white">
       <div className="flex items-center gap-2 border-b border-white/10 px-5 py-3.5">
         <span className="flex gap-1.5">
           <span className="size-2.5 rounded-full bg-[#FF5F57]" />
@@ -415,7 +415,7 @@ export function TerminalView({ address }: { address: Address }) {
       </div>
       <div
         ref={boxRef}
-        className="h-[420px] space-y-1.5 overflow-y-auto px-5 py-4 font-mono text-[13px] leading-relaxed"
+        className="min-h-0 flex-1 space-y-1.5 overflow-y-auto px-5 py-4 font-mono text-[13px] leading-relaxed"
       >
         {lines.map((l, i) => (
           <p
