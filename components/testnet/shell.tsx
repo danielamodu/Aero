@@ -17,6 +17,7 @@ import {
   RefreshCw,
   Send,
   Sprout,
+  SquareTerminal,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -27,7 +28,7 @@ import { FaucetBar } from "./views"
 import { adapterAbi, namesAbi, routerAbi, usdcAbi, vaultAbi } from "@/lib/contracts"
 import type { Address } from "viem"
 import { CONTRACTS, FUJI_AVAX_FAUCET, formatUsdc, routerConfigured } from "@/lib/testnet"
-import { readActivity, type ActivityItem } from "@/lib/testnet-activity"
+import { readActivity } from "@/lib/testnet-activity"
 import { buildContacts } from "@/lib/contacts"
 import {
   addSeenHashes,
@@ -166,6 +167,7 @@ const NAV = [
   { id: "request", label: "Request", icon: HandCoins },
   { id: "pay", label: "Pay", icon: ReceiptText },
   { id: "earn", label: "Earn", icon: Sprout },
+  { id: "terminal", label: "Terminal", icon: SquareTerminal },
 ] as const
 
 function shortAddress(a: string): string {
@@ -284,7 +286,7 @@ export function MobileTop({ address }: { address: Address }) {
 
 export function MobileTabs({ tab, setTab }: { tab: TestnetTab; setTab: (t: TestnetTab) => void }) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-neutral-200 bg-white/92 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-neutral-200 bg-white/92 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
       {NAV.map((n) => (
         <button
           key={n.id}
@@ -769,58 +771,48 @@ export function Overview({
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.08 }}
-        className="mt-6 rounded-[20px] border border-neutral-200 bg-white p-6 sm:p-8"
+        className="relative mt-6 overflow-hidden rounded-[24px] bg-aero-950 p-6 text-white sm:p-8"
       >
-        <p className="text-[13px] font-medium text-neutral-500">Total balance</p>
-        <p className="mt-1 text-5xl font-medium tracking-tight tabular-nums sm:text-6xl">
-          ${animatedTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </p>
-        <div className="mt-5 grid grid-cols-2 gap-4 border-t border-neutral-100 pt-5 text-[15px] tabular-nums">
-          <div>
-            <p className="text-[13px] text-neutral-500">Available</p>
-            <p className="mt-0.5 font-medium">${formatUsdc(usdc)}</p>
+        <AeroMark aria-hidden className="pointer-events-none absolute -right-12 -bottom-16 size-64 text-white/[0.06]" />
+        <div className="relative">
+          <p className="text-[13px] font-medium text-white/50">Total balance</p>
+          <p className="mt-1 font-mono text-5xl font-medium tracking-tight tabular-nums sm:text-6xl">
+            ${animatedTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </p>
+          <div className="mt-5 grid grid-cols-2 gap-4 border-t border-white/10 pt-5 font-mono text-[15px] tabular-nums">
+            <div>
+              <p className="font-sans text-[13px] text-white/45">Available</p>
+              <p className="mt-0.5">${formatUsdc(usdc)}</p>
+            </div>
+            <div>
+              <p className="font-sans text-[13px] text-white/45">
+                Earning · <span className="font-medium text-emerald-300">{apr}% APR</span>
+              </p>
+              <p className="mt-0.5">${formatUsdc(earning === BigInt(0) && !shares ? undefined : earning)}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-[13px] text-neutral-500">
-              Earning · <span className="font-medium text-emerald-600">{apr}% APR</span>
-            </p>
-            <p className="mt-0.5 font-medium">${formatUsdc(earning === BigInt(0) && !shares ? undefined : earning)}</p>
+          <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+            {(
+              [
+                ["Send", "send"],
+                ["Request", "request"],
+                ["Pay", "pay"],
+                ["Earn", "earn"],
+              ] as const
+            ).map(([label, id]) => (
+              <Button
+                key={id}
+                onClick={() => go(id)}
+                className="h-11 rounded-full bg-white/10 font-medium text-white backdrop-blur transition hover:bg-white/20 pressable"
+              >
+                {label}
+              </Button>
+            ))}
           </div>
-        </div>
-        <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-          {(
-            [
-              ["Send", "send"],
-              ["Request", "request"],
-              ["Pay", "pay"],
-              ["Earn", "earn"],
-            ] as const
-          ).map(([label, id]) => (
-            <Button
-              key={id}
-              onClick={() => go(id)}
-              className="h-11 rounded-full bg-aero-800 font-medium text-white hover:bg-aero-900 pressable"
-            >
-              {label}
-            </Button>
-          ))}
         </div>
       </motion.div>
 
-      <Portfolio
-        address={address}
-        fujiUsdc={usdc}
-        goSend={(amt) => {
-          try {
-            window.localStorage.setItem("aero_send_prefill", JSON.stringify({ amount: amt }))
-          } catch {
-            /* ignore */
-          }
-          go("send")
-        }}
-      />
-
-      <div className="mt-5 grid items-start gap-5 xl:grid-cols-[1.5fr_1fr]">
+      <div className="mt-5 grid items-start gap-5 xl:grid-cols-[1.6fr_1fr]">
       <div className="rounded-[20px] border border-neutral-200 bg-white p-6">
         <div className="flex items-center justify-between">
           <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">Recent activity</p>
@@ -904,6 +896,18 @@ export function Overview({
         )}
         </div>
         <div className="space-y-5">
+          <Portfolio
+            address={address}
+            fujiUsdc={usdc}
+            goSend={(amt) => {
+              try {
+                window.localStorage.setItem("aero_send_prefill", JSON.stringify({ amount: amt }))
+              } catch {
+                /* ignore */
+              }
+              go("send")
+            }}
+          />
           <FaucetBar address={address} />
         </div>
       </div>

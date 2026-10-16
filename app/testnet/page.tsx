@@ -6,10 +6,12 @@ import { useAccount, useSwitchChain } from "wagmi"
 import { Button } from "@/components/ui/button"
 import { LoginView, MobileTabs, MobileTop, Overview, Sidebar } from "@/components/testnet/shell"
 import { EarnTab, FaucetBar, PayTab, RequestTab, SendTab } from "@/components/testnet/views"
+import { TerminalView } from "@/components/testnet/terminal"
+import { CommandPalette } from "@/components/testnet/command-palette"
 import { reownConfigured } from "@/components/testnet/providers"
 import { contractsConfigured, FUJI_CHAIN_ID, missingContractEnvs } from "@/lib/testnet"
 
-export type TestnetTab = "overview" | "send" | "request" | "pay" | "earn"
+export type TestnetTab = "overview" | "send" | "request" | "pay" | "earn" | "terminal"
 
 function SetupNotice({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -122,6 +124,7 @@ function TestnetConnected({
           {tab === "request" && <RequestTab address={address} go={setTab} />}
           {tab === "pay" && <PayTab address={address} />}
           {tab === "earn" && <EarnTab address={address} />}
+          {tab === "terminal" && <TerminalView address={address} />}
           {tab !== "overview" && (
             <div className="mt-6">
               <FaucetBar address={address} />
@@ -132,6 +135,7 @@ function TestnetConnected({
         </main>
       </div>
       <MobileTabs tab={tab} setTab={setTab} />
+      <CommandPalette go={setTab} />
     </div>
   )
 }
