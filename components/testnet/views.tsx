@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
 import {
   useReadContract,
@@ -27,6 +27,7 @@ import {
   snowtraceTx,
 } from "@/lib/testnet"
 import { pushActivity } from "@/lib/testnet-activity"
+import { pushNotice } from "@/lib/notifications"
 import { buildContacts, getFavorites, toggleFavorite, type Contact } from "@/lib/contacts"
 import { BuySheet } from "./buy-sheet"
 import { QRCodeSVG } from "qrcode.react"
@@ -38,6 +39,17 @@ export function useTx() {
   const { data: hash, writeContract, isPending, error, reset } = useWriteContract()
   const { isLoading: confirming, isSuccess } = useWaitForTransactionReceipt({ hash })
   return { hash, write: writeContract, busy: isPending || confirming, done: isSuccess, error, reset }
+}
+
+/** Run fn at most once per tx hash (effects refire; notices must not). */
+function useOncePerHash() {
+  const seen = useRef<Set<string>>(new Set())
+  return (hash: string | undefined, fn: () => void) => {
+    if (hash && !seen.current.has(hash)) {
+      seen.current.add(hash)
+      fn()
+    }
+  }
 }
 
 export function TxStatus({ hash, error }: { hash: `0x${string}` | undefined; error: Error | null }) {
@@ -239,7 +251,18 @@ export function SendTab({
   initialAmount?: string
 }) {
   const [to, setTo] = useState(initialTo)
-  const [amount, setAmount] = useState(initialAmount)
+  const [amount, setAmount] = useState(() => {
+    if (initialAmount) return initialAmount
+    try {
+      const raw = window.localStorage.getItem("aero_send_prefill")
+      if (!raw) return ""
+      window.localStorage.removeItem("aero_send_prefill")
+      const amt = (JSON.parse(raw) as { amount?: unknown }).amount
+      return typeof amt === "string" ? amt : ""
+    } catch {
+      return ""
+    }
+  })
   const [memo, setMemo] = useState("")
   const [receipts, setReceipts] = useState<Receipt[]>([])
   const [contacts, setContacts] = useState<Contact[]>([])
@@ -315,32 +338,41 @@ export function SendTab({
       <div className="rounded-[20px] border border-neutral-200 bg-white p-6">
         <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">Send tUSDC</p>
         {contacts.length > 0 && (
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-            {contacts.map((c) => {
-              const fav = favs.includes(c.address.toLowerCase())
-              return (
-                <span
-                  key={c.address}
-                  className="flex shrink-0 items-center gap-1 rounded-full border border-neutral-200 py-1 pr-1 pl-3.5"
-                >
-                  <button
-                    type="button"
-                    onClick={() => setTo(c.label.startsWith("@") ? c.label : c.address)}
-                    className="text-sm font-medium text-neutral-700 hover:text-neutral-950"
-                  >
-                    {c.label}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onStar(c.address)}
-                    aria-label={fav ? "Unfavorite" : "Favorite"}
-                    className={fav ? "text-amber-500" : "text-neutral-300 hover:text-neutral-500"}
-                  >
-                    <Star className="size-3.5" fill="currentColor" />
-                  </button>
-                </span>
-              )
-            })}
+          <div className="mt-4">
+            <p className="text-[13px] font-medium text-neutral-500">Recent</p>
+            <div className="mt-2 flex gap-4 overflow-x-auto pb-1">
+              {contacts.slice(0, 5).map((c) => {
+                const fav = favs.includes(c.address.toLowerCase())
+                const initials = c.label.startsWith("@")
+                  ? c.label.slice(1, 3).toUpperCase()
+                  : c.label.slice(0, 2).toUpperCase()
+                const hue = [...c.address].reduce((n, ch) => n + ch.charCodeAt(0), 0) % 360
+                return (
+                  <span key={c.address} className="flex w-16 shrink-0 flex-col items-center gap-1.5">
+                    <span className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setTo(c.label.startsWith("@") ? c.label : c.address)}
+                        aria-label={`Send to ${c.label}`}
+                        style={{ backgroundColor: `hsl(${hue} 45% 92%)`, color: `hsl(${hue} 55% 32%)` }}
+                        className="flex size-12 items-center justify-center rounded-full text-sm font-bold transition hover:ring-2 hover:ring-aero-800/30"
+                      >
+                        {initials}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onStar(c.address)}
+                        aria-label={fav ? "Unfavorite" : "Favorite"}
+                        className={fav ? "absolute -top-1 -right-1 text-amber-500" : "absolute -top-1 -right-1 text-neutral-300 hover:text-neutral-500"}
+                      >
+                        <Star className="size-3.5" fill="currentColor" />
+                      </button>
+                    </span>
+                    <span className="w-full truncate text-center text-xs font-medium text-neutral-600">{c.label}</span>
+                  </span>
+                )
+              })}
+            </div>
           </div>
         )}
         <div className="mt-4 space-y-4">
@@ -546,6 +578,7 @@ export function RouterPanel({ address }: { address: Address }) {
   const approveTx = useTx()
   const depositTx = useTx()
   const withdrawTx = useTx()
+  const notifyOnce = useOncePerHash()
 
   const { data: apy, refetch: refetchApy } = useReadContract({ address: CONTRACTS.router, abi: routerAbi, functionName: "liveApyBps" })
   const { data: total, refetch: refetchTotal } = useReadContract({ address: CONTRACTS.router, abi: routerAbi, functionName: "totalAssets" })
@@ -564,6 +597,26 @@ export function RouterPanel({ address }: { address: Address }) {
   const raw = parseUsdc(amount)
   const needsApprove = raw !== null && (allowance ?? BigInt(0)) < raw
   const myAssets = myShares && price ? (myShares * price) / BigInt(1e18) : undefined
+
+  useEffect(() => {
+    if (depositTx.done) {
+      refetchApy()
+      refetchTotal()
+      refetchShares()
+      refetchAllowance()
+      notifyOnce(depositTx.hash, () =>
+        pushNotice(`Auto-earn deposited $${amount || "0"} into the router`, "Split across live markets automatically.")
+      )
+      depositTx.reset()
+    }
+    if (withdrawTx.done) {
+      refetchApy()
+      refetchTotal()
+      refetchShares()
+      withdrawTx.reset()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [depositTx.done, withdrawTx.done])
 
   return (
     <div className="rounded-[20px] bg-aero-950 p-6 text-white sm:p-8">
@@ -731,12 +784,164 @@ export function RequestTab({ address, go }: { address: Address; go: (t: TestnetT
 
 /* ---------------------------------- earn ---------------------------------- */
 
+/* -------------------------------- auto-earn -------------------------------- */
+
+function AutoEarn({ address }: { address: Address }) {
+  const [autoOn, setAutoOn] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem("aero_auto_earn") !== "0"
+    } catch {
+      return true
+    }
+  })
+  const approveTx = useTx()
+  const depositTx = useTx()
+
+  const { data: usdc, refetch: refetchUsdc } = useReadContract({
+    address: CONTRACTS.usdc, abi: usdcAbi, functionName: "balanceOf", args: [address],
+  })
+  const { data: rate } = useReadContract({
+    address: CONTRACTS.vault, abi: vaultAbi, functionName: "ratePerSecond",
+  })
+  const { data: bps } = useReadContract({
+    address: CONTRACTS.adapter, abi: adapterAbi, functionName: "liveApyBps",
+    query: { enabled: adapterConfigured },
+  })
+  const { data: vaultShares, refetch: refetchVault } = useReadContract({
+    address: CONTRACTS.vault, abi: vaultAbi, functionName: "balanceOf", args: [address],
+  })
+  const { data: adapterShares, refetch: refetchAdapter } = useReadContract({
+    address: CONTRACTS.adapter, abi: adapterAbi, functionName: "balanceOf", args: [address],
+    query: { enabled: adapterConfigured },
+  })
+
+  useEffect(() => {
+    if (depositTx.done) {
+      refetchUsdc()
+      refetchVault()
+      refetchAdapter()
+      depositTx.reset()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [depositTx.done])
+
+  const toggle = (v: boolean) => {
+    setAutoOn(v)
+    try {
+      window.localStorage.setItem("aero_auto_earn", v ? "1" : "0")
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const vaultApr = rate !== undefined ? ((Number(rate) * 31_557_600) / 1e18) * 100 : null
+  const adapterApr = bps !== undefined ? Number(bps) / 100 : null
+  const best: "vault" | "adapter" | null =
+    vaultApr === null ? null : adapterApr === null || !adapterConfigured ? "vault" : adapterApr >= vaultApr ? "adapter" : "vault"
+  const bestApy = best === "adapter" ? adapterApr : vaultApr
+  const venue = best === "adapter" ? CONTRACTS.adapter : CONTRACTS.vault
+  const venueAbi = best === "adapter" ? adapterAbi : vaultAbi
+
+  const { data: venueAllowance, refetch: refetchVenueAllowance } = useReadContract({
+    address: CONTRACTS.usdc, abi: usdcAbi, functionName: "allowance", args: [address, venue],
+  })
+  useEffect(() => {
+    if (approveTx.done) {
+      refetchVenueAllowance()
+      approveTx.reset()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [approveTx.done])
+
+  const available = usdc ?? BigInt(0)
+  const idle = available > BigInt(10_000_000)
+  const working = (vaultShares ?? BigInt(0)) > BigInt(0) || (adapterShares ?? BigInt(0)) > BigInt(0)
+
+  const addAll = () => {
+    if (available <= BigInt(0) || approveTx.busy || depositTx.busy) return
+    if ((venueAllowance ?? BigInt(0)) < available) {
+      approveTx.write({ address: CONTRACTS.usdc, abi: usdcAbi, functionName: "approve", args: [venue, maxUint256] })
+    } else {
+      depositTx.write({ address: venue, abi: venueAbi, functionName: "deposit", args: [available] } as never)
+    }
+  }
+
+  return (
+    <div className="rounded-[20px] border border-neutral-200 bg-white p-5 sm:p-6">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-[15px] font-semibold text-neutral-900">Auto-earn</p>
+          <p className="mt-0.5 text-[13px] text-neutral-500">
+            {best !== null ? (
+              <>Best rate right now · <span className="font-medium text-emerald-600">{best === "adapter" ? "Benqi adapter" : "Mock vault"} {bestApy!.toFixed(2)}%</span></>
+            ) : (
+              "Comparing live rates…"
+            )}
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={autoOn}
+          aria-label="Auto-earn"
+          onClick={() => toggle(!autoOn)}
+          className={cn("relative h-7 w-12 shrink-0 rounded-full transition", autoOn ? "bg-emerald-500" : "bg-neutral-200")}
+        >
+          <motion.span
+            layout
+            animate={{ x: autoOn ? 20 : 0 }}
+            transition={{ type: "spring", stiffness: 500, damping: 32 }}
+            className="absolute top-1 left-1 size-5 rounded-full bg-white shadow"
+          />
+        </button>
+      </div>
+
+      {autoOn && (
+        <div className="mt-4 rounded-2xl bg-[#f7f7f7] p-4">
+          {idle ? (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-[15px] leading-relaxed text-neutral-700">
+                Your <span className="font-semibold tabular-nums">${formatUsdc(available)}</span> is sitting
+                idle. Auto-earn {best === "adapter" ? "is routing it" : "would route it"} to the best rate.
+              </p>
+              <Button
+                disabled={approveTx.busy || depositTx.busy}
+                onClick={addAll}
+                className="h-11 shrink-0 rounded-full bg-aero-800 px-6 font-medium text-white hover:bg-aero-900 disabled:opacity-60"
+              >
+                {approveTx.busy ? "Approving…" : depositTx.busy ? "Depositing…" : `Add $${formatUsdc(available)}`}
+              </Button>
+            </div>
+          ) : (
+            <p className="text-[15px] leading-relaxed text-neutral-700">
+              <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700">
+                <span className="relative flex size-1.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
+                  <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />
+                </span>
+                {working ? "Your balance is working." : "Auto-earn is on."}
+              </span>{" "}
+              {working
+                ? "Every idle dollar is routed to the best live rate."
+                : "Fund your balance and it will be routed automatically."}
+            </p>
+          )}
+          <div className="mt-2">
+            <TxStatus hash={approveTx.hash ?? depositTx.hash} error={approveTx.error ?? depositTx.error} />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function EarnTab({ address }: { address: Address }) {
   const [depositAmt, setDepositAmt] = useState("")
   const [withdrawAmt, setWithdrawAmt] = useState("")
   const approveTx = useTx()
   const depositTx = useTx()
   const withdrawTx = useTx()
+  const notifyOnce = useOncePerHash()
 
   const { data: rate, refetch: refetchRate } = useReadContract({ address: CONTRACTS.vault, abi: vaultAbi, functionName: "ratePerSecond" })
   const { data: shares, refetch: refetchShares } = useReadContract({ address: CONTRACTS.vault, abi: vaultAbi, functionName: "balanceOf", args: [address] })
@@ -751,6 +956,14 @@ export function EarnTab({ address }: { address: Address }) {
   }
   useEffect(() => {
     if (depositTx.done || withdrawTx.done) refresh()
+    if (depositTx.done && depositTx.hash) {
+      notifyOnce(depositTx.hash, () =>
+        pushNotice(
+          `Auto-earn deposited $${depositAmt || "0"} — now earning`,
+          rate !== undefined ? `Around ${(((Number(rate) * 31_557_600) / 1e18) * 100).toFixed(2)}% APR in the mock vault.` : "Your balance is working."
+        )
+      )
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [depositTx.done, withdrawTx.done])
 
@@ -786,6 +999,7 @@ export function EarnTab({ address }: { address: Address }) {
 
   return (
     <div className="space-y-5">
+      <AutoEarn address={address} />
       <RouterPanel address={address} />
       <div className="grid gap-5 lg:grid-cols-2">
         <div className="rounded-[20px] border border-neutral-200 bg-white p-6 sm:p-8">
@@ -865,6 +1079,7 @@ export function AdapterPanel({ address }: { address: Address }) {
   const approveTx = useTx()
   const depositTx = useTx()
   const withdrawTx = useTx()
+  const notifyOnce = useOncePerHash()
 
   const { data: bps, refetch: refetchApy } = useReadContract({
     address: CONTRACTS.adapter, abi: adapterAbi, functionName: "liveApyBps",
@@ -894,6 +1109,21 @@ export function AdapterPanel({ address }: { address: Address }) {
   const needsApprove = depositRaw !== null && (allowance ?? BigInt(0)) < depositRaw
   const myAssets = myShares && price ? (myShares * price) / BigInt(1e18) : undefined
   const apy = bps !== undefined ? (Number(bps) / 100).toFixed(2) : "—"
+
+  useEffect(() => {
+    if (depositTx.done) {
+      refresh()
+      notifyOnce(depositTx.hash, () =>
+        pushNotice(`Auto-earn deposited $${depositAmt || "0"} into the Benqi market`, `Now earning around ${apy}% APR.`)
+      )
+      depositTx.reset()
+    }
+    if (withdrawTx.done) {
+      refresh()
+      withdrawTx.reset()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [depositTx.done, withdrawTx.done])
 
   const doDeposit = () => {
     if (depositRaw === null) return

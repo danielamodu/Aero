@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { motion } from "motion/react"
-import { useDisconnect, useReadContract } from "wagmi"
+import { useDisconnect, useReadContract, useReadContracts } from "wagmi"
 import {
+  ArrowDownLeft,
   ArrowUpRight,
+  Bell,
   Check,
   HandCoins,
   LayoutGrid,
@@ -18,10 +20,20 @@ import { cn } from "@/lib/utils"
 import { AeroMark } from "@/components/aero/logo"
 import { BrandLockup, BrandWordmark } from "@/components/aero/brand-logo"
 import { AppKitConnectButton } from "@/components/testnet/providers"
-import { namesAbi, usdcAbi, vaultAbi } from "@/lib/contracts"
+import { adapterAbi, namesAbi, routerAbi, usdcAbi, vaultAbi } from "@/lib/contracts"
 import type { Address } from "viem"
-import { CONTRACTS, FUJI_AVAX_FAUCET, formatUsdc } from "@/lib/testnet"
+import { CONTRACTS, FUJI_AVAX_FAUCET, formatUsdc, routerConfigured } from "@/lib/testnet"
 import { readActivity, type ActivityItem } from "@/lib/testnet-activity"
+import { buildContacts } from "@/lib/contacts"
+import {
+  addSeenHashes,
+  markAllRead,
+  pushNotice,
+  readNotices,
+  seenHashes,
+  unreadCount,
+  type Notice,
+} from "@/lib/notifications"
 import { fetchOnchainActivity, fetchMemos, hasOnchainSends, type ChainActivity } from "@/lib/onchain-activity"
 import type { TestnetTab } from "@/app/testnet/page"
 
@@ -162,6 +174,9 @@ export function Sidebar({
         <span className="rounded-full bg-amber-100 px-2 py-0.5 font-mono text-[10px] font-bold tracking-wider text-amber-800">
           TESTNET
         </span>
+        <span className="ml-auto">
+          <NotificationBell address={address} />
+        </span>
       </div>
       <nav className="mt-8 space-y-1">
         {NAV.map((n) => (
@@ -210,7 +225,7 @@ export function Sidebar({
   )
 }
 
-export function MobileTop() {
+export function MobileTop({ address }: { address: Address }) {
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-neutral-200 bg-white/90 px-5 backdrop-blur-xl lg:hidden">
       <span className="flex items-center gap-2">
@@ -219,7 +234,10 @@ export function MobileTop() {
           TESTNET
         </span>
       </span>
-      <AppKitConnectButton />
+      <span className="flex items-center gap-2">
+        <NotificationBell address={address} />
+        <AppKitConnectButton />
+      </span>
     </header>
   )
 }
@@ -352,6 +370,233 @@ export function Checklist({ address, funded, handle }: { address: Address; funde
   )
 }
 
+/* -------------------------------- portfolio ------------------------------- */
+
+function mockBalance(seed: string, min: number, max: number): number {
+  let h = 7
+  for (const ch of seed) h = (h * 31 + ch.charCodeAt(0)) >>> 0
+  return min + ((h % Math.floor((max - min) * 100)) / 100)
+}
+
+const L1_META = [
+  { id: "beam", name: "Beam L1", dot: "bg-sky-500" },
+  { id: "dfk", name: "DFK Chain", dot: "bg-emerald-500" },
+] as const
+
+export function Portfolio({
+  address,
+  fujiUsdc,
+  goSend,
+}: {
+  address: Address
+  fujiUsdc: bigint | undefined
+  goSend: (amountUsdc: string) => void
+}) {
+  const chains = [
+    { name: "C-Chain · Fuji", dot: "bg-aero-800", balance: fujiUsdc !== undefined ? Number(fujiUsdc) / 1e6 : null, live: true },
+    ...L1_META.map((l1) => ({
+      name: l1.name,
+      dot: l1.dot,
+      balance: mockBalance(`${address}-${l1.id}`, l1.id === "beam" ? 20 : 5, l1.id === "beam" ? 400 : 150),
+      live: false,
+    })),
+  ]
+  const total = chains.reduce((n, c) => n + (c.balance ?? 0), 0)
+
+  return (
+    <div className="mt-5 rounded-[20px] border border-neutral-200 bg-white p-6">
+      <div className="flex items-baseline justify-between">
+        <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
+          Your Avalanche portfolio
+        </p>
+        <p className="font-mono text-xl font-medium tabular-nums">
+          ${total.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </p>
+      </div>
+      <div className="mt-3 divide-y divide-neutral-100">
+        {chains.map((c) => (
+          <div key={c.name} className="flex items-center gap-3 py-3">
+            <span className={cn("size-2.5 shrink-0 rounded-full", c.dot)} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[15px] font-medium text-neutral-900">
+                {c.name}{" "}
+                {!c.live && (
+                  <span className="ml-1 rounded-full bg-neutral-100 px-2 py-0.5 align-middle font-mono text-[10px] font-bold text-neutral-500">
+                    SIMULATED
+                  </span>
+                )}
+              </p>
+            </div>
+            <span className="font-mono tabular-nums">
+              {c.balance === null ? "—" : `$${c.balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            </span>
+            <button
+              type="button"
+              disabled={c.balance === null || c.balance <= 0}
+              onClick={() => c.balance !== null && goSend(c.balance.toFixed(2))}
+              className="shrink-0 rounded-full border border-neutral-200 px-3.5 py-1.5 text-[13px] font-medium text-neutral-700 transition hover:border-aero-800 hover:text-aero-800 disabled:opacity-40"
+            >
+              Move
+            </button>
+          </div>
+        ))}
+      </div>
+      <p className="mt-2 text-[13px] leading-relaxed text-neutral-400">
+        Beam and DFK balances are simulated on testnet — those chains have no testnet of
+        their own. Moves settle on Fuji for now; Warp messaging handles it on mainnet.
+      </p>
+    </div>
+  )
+}
+
+/* ------------------------------ notifications ----------------------------- */
+
+const WEEK = 7 * 24 * 60 * 60 * 1000
+
+function yieldBaseline(): { ts: number; value: number } | null {
+  try {
+    const raw = window.localStorage.getItem("aero_yield_base")
+    if (!raw) return null
+    const b = JSON.parse(raw) as { ts: number; value: number }
+    return typeof b.ts === "number" && typeof b.value === "number" ? b : null
+  } catch {
+    return null
+  }
+}
+
+function saveYieldBaseline(ts: number, value: number): void {
+  try {
+    window.localStorage.setItem("aero_yield_base", JSON.stringify({ ts, value }))
+  } catch {
+    /* ignore */
+  }
+}
+
+export function NotificationBell({ address }: { address: Address }) {
+  const [open, setOpen] = useState(false)
+  const [notices, setNotices] = useState<Notice[]>(() => readNotices())
+  const [unread, setUnread] = useState<number>(() => unreadCount())
+  const refresh = () => {
+    setNotices(readNotices())
+    setUnread(unreadCount())
+  }
+
+  const { data: positions } = useReadContracts({
+    contracts: [
+      { address: CONTRACTS.vault, abi: vaultAbi, functionName: "balanceOf", args: [address] },
+      { address: CONTRACTS.vault, abi: vaultAbi, functionName: "index" },
+      { address: CONTRACTS.adapter, abi: adapterAbi, functionName: "balanceOf", args: [address] },
+      { address: CONTRACTS.adapter, abi: adapterAbi, functionName: "sharePrice" },
+      { address: CONTRACTS.router, abi: routerAbi, functionName: "balanceOf", args: [address] },
+      { address: CONTRACTS.router, abi: routerAbi, functionName: "sharePrice" },
+    ],
+    query: { enabled: routerConfigured },
+  })
+
+  useEffect(() => {
+    let live = true
+    const poll = async () => {
+      try {
+        const items = await fetchOnchainActivity(address, CONTRACTS)
+        if (!live) return
+        const seen = seenHashes()
+        const fresh = items.filter(
+          (i) => (i.kind === "in" || i.kind === "faucet") && !seen.has(i.hash.toLowerCase())
+        )
+        if (seen.size > 0) {
+          for (const f of fresh.slice(0, 3)) {
+            pushNotice(
+              f.kind === "faucet" ? "Faucet claim confirmed" : `You received ${f.amount}`,
+              f.kind === "faucet" ? "10,000 test dollars landed in your balance." : "A payment just settled. Nice."
+            )
+          }
+        }
+        addSeenHashes(items.map((i) => i.hash))
+
+        // Weekly yield digest from position growth.
+        if (positions) {
+          const [vShares, vIndex, aShares, aPrice, rShares, rPrice] = positions.map((p) =>
+            p.status === "success" ? (p.result as bigint) : BigInt(0)
+          )
+          const total =
+            Number(vShares * vIndex + aShares * aPrice + rShares * rPrice) / 1e24
+          const base = yieldBaseline()
+          const now = Date.now()
+          if (!base) {
+            saveYieldBaseline(now, total)
+          } else if (now - base.ts > WEEK) {
+            if (total > base.value + 0.01) {
+              pushNotice(
+                `Your yield earned $${(total - base.value).toFixed(2)} this week`,
+                "Idle money, working nights. Keep it rolling."
+              )
+            }
+            saveYieldBaseline(now, total)
+          }
+        }
+        refresh()
+      } catch {
+        /* poll quietly */
+      }
+    }
+    poll()
+    const id = setInterval(poll, 30_000)
+    return () => {
+      live = false
+      clearInterval(id)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [address])
+
+  const toggle = () => {
+    if (!open) {
+      setNotices(markAllRead())
+      setUnread(0)
+    }
+    setOpen((o) => !o)
+  }
+
+  return (
+    <span className="relative">
+      <button
+        type="button"
+        onClick={toggle}
+        aria-label={unread > 0 ? `${unread} unread notifications` : "Notifications"}
+        className="relative flex size-10 items-center justify-center rounded-full border border-neutral-200 text-neutral-600 transition hover:border-neutral-300 hover:text-neutral-900"
+      >
+        <Bell className="size-[18px]" />
+        {unread > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 flex size-4.5 items-center justify-center rounded-full bg-aero-800 px-1 font-mono text-[10px] font-bold text-white tabular-nums">
+            {unread > 9 ? "9+" : unread}
+          </span>
+        )}
+      </button>
+      {open && (
+        <div className="absolute top-12 right-0 z-50 w-80 overflow-hidden rounded-[20px] border border-neutral-200 bg-white shadow-[0_20px_50px_-20px_rgba(11,0,78,0.3)]">
+          <p className="border-b border-neutral-100 px-5 py-3.5 text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
+            Notifications
+          </p>
+          <div className="max-h-80 overflow-y-auto">
+            {notices.length === 0 ? (
+              <p className="px-5 py-6 text-center text-sm text-neutral-400">
+                Quiet for now. Incoming payments and yield updates land here.
+              </p>
+            ) : (
+              notices.slice(0, 12).map((n) => (
+                <div key={n.id} className="border-b border-neutral-100 px-5 py-3.5 last:border-0">
+                  <p className="text-sm font-medium text-neutral-900">{n.title}</p>
+                  <p className="mt-0.5 text-[13px] leading-relaxed text-neutral-500">{n.body}</p>
+                  <p className="mt-1 font-mono text-[11px] text-neutral-300">{timeAgo(n.ts)}</p>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </span>
+  )
+}
+
 /* -------------------------------- overview -------------------------------- */
 
 function greeting(): string {
@@ -371,6 +616,7 @@ export function Overview({
   const [activity] = useState(readActivity)
   const [chain, setChain] = useState<ChainActivity[] | null>(null)
   const [memos, setMemos] = useState<Map<string, string>>(new Map())
+  const [names, setNames] = useState<Map<string, string>>(new Map())
   useEffect(() => {
     let live = true
     fetchOnchainActivity(address, CONTRACTS)
@@ -389,17 +635,45 @@ export function Overview({
       live = false
     }
   }, [address])
+  useEffect(() => {
+    if (!chain) return
+    let live = true
+    // Counterparty @handles for the feed (nicety — falls back to addresses).
+    buildContacts(chain)
+      .then((cs) => {
+        if (live) setNames(new Map(cs.map((c) => [c.address.toLowerCase(), c.label])))
+      })
+      .catch(() => {})
+    return () => {
+      live = false
+    }
+  }, [chain])
   const feed = useMemo(() => {
     const seen = new Set(activity.map((a) => a.hash.toLowerCase()))
-    const merged: ActivityItem[] = [...activity]
+    type Row = { label: string; amount: string; hash: string; ts: number; memo?: string; dir: "in" | "out"; peer: string | null }
+    const merged: Row[] = activity.map((a) => ({
+      label: a.label,
+      amount: a.amount,
+      hash: a.hash,
+      ts: a.ts,
+      memo: a.memo ?? memos.get(a.hash.toLowerCase()),
+      dir: a.amount.trim().startsWith("+") ? "in" : "out",
+      peer: a.to ?? null,
+    }))
     for (const c of chain ?? []) {
       if (!seen.has(c.hash.toLowerCase())) {
-        merged.push({ label: c.label, amount: c.amount, hash: c.hash, ts: c.ts })
+        merged.push({
+          label: c.label,
+          amount: c.amount,
+          hash: c.hash,
+          ts: c.ts,
+          memo: memos.get(c.hash.toLowerCase()),
+          dir: c.kind === "in" || c.kind === "faucet" ? "in" : "out",
+          peer: c.counterparty,
+        })
       }
     }
-    return merged
-      .map((a) => ({ ...a, memo: a.memo ?? memos.get(a.hash.toLowerCase()) }))
-      .sort((a, b) => b.ts - a.ts)
+    return merged.sort((a, b) => b.ts - a.ts)
   }, [activity, chain, memos])
   const { data: myName } = useReadContract({ address: CONTRACTS.names, abi: namesAbi, functionName: "resolveUsername", args: [address] })
   const { data: usdc } = useReadContract({ address: CONTRACTS.usdc, abi: usdcAbi, functionName: "balanceOf", args: [address] })
@@ -463,6 +737,19 @@ export function Overview({
         </div>
       </motion.div>
 
+      <Portfolio
+        address={address}
+        fujiUsdc={usdc}
+        goSend={(amt) => {
+          try {
+            window.localStorage.setItem("aero_send_prefill", JSON.stringify({ amount: amt }))
+          } catch {
+            /* ignore */
+          }
+          go("send")
+        }}
+      />
+
       <div className="mt-5 rounded-[20px] border border-neutral-200 bg-white p-6">
         <div className="flex items-center justify-between">
           <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">Recent activity</p>
@@ -482,23 +769,43 @@ export function Overview({
           </p>
         ) : (
           <div className="mt-2 divide-y divide-neutral-100">
-            {feed.slice(0, 8).map((a) => (
-              <div key={a.hash} className="flex items-center justify-between gap-3 py-2.5 text-sm">
-                <span className="min-w-0 truncate font-medium text-neutral-700">
-                  {a.label} · <span className="tabular-nums">{a.amount}</span>{" "}
-                  <span className="font-normal text-neutral-400">{a.ts > 0 ? `· ${timeAgo(a.ts)}` : ""}</span>
-                  {a.memo && <span className="block truncate font-normal text-neutral-400">“{a.memo}”</span>}
-                </span>
-                <a
-                  href={`https://testnet.snowtrace.io/tx/${a.hash}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="shrink-0 font-medium text-aero-800 hover:underline"
-                >
-                  Receipt
-                </a>
-              </div>
-            ))}
+            {feed.slice(0, 10).map((a) => {
+              const peerLabel = a.peer
+                ? (names.get(a.peer.toLowerCase()) ?? `${a.peer.slice(0, 6)}…${a.peer.slice(-4)}`)
+                : null
+              const Incoming = a.dir === "in"
+              return (
+                <div key={a.hash} className="flex items-center gap-3 py-2.5 text-sm">
+                  <span
+                    className={cn(
+                      "flex size-8 shrink-0 items-center justify-center rounded-full",
+                      Incoming ? "bg-emerald-50 text-emerald-600" : "bg-neutral-100 text-neutral-500"
+                    )}
+                  >
+                    {Incoming ? <ArrowDownLeft className="size-4" /> : <ArrowUpRight className="size-4" />}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">
+                    <span className="block truncate font-medium text-neutral-900">
+                      {Incoming ? "Received" : "Sent"}
+                      {peerLabel ? <span className="font-normal text-neutral-500"> · {peerLabel}</span> : null}{" "}
+                      <span className="tabular-nums">{a.amount}</span>
+                    </span>
+                    <span className="block truncate text-[13px] text-neutral-400">
+                      {a.ts > 0 ? `${timeAgo(a.ts)} · ` : ""}Confirmed
+                      {a.memo ? ` · “${a.memo}”` : ""}
+                    </span>
+                  </span>
+                  <a
+                    href={`https://testnet.snowtrace.io/tx/${a.hash}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="shrink-0 font-medium text-aero-800 hover:underline"
+                  >
+                    Receipt
+                  </a>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>

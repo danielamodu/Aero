@@ -106,7 +106,7 @@ function TestnetConnected({
     <div className="min-h-svh bg-white lg:flex">
       <Sidebar tab={tab} setTab={setTab} address={address} />
       <div className="min-w-0 flex-1">
-        <MobileTop />
+        <MobileTop address={address} />
         <main className="mx-auto w-full max-w-3xl px-5 pt-6 pb-28 lg:pb-16">
           {tab === "overview" && <Overview address={address} go={setTab} />}
           {tab === "send" && <SendTab address={address} initialTo={prefill.to} initialAmount={prefill.amount} />}
