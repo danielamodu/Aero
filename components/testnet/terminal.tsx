@@ -3,7 +3,13 @@
 import { useEffect, useRef, useState, type FormEvent } from "react"
 import { useWriteContract } from "wagmi"
 import { maxUint256, zeroAddress, type Address } from "viem"
-import { namesAbi, payAbi, usdcAbi, vaultAbi, adapterAbi } from "@/lib/contracts"
+import {
+  namesAbi,
+  payAbi,
+  usdcAbi,
+  vaultAbi,
+  adapterAbi,
+} from "@/lib/contracts"
 import {
   CONTRACTS,
   formatUsdc,
@@ -15,7 +21,11 @@ import {
 } from "@/lib/testnet"
 import { fujiClient } from "@/lib/onchain-activity"
 
-type Line = { text: string; kind: "cmd" | "ok" | "err" | "info" | "tx"; hash?: string }
+type Line = {
+  text: string
+  kind: "cmd" | "ok" | "err" | "info" | "tx"
+  hash?: string
+}
 
 const HELP = [
   "balance — show tUSDC, earned, total",
@@ -33,7 +43,10 @@ const HELP = [
 
 export function TerminalView({ address }: { address: Address }) {
   const [lines, setLines] = useState<Line[]>([
-    { text: "aero terminal · Fuji testnet · money is fake, rails are real", kind: "info" },
+    {
+      text: "aero terminal · Fuji testnet · money is fake, rails are real",
+      kind: "info",
+    },
     { text: "type `help` to see what I understand", kind: "info" },
   ])
   const [input, setInput] = useState("")
@@ -45,7 +58,8 @@ export function TerminalView({ address }: { address: Address }) {
     boxRef.current?.scrollTo({ top: boxRef.current.scrollHeight })
   }, [lines.length])
 
-  const print = (batch: Line[]) => setLines((prev) => [...prev, ...batch].slice(-100))
+  const print = (batch: Line[]) =>
+    setLines((prev) => [...prev, ...batch].slice(-100))
 
   const read = async <T,>(fn: () => Promise<T>): Promise<T> => fn()
 
@@ -57,10 +71,17 @@ export function TerminalView({ address }: { address: Address }) {
     try {
       const hash = await call()
       await fujiClient.waitForTransactionReceipt({ hash })
-      print([{ text: `confirmed · ${hash.slice(0, 10)}…${hash.slice(-6)}`, kind: "tx", hash }])
+      print([
+        {
+          text: `confirmed · ${hash.slice(0, 10)}…${hash.slice(-6)}`,
+          kind: "tx",
+          hash,
+        },
+      ])
       return hash
     } catch (e) {
-      const msg = e instanceof Error ? e.message.split("\n")[0].slice(0, 140) : "failed"
+      const msg =
+        e instanceof Error ? e.message.split("\n")[0].slice(0, 140) : "failed"
       print([{ text: msg, kind: "err" }])
       return null
     }
@@ -91,15 +112,13 @@ export function TerminalView({ address }: { address: Address }) {
     )) as bigint
     if (allowance >= raw) return true
     print([{ text: "approving AeroPay once…", kind: "info" }])
-    const hash = await runWrite(
-      "approve",
-      async () =>
-        writeContractAsync({
-          address: CONTRACTS.usdc,
-          abi: usdcAbi,
-          functionName: "approve",
-          args: [CONTRACTS.pay, maxUint256],
-        })
+    const hash = await runWrite("approve", async () =>
+      writeContractAsync({
+        address: CONTRACTS.usdc,
+        abi: usdcAbi,
+        functionName: "approve",
+        args: [CONTRACTS.pay, maxUint256],
+      })
     )
     return hash !== null
   }
@@ -121,9 +140,29 @@ export function TerminalView({ address }: { address: Address }) {
         return
       case "balance": {
         const [usdc, shares, index] = await Promise.all([
-          read(() => fujiClient.readContract({ address: CONTRACTS.usdc, abi: usdcAbi, functionName: "balanceOf", args: [address] })) as Promise<bigint>,
-          read(() => fujiClient.readContract({ address: CONTRACTS.vault, abi: vaultAbi, functionName: "balanceOf", args: [address] })) as Promise<bigint>,
-          read(() => fujiClient.readContract({ address: CONTRACTS.vault, abi: vaultAbi, functionName: "index" })) as Promise<bigint>,
+          read(() =>
+            fujiClient.readContract({
+              address: CONTRACTS.usdc,
+              abi: usdcAbi,
+              functionName: "balanceOf",
+              args: [address],
+            })
+          ) as Promise<bigint>,
+          read(() =>
+            fujiClient.readContract({
+              address: CONTRACTS.vault,
+              abi: vaultAbi,
+              functionName: "balanceOf",
+              args: [address],
+            })
+          ) as Promise<bigint>,
+          read(() =>
+            fujiClient.readContract({
+              address: CONTRACTS.vault,
+              abi: vaultAbi,
+              functionName: "index",
+            })
+          ) as Promise<bigint>,
         ])
         const earning = (shares * index) / BigInt(1e18)
         print([
@@ -135,7 +174,11 @@ export function TerminalView({ address }: { address: Address }) {
       }
       case "faucet": {
         await runWrite("faucet", async () =>
-          writeContractAsync({ address: CONTRACTS.usdc, abi: usdcAbi, functionName: "faucet" })
+          writeContractAsync({
+            address: CONTRACTS.usdc,
+            abi: usdcAbi,
+            functionName: "faucet",
+          })
         )
         return
       }
@@ -143,18 +186,40 @@ export function TerminalView({ address }: { address: Address }) {
         if (args[0] === "register" && args[1]) {
           const name = normalizeUsername(args[1])
           if (!isUsername(args[1])) {
-            print([{ text: "handles are 3–20 lowercase letters, numbers, _", kind: "err" }])
+            print([
+              {
+                text: "handles are 3–20 lowercase letters, numbers, _",
+                kind: "err",
+              },
+            ])
             return
           }
           await runWrite(`register @${name}`, async () =>
-            writeContractAsync({ address: CONTRACTS.names, abi: namesAbi, functionName: "register", args: [name] })
+            writeContractAsync({
+              address: CONTRACTS.names,
+              abi: namesAbi,
+              functionName: "register",
+              args: [name],
+            })
           )
           return
         }
         const mine = (await read(() =>
-          fujiClient.readContract({ address: CONTRACTS.names, abi: namesAbi, functionName: "resolveUsername", args: [address] })
+          fujiClient.readContract({
+            address: CONTRACTS.names,
+            abi: namesAbi,
+            functionName: "resolveUsername",
+            args: [address],
+          })
         )) as string
-        print([{ text: mine ? `@${mine} — yours on Fuji` : "no handle yet — `handle register @you`", kind: mine ? "ok" : "info" }])
+        print([
+          {
+            text: mine
+              ? `@${mine} — yours on Fuji`
+              : "no handle yet — `handle register @you`",
+            kind: mine ? "ok" : "info",
+          },
+        ])
         return
       }
       case "send":
@@ -171,7 +236,12 @@ export function TerminalView({ address }: { address: Address }) {
         }
         const to = await resolveTo(who)
         if (!to) {
-          print([{ text: `@${normalizeUsername(who)} isn't registered — check the spelling`, kind: "err" }])
+          print([
+            {
+              text: `@${normalizeUsername(who)} isn't registered — check the spelling`,
+              kind: "err",
+            },
+          ])
           return
         }
         const memo = memoParts.join(" ").slice(0, 140)
@@ -179,21 +249,39 @@ export function TerminalView({ address }: { address: Address }) {
           if (!(await ensurePayAllowance(raw))) return
           if (isAddress(who.trim())) {
             await runWrite(`pay $${amtStr} → ${who}`, async () =>
-              writeContractAsync({ address: CONTRACTS.pay, abi: payAbi, functionName: "pay", args: [CONTRACTS.usdc, to, raw, memo] })
-            )
-          } else {
-            await runWrite(`pay $${amtStr} → @${normalizeUsername(who)}`, async () =>
               writeContractAsync({
                 address: CONTRACTS.pay,
                 abi: payAbi,
-                functionName: "payUsername",
-                args: [CONTRACTS.names, CONTRACTS.usdc, normalizeUsername(who), raw, memo],
+                functionName: "pay",
+                args: [CONTRACTS.usdc, to, raw, memo],
               })
+            )
+          } else {
+            await runWrite(
+              `pay $${amtStr} → @${normalizeUsername(who)}`,
+              async () =>
+                writeContractAsync({
+                  address: CONTRACTS.pay,
+                  abi: payAbi,
+                  functionName: "payUsername",
+                  args: [
+                    CONTRACTS.names,
+                    CONTRACTS.usdc,
+                    normalizeUsername(who),
+                    raw,
+                    memo,
+                  ],
+                })
             )
           }
         } else {
           await runWrite(`send $${amtStr} → ${who}`, async () =>
-            writeContractAsync({ address: CONTRACTS.usdc, abi: usdcAbi, functionName: "transfer", args: [to, raw] })
+            writeContractAsync({
+              address: CONTRACTS.usdc,
+              abi: usdcAbi,
+              functionName: "transfer",
+              args: [to, raw],
+            })
           )
         }
         return
@@ -201,44 +289,95 @@ export function TerminalView({ address }: { address: Address }) {
       case "earn": {
         if (args[0] === "withdraw" && args[1] === "all") {
           const shares = (await read(() =>
-            fujiClient.readContract({ address: CONTRACTS.vault, abi: vaultAbi, functionName: "balanceOf", args: [address] })
+            fujiClient.readContract({
+              address: CONTRACTS.vault,
+              abi: vaultAbi,
+              functionName: "balanceOf",
+              args: [address],
+            })
           )) as bigint
           if (shares === BigInt(0)) {
             print([{ text: "nothing earning right now", kind: "info" }])
             return
           }
           await runWrite("withdraw all", async () =>
-            writeContractAsync({ address: CONTRACTS.vault, abi: vaultAbi, functionName: "withdraw", args: [shares] })
+            writeContractAsync({
+              address: CONTRACTS.vault,
+              abi: vaultAbi,
+              functionName: "withdraw",
+              args: [shares],
+            })
           )
           return
         }
         if (args[0] === "apy") {
           const [rate, bps] = await Promise.all([
-            read(() => fujiClient.readContract({ address: CONTRACTS.vault, abi: vaultAbi, functionName: "ratePerSecond" })) as Promise<bigint>,
-            read(() => fujiClient.readContract({ address: CONTRACTS.adapter, abi: adapterAbi, functionName: "liveApyBps" }).catch(() => undefined)),
+            read(() =>
+              fujiClient.readContract({
+                address: CONTRACTS.vault,
+                abi: vaultAbi,
+                functionName: "ratePerSecond",
+              })
+            ) as Promise<bigint>,
+            read(() =>
+              fujiClient
+                .readContract({
+                  address: CONTRACTS.adapter,
+                  abi: adapterAbi,
+                  functionName: "liveApyBps",
+                })
+                .catch(() => undefined)
+            ),
           ])
           const lines: Line[] = [
-            { text: `mock vault  ${(((Number(rate) * 31_557_600) / 1e18) * 100).toFixed(2)}% APR`, kind: "ok" },
+            {
+              text: `mock vault  ${(((Number(rate) * 31_557_600) / 1e18) * 100).toFixed(2)}% APR`,
+              kind: "ok",
+            },
           ]
-          if (typeof bps === "bigint") lines.push({ text: `benqi market  ${(Number(bps) / 100).toFixed(2)}% APR`, kind: "ok" })
+          if (typeof bps === "bigint")
+            lines.push({
+              text: `benqi market  ${(Number(bps) / 100).toFixed(2)}% APR`,
+              kind: "ok",
+            })
           print(lines)
           return
         }
         const raw = parseUsdc(args[0] ?? "")
         if (raw === null) {
-          print([{ text: "usage: earn 100 | earn withdraw all | earn apy", kind: "err" }])
+          print([
+            {
+              text: "usage: earn 100 | earn withdraw all | earn apy",
+              kind: "err",
+            },
+          ])
           return
         }
         const allowance = (await read(() =>
-          fujiClient.readContract({ address: CONTRACTS.usdc, abi: usdcAbi, functionName: "allowance", args: [address, CONTRACTS.vault] })
+          fujiClient.readContract({
+            address: CONTRACTS.usdc,
+            abi: usdcAbi,
+            functionName: "allowance",
+            args: [address, CONTRACTS.vault],
+          })
         )) as bigint
         if (allowance < raw) {
           await runWrite("approve vault", async () =>
-            writeContractAsync({ address: CONTRACTS.usdc, abi: usdcAbi, functionName: "approve", args: [CONTRACTS.vault, maxUint256] })
+            writeContractAsync({
+              address: CONTRACTS.usdc,
+              abi: usdcAbi,
+              functionName: "approve",
+              args: [CONTRACTS.vault, maxUint256],
+            })
           )
         }
         await runWrite(`deposit $${args[0]}`, async () =>
-          writeContractAsync({ address: CONTRACTS.vault, abi: vaultAbi, functionName: "deposit", args: [raw] })
+          writeContractAsync({
+            address: CONTRACTS.vault,
+            abi: vaultAbi,
+            functionName: "deposit",
+            args: [raw],
+          })
         )
         return
       }
@@ -270,9 +409,14 @@ export function TerminalView({ address }: { address: Address }) {
           <span className="size-2.5 rounded-full bg-[#28C840]" />
         </span>
         <p className="ml-2 font-mono text-xs text-white/40">aero — fuji</p>
-        <p className="ml-auto hidden font-mono text-[11px] text-white/30 sm:block">real transactions, play money</p>
+        <p className="ml-auto hidden font-mono text-[11px] text-white/30 sm:block">
+          real transactions, play money
+        </p>
       </div>
-      <div ref={boxRef} className="h-[420px] space-y-1.5 overflow-y-auto px-5 py-4 font-mono text-[13px] leading-relaxed">
+      <div
+        ref={boxRef}
+        className="h-[420px] space-y-1.5 overflow-y-auto px-5 py-4 font-mono text-[13px] leading-relaxed"
+      >
         {lines.map((l, i) => (
           <p
             key={`${i}-${l.text.slice(0, 12)}`}
@@ -303,8 +447,13 @@ export function TerminalView({ address }: { address: Address }) {
           </p>
         ))}
       </div>
-      <form onSubmit={submit} className="flex items-center gap-2 border-t border-white/10 px-5 py-3.5">
-        <span className="shrink-0 font-mono text-sm font-bold text-emerald-300">@you:~$</span>
+      <form
+        onSubmit={submit}
+        className="flex items-center gap-2 border-t border-white/10 px-5 py-3.5"
+      >
+        <span className="shrink-0 font-mono text-sm font-bold text-emerald-300">
+          @you:~$
+        </span>
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -316,7 +465,9 @@ export function TerminalView({ address }: { address: Address }) {
           disabled={busy}
           className="h-9 min-w-0 flex-1 bg-transparent font-mono text-sm text-white outline-none placeholder:text-white/25 disabled:opacity-60"
         />
-        {busy && <span className="size-2 animate-pulse rounded-full bg-emerald-300" />}
+        {busy && (
+          <span className="size-2 animate-pulse rounded-full bg-emerald-300" />
+        )}
       </form>
     </div>
   )
