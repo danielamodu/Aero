@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { motion } from "motion/react"
+import { motion, useMotionValue, useReducedMotion, useTransform } from "motion/react"
 import { useDisconnect, useReadContract, useReadContracts } from "wagmi"
 import { useQueryClient } from "@tanstack/react-query"
 import {
@@ -21,7 +21,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { AeroMark } from "@/components/aero/logo"
-import { BrandLockup, BrandWordmark } from "@/components/aero/brand-logo"
+import { BrandLockup } from "@/components/aero/brand-logo"
 import { AppKitConnectButton } from "@/components/testnet/providers"
 import { adapterAbi, namesAbi, routerAbi, usdcAbi, vaultAbi } from "@/lib/contracts"
 import type { Address } from "viem"
@@ -37,106 +37,123 @@ import {
   unreadCount,
   type Notice,
 } from "@/lib/notifications"
-import { fetchOnchainActivity, fetchMemos, hasOnchainSends, type ChainActivity } from "@/lib/onchain-activity"
+import { fetchOnchainActivity, fetchRecentTransfers, fetchMemos, getLatestBlockNumber, hasOnchainSends, type ChainActivity, type RecentTransfer } from "@/lib/onchain-activity"
 import type { TestnetTab } from "@/app/testnet/page"
 
 /* ---------------------------------- login --------------------------------- */
 
-const LOGIN_STEPS = [
-  { n: "01", title: "Connect a Fuji wallet", body: "Any wallet works — Core, MetaMask, Rabby. We never see your keys." },
-  { n: "02", title: "Claim test dollars", body: "10,000 tUSDC from the in-app faucet. Worthless by design, priceless for practice." },
-  { n: "03", title: "Send to @usernames", body: "Claim a handle on-chain, then move money in under a second." },
-]
-
 export function LoginView() {
+  const reduce = useReducedMotion()
+  const mx = useMotionValue(0)
+  const my = useMotionValue(0)
+  const ax = useTransform(mx, [-0.5, 0.5], [-22, 22])
+  const ay = useTransform(my, [-0.5, 0.5], [-14, 14])
+  const [block, setBlock] = useState<bigint | null>(null)
+  const [recent, setRecent] = useState<RecentTransfer[]>([])
+
+  useEffect(() => {
+    let live = true
+    const tick = async () => {
+      try {
+        const [b, txs] = await Promise.all([getLatestBlockNumber(), fetchRecentTransfers(5)])
+        if (live) {
+          setBlock(b)
+          setRecent(txs)
+        }
+      } catch {
+        /* offline — stay quiet */
+      }
+    }
+    tick()
+    const id = setInterval(tick, 12_000)
+    return () => {
+      live = false
+      clearInterval(id)
+    }
+  }, [])
+
+  const onMove = (e: React.MouseEvent<HTMLElement>) => {
+    if (reduce) return
+    const r = e.currentTarget.getBoundingClientRect()
+    mx.set((e.clientX - r.left) / r.width - 0.5)
+    my.set((e.clientY - r.top) / r.height - 0.5)
+  }
+
   return (
-    <div className="grid min-h-svh lg:h-svh lg:grid-cols-2 lg:overflow-hidden">
-      <div className="relative flex flex-col justify-center overflow-hidden bg-aero-800 px-8 py-10 text-white sm:px-12 lg:py-0">
-        <AeroMark aria-hidden className="pointer-events-none absolute -right-20 -bottom-24 size-[380px] text-white/[0.07]" />
-        <div className="relative py-10 lg:py-12">
-          <motion.h1
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="max-w-md text-4xl leading-[1.02] font-medium tracking-[-0.025em] text-balance sm:text-5xl xl:text-6xl"
-          >
-            Play money, real rails.
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            className="mt-5 max-w-md text-lg leading-relaxed text-white/70"
-          >
-            The full Aero experience on Avalanche Fuji — send, pay, and earn with test
-            dollars before a single real cent moves.
-          </motion.p>
-          <div className="mt-8 space-y-5">
-            {LOGIN_STEPS.map((s, i) => (
-              <motion.div
-                key={s.n}
-                initial={{ opacity: 0, x: -16 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 + i * 0.12 }}
-                className="flex gap-4"
-              >
-                <span className="font-mono text-sm font-bold text-white/40 tabular-nums">{s.n}</span>
-                <div>
-                  <p className="font-medium">{s.title}</p>
-                  <p className="mt-0.5 max-w-sm text-[15px] leading-relaxed text-white/60">{s.body}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-        <p className="relative mt-8 font-mono text-xs text-white/40">
-          FUJI · CHAIN 43113 · CONTRACTS UNVERIFIED EXPERIMENTS
-        </p>
+    <section onMouseMove={onMove} className="relative flex min-h-svh flex-col overflow-hidden bg-aero-800 text-white">
+      <motion.div
+        aria-hidden
+        style={reduce ? undefined : { x: ax, y: ay }}
+        className="pointer-events-none absolute inset-0 flex items-center justify-center"
+      >
+        <AeroMark className="size-[135vmin] shrink-0 text-white/[0.07]" />
+      </motion.div>
+
+      <header className="relative flex items-center justify-between px-5 py-5 sm:px-8">
+        <BrandLockup tone="light" height={26} />
+        <span className="font-mono text-[11px] font-bold tracking-[0.18em] text-white/50">
+          FUJI · 43113
+        </span>
+      </header>
+
+      <div className="relative flex flex-1 flex-col items-center justify-center px-5 text-center">
+        <motion.h1
+          initial={{ opacity: 0, y: 26 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="max-w-2xl text-5xl leading-[1.0] font-medium tracking-[-0.025em] text-balance sm:text-7xl"
+        >
+          Play money, real rails.
+        </motion.h1>
+        <motion.p
+          initial={{ opacity: 0, y: 26 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="mt-5 max-w-md text-lg leading-relaxed text-white/65"
+        >
+          Connect a wallet — 30 seconds, test dollars only.
+        </motion.p>
+        <motion.div
+          initial={{ opacity: 0, y: 26 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="mt-8"
+        >
+          <AppKitConnectButton className="h-13 bg-white px-8 text-base text-aero-900 hover:bg-aero-50" />
+        </motion.div>
+        <motion.a
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.35 }}
+          href={FUJI_AVAX_FAUCET}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-5 text-sm text-white/50 underline underline-offset-4 transition hover:text-white"
+        >
+          Need gas? Free Fuji AVAX
+        </motion.a>
       </div>
 
-      <div className="flex items-center justify-center bg-white px-5 py-10 lg:py-0">
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, delay: 0.15 }}
-          className="w-full max-w-sm text-center"
-        >
-          <div className="flex justify-center">
-            <BrandLockup tone="dark" height={30} />
-          </div>
-          <h2 className="mt-7 text-3xl font-medium tracking-[-0.02em] text-neutral-900">
-            Get started
-          </h2>
-          <p className="mx-auto mt-3 max-w-xs text-[15px] leading-relaxed text-neutral-500">
-            Connect a wallet on Avalanche Fuji.
-          </p>
-          <div className="mt-7 flex justify-center">
-            <AppKitConnectButton />
-          </div>
-          <div className="mt-7 rounded-2xl bg-[#f7f7f7] p-5 text-left">
-            <p className="text-[13px] font-semibold tracking-[0.12em] text-neutral-400 uppercase">
-              You&apos;ll need
-            </p>
-            <ul className="mt-2.5 space-y-1.5 text-sm leading-relaxed text-neutral-600">
-              <li>· A wallet (Core, MetaMask, Rabby…)</li>
-              <li>
-                · A little Fuji AVAX for gas —{" "}
-                <a href={FUJI_AVAX_FAUCET} target="_blank" rel="noreferrer" className="font-medium text-aero-800 hover:underline">
-                  free from the faucet <ArrowUpRight className="inline size-3.5" />
-                </a>
-              </li>
-              <li>· About 30 seconds</li>
-            </ul>
-          </div>
-          <p className="mt-6 text-[13px] text-neutral-400">
-            Test dollars only ·{" "}
-            <a href="https://useaero.org/docs" className="underline underline-offset-4 hover:text-neutral-600">
-              Read the docs
-            </a>
-          </p>
-        </motion.div>
-      </div>
-    </div>
+      <footer className="relative border-t border-white/10 px-5 py-4 sm:px-8">
+        <div className="flex items-center justify-between gap-4 font-mono text-[11px] text-white/45 tabular-nums">
+          <span className="inline-flex shrink-0 items-center gap-1.5">
+            <span className="relative flex size-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-70" />
+              <span className="relative inline-flex size-1.5 rounded-full bg-emerald-300" />
+            </span>
+            {block ? `FUJI #${block.toString()} · ~2s finality` : "Connecting to Fuji…"}
+          </span>
+          <span className="hidden min-w-0 items-center gap-4 truncate md:flex">
+            {recent.slice(0, 3).map((t) => (
+              <span key={t.hash} className="truncate">
+                {t.from.slice(0, 6)}…{t.from.slice(-4)} → {t.to.slice(0, 6)}…{t.to.slice(-4)}{" "}
+                ${(Number(t.value) / 1e6).toLocaleString("en-US", { maximumFractionDigits: 0 })}
+              </span>
+            ))}
+          </span>
+        </div>
+      </footer>
+    </section>
   )
 }
 

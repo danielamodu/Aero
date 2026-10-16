@@ -6,6 +6,20 @@ const client = createPublicClient({
   transport: http("https://api.avax-test.network/ext/bc/C/rpc"),
 })
 
+export { client as fujiClient }
+
+export async function getLatestBlockNumber(): Promise<bigint> {
+  return client.getBlockNumber()
+}
+
+export type RecentTransfer = {
+  hash: string
+  from: string
+  to: string
+  value: bigint
+  block: bigint
+}
+
 // ~35 days of Fuji blocks. Testnet phases are shorter than this;
 // keep the window bounded so public RPCs answer quickly.
 const WINDOW_BLOCKS = BigInt(1500000)
@@ -113,6 +127,28 @@ export async function fetchMemos(user: Address, pay: Address): Promise<Map<strin
   }
   return memos
 }
+/** Newest tUSDC transfers network-wide (bounded window — best effort). */
+export async function fetchRecentTransfers(limit = 6): Promise<RecentTransfer[]> {
+  const latest = await client.getBlockNumber()
+  const fromBlock = latest > WINDOW_BLOCKS ? latest - WINDOW_BLOCKS : BigInt(0)
+  const logs = await client.getLogs({
+    address: "0x4f88395a2cf38645ba2016b6abf5ad084c19c369",
+    event: TRANSFER,
+    fromBlock,
+    toBlock: latest,
+  })
+  return logs
+    .slice(-limit)
+    .reverse()
+    .map((l) => ({
+      hash: l.transactionHash!,
+      from: l.args.from!,
+      to: l.args.to!,
+      value: l.args.value ?? BigInt(0),
+      block: l.blockNumber,
+    }))
+}
+
 export async function hasOnchainSends(user: Address, usdc: Address, vault: Address): Promise<boolean> {
   const latest = await client.getBlockNumber()
   const fromBlock = latest > WINDOW_BLOCKS ? latest - WINDOW_BLOCKS : BigInt(0)
