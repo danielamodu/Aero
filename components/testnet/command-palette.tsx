@@ -7,7 +7,6 @@ import {
   Droplets,
   LayoutGrid,
   LogOut,
-  ReceiptText,
   Send,
   Sprout,
   SquareTerminal,
@@ -89,31 +88,17 @@ export function CommandPalette({ go }: { go: (t: TestnetTab) => void }) {
   const actions: Action[] = useMemo(
     () => [
       {
-        id: "ov",
-        label: "Go to Overview",
-        hint: "dashboard",
+        id: "home",
+        label: "Go home",
+        hint: "balance + activity",
         icon: LayoutGrid,
-        run: () => go("overview"),
-      },
-      {
-        id: "send",
-        label: "Send money",
-        hint: "to @username or 0x",
-        icon: Send,
-        run: () => go("send"),
-      },
-      {
-        id: "req",
-        label: "Request money",
-        hint: "share a pay link",
-        icon: ReceiptText,
-        run: () => go("request"),
+        run: () => go("home"),
       },
       {
         id: "pay",
-        label: "Pay a bill",
-        hint: "rent, power, invoices",
-        icon: ReceiptText,
+        label: "Pay someone",
+        hint: "send, request, bills",
+        icon: Send,
         run: () => go("pay"),
       },
       {

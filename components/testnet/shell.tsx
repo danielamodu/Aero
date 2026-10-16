@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   motion,
   useMotionValue,
@@ -19,19 +19,18 @@ import {
   HandCoins,
   LayoutGrid,
   LogOut,
-  ReceiptText,
+  Plus,
   RefreshCw,
   Send,
   Sprout,
   SquareTerminal,
-  Wallet,
-  Zap,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { AeroMark } from "@/components/aero/logo"
 import { BrandLockup } from "@/components/aero/brand-logo"
 import { AppKitConnectButton } from "@/components/testnet/providers"
-import { FaucetMini } from "./views"
+import { BuySheet } from "./buy-sheet"
+import { FaucetMini, requestPayMode } from "./views"
 import {
   adapterAbi,
   namesAbi,
@@ -199,10 +198,8 @@ export function LoginView() {
 /* --------------------------------- sidebar -------------------------------- */
 
 const NAV = [
-  { id: "overview", label: "Overview", icon: LayoutGrid },
-  { id: "send", label: "Send", icon: Send },
-  { id: "request", label: "Request", icon: HandCoins },
-  { id: "pay", label: "Pay", icon: ReceiptText },
+  { id: "home", label: "Home", icon: LayoutGrid },
+  { id: "pay", label: "Pay", icon: Send },
   { id: "earn", label: "Earn", icon: Sprout },
   { id: "terminal", label: "Terminal", icon: SquareTerminal },
 ] as const
@@ -350,7 +347,7 @@ export function MobileTabs({
   setTab: (t: TestnetTab) => void
 }) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-neutral-200 bg-white/92 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-neutral-200 bg-white/92 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
       {NAV.map((n) => (
         <button
           key={n.id}
@@ -895,193 +892,11 @@ export function NotificationBell({
 
 /* -------------------------------- overview -------------------------------- */
 
-function useTweenNumber(target: number): number {
-  const [val, setVal] = useState(0)
-  const prev = useRef(0)
-  useEffect(() => {
-    let raf = 0
-    const from = prev.current
-    const start = performance.now()
-    const dur = 900
-    const tick = (now: number) => {
-      const p = Math.min(1, (now - start) / dur)
-      const eased = 1 - Math.pow(1 - p, 3)
-      const v = from + (target - from) * eased
-      setVal(v)
-      prev.current = v
-      if (p < 1) raf = requestAnimationFrame(tick)
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [target])
-  return val
-}
-
 function greeting(): string {
   const h = new Date().getHours()
   if (h < 12) return "Good morning"
   if (h < 18) return "Good afternoon"
   return "Good evening"
-}
-
-/* ------------------------------ balance chart ----------------------------- */
-
-function BalanceChart({
-  feed,
-  current,
-}: {
-  feed: { hash: string; label: string; amount: string; ts: number }[]
-  current: number
-}) {
-  const [now] = useState(() => Date.now())
-  const { pts, flows } = useMemo(() => {
-    const seen = new Set<string>()
-    const deltas = feed
-      .filter((a) => {
-        const k = a.hash.toLowerCase()
-        if (seen.has(k)) return false
-        seen.add(k)
-        return true
-      })
-      .map((a) => {
-        const num = parseFloat(a.amount.replace(/[^0-9.]/g, "")) || 0
-        const plus = /^(Received|Faucet)/.test(a.label)
-        const minus = /^(Sent|You)/.test(a.label)
-        return {
-          ts: a.ts > 0 ? a.ts : now,
-          v: plus ? num : minus ? -num : 0,
-        }
-      })
-      .filter((f) => f.v !== 0)
-      .sort((x, y) => x.ts - y.ts)
-    if (deltas.length === 0) {
-      return {
-        pts: [
-          { t: now - 86400000, v: current },
-          { t: now, v: current },
-        ],
-        flows: 0,
-      }
-    }
-    let run = current
-    const pts = [{ t: now, v: current }]
-    for (let i = deltas.length - 1; i >= 0; i--) {
-      run = Math.max(0, run - deltas[i].v)
-      pts.push({ t: deltas[i].ts, v: run })
-    }
-    const ordered = pts.reverse()
-    if (ordered.length === 1)
-      ordered.unshift({ t: ordered[0].t - 86400000, v: ordered[0].v })
-    return { pts: ordered, flows: deltas.length }
-  }, [feed, current, now])
-
-  const W = 600
-  const H = 220
-  const L = 46
-  const R = 14
-  const T = 12
-  const B = 26
-  const tVals = pts.map((p) => p.t)
-  const vVals = pts.map((p) => p.v)
-  const t0 = Math.min(...tVals)
-  const t1 = Math.max(...tVals)
-  const lo = Math.min(...vVals)
-  const hi = Math.max(...vVals)
-  const span = Math.max(t1 - t0, 3600000)
-  const pad = Math.max((hi - lo) * 0.15, hi * 0.02, 1)
-  const y0 = Math.max(0, lo - pad)
-  const y1 = hi + pad
-  const X = (t: number) => L + ((t - t0) / span) * (W - L - R)
-  const Y = (v: number) =>
-    T + (1 - (v - y0) / Math.max(y1 - y0, 1e-9)) * (H - T - B)
-  const line = pts
-    .map(
-      (p, i) =>
-        `${i === 0 ? "M" : "L"}${X(p.t).toFixed(1)},${Y(p.v).toFixed(1)}`
-    )
-    .join(" ")
-  const area = `${line} L${X(t1).toFixed(1)},${H - B} L${X(t0).toFixed(1)},${H - B} Z`
-  const grid = [0, 1, 2, 3].map((i) => y0 + ((y1 - y0) * i) / 3)
-  const fmtD = (t: number) =>
-    new Date(t).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-  const last = pts[pts.length - 1]
-
-  return (
-    <div>
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        className="mt-4 w-full"
-        role="img"
-        aria-label="Balance history"
-      >
-        <defs>
-          <linearGradient id="aero-bal-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop
-              offset="0%"
-              stopColor="var(--color-aero-800)"
-              stopOpacity="0.18"
-            />
-            <stop
-              offset="100%"
-              stopColor="var(--color-aero-800)"
-              stopOpacity="0"
-            />
-          </linearGradient>
-        </defs>
-        {grid.map((g, i) => (
-          <g key={i}>
-            <line
-              x1={L}
-              x2={W - R}
-              y1={Y(g)}
-              y2={Y(g)}
-              stroke="#E4E4E7"
-              strokeWidth="1"
-            />
-            <text
-              x={L - 8}
-              y={Y(g) + 3.5}
-              textAnchor="end"
-              fontSize="10"
-              fill="#A3A3A3"
-              fontFamily="monospace"
-            >
-              ${g >= 1000 ? `${(g / 1000).toFixed(1)}K` : g.toFixed(0)}
-            </text>
-          </g>
-        ))}
-        <path d={area} fill="url(#aero-bal-fill)" />
-        <path
-          d={line}
-          fill="none"
-          stroke="var(--color-aero-800)"
-          strokeWidth="2"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        />
-        <circle
-          cx={X(last.t)}
-          cy={Y(last.v)}
-          r="4"
-          fill="var(--color-aero-800)"
-          stroke="#fff"
-          strokeWidth="2"
-        />
-        <text x={L} y={H - 8} fontSize="10" fill="#A3A3A3">
-          {fmtD(t0)}
-        </text>
-        <text x={W - R} y={H - 8} textAnchor="end" fontSize="10" fill="#A3A3A3">
-          {fmtD(t1)}
-        </text>
-      </svg>
-      {flows === 0 && (
-        <p className="mt-1 text-xs text-neutral-400">
-          History builds as you transact — claim, send, or deposit to draw the
-          line.
-        </p>
-      )}
-    </div>
-  )
 }
 
 export function Overview({
@@ -1098,6 +913,7 @@ export function Overview({
   const queryClient = useQueryClient()
   const [nonce, setNonce] = useState(0)
   const [spinning, setSpinning] = useState(false)
+  const [buyOpen, setBuyOpen] = useState(false)
   useEffect(() => {
     let live = true
     fetchOnchainActivity(address, CONTRACTS)
@@ -1200,8 +1016,6 @@ export function Overview({
     rate !== undefined
       ? (((Number(rate) * 31_557_600) / 1e18) * 100).toFixed(2)
       : "—"
-  const animatedTotal = useTweenNumber(Number(total) / 1e6)
-
   return (
     <div className="w-full">
       <motion.div
@@ -1209,76 +1023,57 @@ export function Overview({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45 }}
       >
-        <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
-          Overview
-        </p>
-        <h1 className="mt-2 text-3xl font-medium tracking-[-0.02em] text-neutral-900 sm:text-4xl">
+        <h1 className="text-3xl font-medium tracking-[-0.02em] text-neutral-900 sm:text-4xl">
           {greeting()}
           {myName ? `, @${myName}` : ""}.
         </h1>
       </motion.div>
 
-      <div className="mt-6 grid grid-cols-2 gap-4 xl:grid-cols-4">
-        {[
-          {
-            icon: Wallet,
-            label: "Total balance",
-            value: `$${animatedTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-            sub: "tUSDC · Fuji",
-          },
-          {
-            icon: HandCoins,
-            label: "Available",
-            value: `$${formatUsdc(usdc)}`,
-            sub: "Ready to send",
-          },
-          {
-            icon: Sprout,
-            label: "Earning",
-            value: `$${formatUsdc(earning === BigInt(0) && !shares ? undefined : earning)}`,
-            sub: `${apr}% APR`,
-          },
-          {
-            icon: Zap,
-            label: "Transactions",
-            value: `${feed.length}`,
-            sub: "Confirmed on-chain",
-          },
-        ].map((s) => (
-          <motion.div
-            key={s.label}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45 }}
-            className="rounded-2xl border border-neutral-200/80 bg-white p-5"
-          >
-            <p className="flex items-center gap-1.5 text-[13px] text-neutral-500">
-              <s.icon className="size-3.5 text-neutral-400" /> {s.label}
-            </p>
-            <p className="mt-2 text-[26px] font-semibold tracking-tight text-neutral-900 tabular-nums">
-              {s.value}
-            </p>
-            <p className="mt-1 text-xs text-neutral-400">{s.sub}</p>
-          </motion.div>
-        ))}
+      <p className="mt-4 text-6xl font-medium tracking-tight text-neutral-900 tabular-nums sm:text-7xl">
+        ${formatUsdc(total)}
+      </p>
+      <p className="mt-2 text-[15px] text-neutral-500 tabular-nums">
+        Available ${formatUsdc(usdc)} · Earning $
+        {formatUsdc(earning === BigInt(0) && !shares ? undefined : earning)} ·{" "}
+        {apr}% APR
+      </p>
+      <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+        <button
+          type="button"
+          onClick={() => {
+            requestPayMode("send")
+            go("pay")
+          }}
+          className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-neutral-200/80 bg-white text-[15px] font-medium text-neutral-900 transition hover:border-neutral-300"
+        >
+          <Send className="size-4" /> Send
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            requestPayMode("request")
+            go("pay")
+          }}
+          className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-neutral-200/80 bg-white text-[15px] font-medium text-neutral-900 transition hover:border-neutral-300"
+        >
+          <HandCoins className="size-4" /> Request
+        </button>
+        <button
+          type="button"
+          onClick={() => setBuyOpen(true)}
+          className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-neutral-200/80 bg-white text-[15px] font-medium text-neutral-900 transition hover:border-neutral-300"
+        >
+          <Plus className="size-4" /> Top up
+        </button>
+        <button
+          type="button"
+          onClick={() => go("earn")}
+          className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-neutral-200/80 bg-white text-[15px] font-medium text-neutral-900 transition hover:border-neutral-300"
+        >
+          <Sprout className="size-4" /> Earn
+        </button>
       </div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.08 }}
-        className="mt-4 rounded-2xl border border-neutral-200/80 bg-white p-5 sm:p-6"
-      >
-        <div className="flex items-baseline justify-between gap-3">
-          <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
-            Balance
-          </p>
-          <p className="font-mono text-xs text-neutral-400">
-            All history · Fuji
-          </p>
-        </div>
-        <BalanceChart feed={feed} current={Number(total) / 1e6} />
-      </motion.div>
+      <BuySheet open={buyOpen} onOpenChange={setBuyOpen} />
 
       <div className="mt-5 grid items-start gap-5 xl:grid-cols-[1.8fr_1fr]">
         <div className="rounded-2xl border border-neutral-200/80 bg-white p-5 sm:p-6">
@@ -1327,7 +1122,10 @@ export function Overview({
               </p>
               <button
                 type="button"
-                onClick={() => go("send")}
+                onClick={() => {
+                  requestPayMode("send")
+                  go("pay")
+                }}
                 className="pressable pressable mt-4 inline-flex h-11 items-center gap-2 rounded-full bg-aero-800 px-6 text-[15px] font-medium text-white transition hover:bg-aero-900"
               >
                 <Send className="size-4" /> Send your first payment
@@ -1406,7 +1204,7 @@ export function Overview({
               } catch {
                 /* ignore */
               }
-              go("send")
+              go("pay")
             }}
           />
         </div>

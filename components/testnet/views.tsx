@@ -16,7 +16,6 @@ import {
   Droplets,
   ExternalLink,
   HandCoins,
-  Landmark,
   QrCode,
   Send,
   Share,
@@ -57,7 +56,6 @@ import {
 } from "@/lib/contacts"
 import { BuySheet } from "./buy-sheet"
 import { QRCodeSVG } from "qrcode.react"
-import type { TestnetTab } from "@/app/testnet/page"
 
 /* ---------------------------------- atoms --------------------------------- */
 
@@ -359,10 +357,12 @@ export function SendTab({
   address,
   initialTo = "",
   initialAmount = "",
+  billFill = null,
 }: {
   address: Address
   initialTo?: string
   initialAmount?: string
+  billFill?: BillFill | null
 }) {
   const [to, setTo] = useState(initialTo)
   const [amount, setAmount] = useState(() => {
@@ -384,6 +384,15 @@ export function SendTab({
   const resolved = useRecipient(to)
   const tx = useTx()
   const raw = parseUsdc(amount)
+  useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
+    if (billFill) {
+      setTo(billFill.to)
+      setAmount(billFill.amount)
+      setMemo(billFill.memo)
+    }
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [billFill])
   const { data: myName } = useReadContract({
     address: CONTRACTS.names,
     abi: namesAbi,
@@ -774,7 +783,27 @@ export function SendTab({
   )
 }
 
-/* ----------------------------------- pay ---------------------------------- */
+/* ---------------------------------- pay ---------------------------------- */
+
+export type PayMode = "send" | "request"
+
+export function requestPayMode(m: PayMode) {
+  try {
+    window.localStorage.setItem("aero_pay_mode", m)
+  } catch {
+    /* ignore */
+  }
+}
+
+export function consumePayMode(): PayMode | null {
+  try {
+    const m = window.localStorage.getItem("aero_pay_mode")
+    window.localStorage.removeItem("aero_pay_mode")
+    return m === "request" || m === "send" ? m : null
+  } catch {
+    return null
+  }
+}
 
 const BILLS = [
   {
@@ -783,6 +812,8 @@ const BILLS = [
     tag: "Rent",
     amount: "1400",
     due: "Due Nov 1",
+    to: "",
+    memo: "Rent · Maple Apartments",
     color: "hsl(258 70% 88%)",
     ink: "hsl(258 60% 32%)",
   },
@@ -792,6 +823,8 @@ const BILLS = [
     tag: "Utilities",
     amount: "86.20",
     due: "Due Nov 8",
+    to: "",
+    memo: "City Power & Light",
     color: "hsl(48 80% 88%)",
     ink: "hsl(38 70% 30%)",
   },
@@ -801,159 +834,100 @@ const BILLS = [
     tag: "Invoice",
     amount: "320",
     due: "Due on receipt",
+    to: "@lena",
+    memo: "Invoice #042",
     color: "hsl(160 50% 86%)",
     ink: "hsl(165 55% 26%)",
   },
 ]
 
-export function PayTab({ address }: { address: Address }) {
-  const [billId, setBillId] = useState(BILLS[0].id)
-  const [to, setTo] = useState("")
-  const [paid, setPaid] = useState<string[]>([])
-  const resolved = useRecipient(to)
-  const tx = useTx()
-  const bill = BILLS.find((b) => b.id === billId)!
-  const raw = parseUsdc(bill.amount)
-  void address
+export type BillFill = {
+  to: string
+  amount: string
+  memo: string
+  n: number
+}
 
-  useEffect(() => {
-    // Tx-completion handler: marking the bill paid is event-like, not derived state.
-    /* eslint-disable react-hooks/set-state-in-effect */
-    if (tx.done && tx.hash) {
-      setPaid((p) => (p.includes(bill.id) ? p : [...p, bill.id]))
-      pushActivity({
-        label: `${bill.label} → ${to.trim()}`,
-        amount: `$${bill.amount}`,
-        hash: tx.hash as string,
-        to: resolved.address ?? undefined,
-      })
-      tx.reset()
-    }
-    /* eslint-enable react-hooks/set-state-in-effect */
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tx.done])
-
-  const open = BILLS.filter((b) => !paid.includes(b.id))
-  const dueTotal = open.reduce((n, b) => n + Number(b.amount), 0)
+export function PayScreen({
+  address,
+  initialTo = "",
+  initialAmount = "",
+}: {
+  address: Address
+  initialTo?: string
+  initialAmount?: string
+}) {
+  const [mode, setMode] = useState<PayMode>(() => consumePayMode() ?? "send")
+  const [billFill, setBillFill] = useState<BillFill | null>(null)
 
   return (
     <div className="space-y-5">
-      <div className="rounded-[28px] bg-aero-950 p-6 text-white sm:p-8">
-        <div className="flex items-center gap-2 text-white/50">
-          <Landmark className="size-4" />
-          <p className="text-[13px] font-semibold tracking-[0.14em] uppercase">
-            Bills
-          </p>
-        </div>
-        <p className="mt-3 text-6xl font-medium tracking-tight tabular-nums">
-          $
-          {dueTotal.toLocaleString("en-US", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}
-        </p>
-        <p className="mt-2 text-[15px] text-white/55">
-          {open.length === 0
-            ? "All clear — nothing due."
-            : `${open.length} bill${open.length === 1 ? "" : "s"} open · pay straight from test balance`}
-        </p>
-      </div>
-
-      <div className="grid items-start gap-5 xl:grid-cols-[1fr_380px]">
-        <div className="divide-y divide-neutral-100 rounded-2xl border border-neutral-200/80 bg-white p-2">
-          {BILLS.map((b) => {
-            const done = paid.includes(b.id)
-            const selected = billId === b.id
-            return (
-              <button
-                key={b.id}
-                type="button"
-                onClick={() => setBillId(b.id)}
-                className={cn(
-                  "flex w-full items-center gap-4 rounded-xl p-4 text-left transition",
-                  selected ? "bg-aero-50/70" : "hover:bg-neutral-50",
-                  done && "opacity-70"
-                )}
-              >
-                <span
-                  style={{ backgroundColor: b.color, color: b.ink }}
-                  className="flex size-12 shrink-0 items-center justify-center rounded-2xl text-lg font-bold"
-                >
-                  {b.label.replace("@", "").charAt(0).toUpperCase()}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[15px] font-semibold text-neutral-900">
-                    {b.label}
-                  </span>
-                  <span className="mt-0.5 block text-[13px] text-neutral-400">
-                    {b.tag} · {b.due}
-                  </span>
-                </span>
-                <span className="shrink-0 text-right">
-                  <span className="block text-lg font-medium tabular-nums">
-                    ${b.amount}
-                  </span>
-                  {done ? (
-                    <span className="mt-0.5 inline-flex items-center gap-1 text-[13px] font-medium text-emerald-600">
-                      <Check className="size-3.5" strokeWidth={3} /> Paid
-                    </span>
-                  ) : selected ? (
-                    <span className="mt-0.5 block text-[13px] font-medium text-aero-800">
-                      Selected
-                    </span>
-                  ) : null}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-
-        <div className="rounded-2xl border border-neutral-200/80 bg-white p-6 xl:sticky xl:top-6">
-          <Field label={`Paying ${bill.label} to`}>
-            <Input
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              placeholder="@landlord or 0x…"
-              className="h-12 rounded-2xl border-neutral-200 text-base text-neutral-900 placeholder:text-neutral-400"
-            />
-          </Field>
-          {resolved.hint && (
-            <p
-              className={cn(
-                "mt-1.5 text-[13px]",
-                resolved.address
-                  ? "font-medium text-emerald-600"
-                  : "text-neutral-400"
-              )}
-            >
-              {resolved.hint}
-            </p>
-          )}
-          <Button
-            disabled={!resolved.address || raw === null || tx.busy}
-            onClick={() =>
-              resolved.address &&
-              raw !== null &&
-              tx.write({
-                address: CONTRACTS.usdc,
-                abi: usdcAbi,
-                functionName: "transfer",
-                args: [resolved.address, raw],
-              })
-            }
-            className="mt-4 h-12 w-full rounded-full bg-aero-800 text-[15px] font-medium text-white hover:bg-aero-900 disabled:opacity-60"
+      <div className="flex rounded-full bg-[#f1f1f1] p-1">
+        {(["send", "request"] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => setMode(m)}
+            className={cn(
+              "h-10 flex-1 rounded-full text-sm font-medium transition",
+              mode === m
+                ? "bg-white text-neutral-900 shadow-sm"
+                : "text-neutral-500 hover:text-neutral-800"
+            )}
           >
-            {tx.busy
-              ? "Paying…"
-              : resolved.address
-                ? `Pay $${bill.amount} → ${to.trim()}`
-                : `Pay $${bill.amount}`}
-          </Button>
-          <div className="mt-3">
-            <TxStatus hash={tx.hash} error={tx.error} />
-          </div>
-        </div>
+            {m === "send" ? "Send" : "Request"}
+          </button>
+        ))}
       </div>
+      {mode === "send" ? (
+        <>
+          <div>
+            <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
+              Bills
+            </p>
+            <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+              {BILLS.map((b) => (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() =>
+                    setBillFill({
+                      to: b.to,
+                      amount: b.amount,
+                      memo: b.memo,
+                      n: Date.now(),
+                    })
+                  }
+                  className="flex shrink-0 items-center gap-2.5 rounded-2xl border border-neutral-200/80 bg-white py-2.5 pr-4 pl-2.5 text-left transition hover:border-neutral-300"
+                >
+                  <span
+                    style={{ backgroundColor: b.color, color: b.ink }}
+                    className="flex size-9 shrink-0 items-center justify-center rounded-xl text-sm font-bold"
+                  >
+                    {b.label.replace("@", "").charAt(0).toUpperCase()}
+                  </span>
+                  <span>
+                    <span className="block text-sm font-semibold whitespace-nowrap text-neutral-900">
+                      {b.label}
+                    </span>
+                    <span className="block text-xs text-neutral-400 tabular-nums">
+                      ${b.amount} · {b.tag}
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <SendTab
+            address={address}
+            initialTo={initialTo}
+            initialAmount={initialAmount}
+            billFill={billFill}
+          />
+        </>
+      ) : (
+        <RequestTab address={address} goSend={() => setMode("send")} />
+      )}
     </div>
   )
 }
@@ -1202,10 +1176,10 @@ export function RouterPanel({ address }: { address: Address }) {
 
 export function RequestTab({
   address,
-  go,
+  goSend,
 }: {
   address: Address
-  go: (t: TestnetTab) => void
+  goSend: () => void
 }) {
   const [amount, setAmount] = useState("")
   const [copied, setCopied] = useState(false)
@@ -1270,7 +1244,7 @@ export function RequestTab({
             Payment links point at your @username.
           </p>
           <Button
-            onClick={() => go("send")}
+            onClick={goSend}
             className="pressable mt-4 h-11 rounded-full bg-aero-800 px-6 font-medium text-white hover:bg-aero-900"
           >
             Claim a handle

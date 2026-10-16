@@ -12,12 +12,7 @@ import {
   Overview,
   Sidebar,
 } from "@/components/testnet/shell"
-import {
-  EarnTab,
-  PayTab,
-  RequestTab,
-  SendTab,
-} from "@/components/testnet/views"
+import { EarnTab, PayScreen } from "@/components/testnet/views"
 import { TerminalView } from "@/components/testnet/terminal"
 import { CommandPalette } from "@/components/testnet/command-palette"
 import { reownConfigured } from "@/components/testnet/providers"
@@ -27,13 +22,10 @@ import {
   missingContractEnvs,
 } from "@/lib/testnet"
 
-export type TestnetTab =
-  "overview" | "send" | "request" | "pay" | "earn" | "terminal"
+export type TestnetTab = "home" | "pay" | "earn" | "terminal"
 
 const TAB_LABELS: Record<TestnetTab, string> = {
-  overview: "Overview",
-  send: "Send",
-  request: "Request",
+  home: "Home",
   pay: "Pay",
   earn: "Earn",
   terminal: "Terminal",
@@ -85,7 +77,7 @@ function WrongNetwork() {
 }
 
 export default function TestnetPage() {
-  // Payment-link prefill (?to=@x&amount=1.5) — read once, land on Send.
+  // Payment-link prefill (?to=@x&amount=1.5) — read once, land on Pay.
   const [prefill] = useState(() => {
     try {
       const q = new URLSearchParams(window.location.search)
@@ -97,7 +89,7 @@ export default function TestnetPage() {
       return { to: "", amount: "" }
     }
   })
-  const [tab, setTab] = useState<TestnetTab>(prefill.to ? "send" : "overview")
+  const [tab, setTab] = useState<TestnetTab>(prefill.to ? "pay" : "home")
 
   // No wallet hooks before these gates: without a provider they throw.
   if (!reownConfigured) {
@@ -227,18 +219,14 @@ function TestnetConnected({
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.18, ease: "easeOut" }}
             >
-              {tab === "overview" && <Overview address={address} go={setTab} />}
-              {tab === "send" && (
-                <SendTab
+              {tab === "home" && <Overview address={address} go={setTab} />}
+              {tab === "pay" && (
+                <PayScreen
                   address={address}
                   initialTo={prefill.to}
                   initialAmount={prefill.amount}
                 />
               )}
-              {tab === "request" && (
-                <RequestTab address={address} go={setTab} />
-              )}
-              {tab === "pay" && <PayTab address={address} />}
               {tab === "earn" && <EarnTab address={address} />}
               {tab === "terminal" && <TerminalView address={address} />}
             </motion.div>
