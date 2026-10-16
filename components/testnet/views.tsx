@@ -292,7 +292,7 @@ export function UsernameCard({ address }: { address: Address }) {
   const available =
     isUsername(name) && takenBy !== undefined && takenBy === zeroAddress
   return (
-    <div className="rounded-[20px] border border-neutral-200 bg-white p-6">
+    <div className="rounded-2xl border border-neutral-200/80 bg-white p-6">
       <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
         Your handle
       </p>
@@ -508,7 +508,7 @@ export function SendTab({
       )}
 
       <div className="grid items-start gap-5 xl:grid-cols-[1fr_360px]">
-        <div className="px-1 py-2 sm:px-8">
+        <div className="rounded-2xl border border-neutral-200/80 bg-white p-6 sm:p-8">
           <div className="flex items-start justify-center">
             <span className="mt-4 text-3xl font-medium text-neutral-300 select-none">
               $
@@ -655,11 +655,11 @@ export function SendTab({
 
         <div className="space-y-5">
           {rail.length > 0 && (
-            <div>
-              <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
+            <div className="rounded-2xl border border-neutral-200/80 bg-white p-4">
+              <p className="px-2 text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
                 People
               </p>
-              <div className="mt-1 divide-y divide-neutral-200 border-y border-neutral-200">
+              <div className="mt-1 divide-y divide-neutral-100">
                 {rail.slice(0, 8).map((c) => {
                   const fav = favs.includes(c.address.toLowerCase())
                   const initials = c.label.startsWith("@")
@@ -724,38 +724,40 @@ export function SendTab({
           )}
 
           {receipts.length > 0 && (
-            <div>
-              <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
+            <div className="rounded-2xl border border-neutral-200/80 bg-white p-4">
+              <p className="px-2 text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
                 Sent
               </p>
-              <AnimatePresence initial={false}>
-                {receipts.map((r) => (
-                  <motion.div
-                    key={r.hash}
-                    initial={{ opacity: 0, y: -8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center justify-between gap-3 border-t border-neutral-200 py-3 text-sm last:border-b"
-                  >
-                    <span className="min-w-0 truncate font-medium text-neutral-700">
-                      {r.label} ·{" "}
-                      <span className="tabular-nums">{r.amount}</span>
-                      {r.memo && (
-                        <span className="block truncate font-normal text-neutral-400">
-                          “{r.memo}”
-                        </span>
-                      )}
-                    </span>
-                    <a
-                      href={snowtraceTx(r.hash)}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="shrink-0 font-medium text-aero-800 hover:underline"
+              <div className="mt-1 divide-y divide-neutral-100 px-2">
+                <AnimatePresence initial={false}>
+                  {receipts.map((r) => (
+                    <motion.div
+                      key={r.hash}
+                      initial={{ opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-center justify-between gap-3 py-3 text-sm"
                     >
-                      Receipt
-                    </a>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+                      <span className="min-w-0 truncate font-medium text-neutral-700">
+                        {r.label} ·{" "}
+                        <span className="tabular-nums">{r.amount}</span>
+                        {r.memo && (
+                          <span className="block truncate font-normal text-neutral-400">
+                            “{r.memo}”
+                          </span>
+                        )}
+                      </span>
+                      <a
+                        href={snowtraceTx(r.hash)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="shrink-0 font-medium text-aero-800 hover:underline"
+                      >
+                        Receipt
+                      </a>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
             </div>
           )}
         </div>
@@ -850,7 +852,7 @@ export function PayTab({ address }: { address: Address }) {
       </div>
 
       <div className="grid items-start gap-5 xl:grid-cols-[1fr_380px]">
-        <div className="space-y-2.5">
+        <div className="divide-y divide-neutral-100 rounded-2xl border border-neutral-200/80 bg-white p-2">
           {BILLS.map((b) => {
             const done = paid.includes(b.id)
             const selected = billId === b.id
@@ -860,10 +862,8 @@ export function PayTab({ address }: { address: Address }) {
                 type="button"
                 onClick={() => setBillId(b.id)}
                 className={cn(
-                  "flex w-full items-center gap-4 rounded-[20px] border bg-white p-4 text-left transition",
-                  selected
-                    ? "border-aero-800 shadow-[0_0_0_1px_var(--color-aero-800)]"
-                    : "border-neutral-200 hover:border-neutral-300",
+                  "flex w-full items-center gap-4 rounded-xl p-4 text-left transition",
+                  selected ? "bg-aero-50/70" : "hover:bg-neutral-50",
                   done && "opacity-70"
                 )}
               >
@@ -900,7 +900,7 @@ export function PayTab({ address }: { address: Address }) {
           })}
         </div>
 
-        <div className="rounded-[20px] border border-neutral-200 bg-white p-6 xl:sticky xl:top-6">
+        <div className="rounded-2xl border border-neutral-200/80 bg-white p-6 xl:sticky xl:top-6">
           <Field label={`Paying ${bill.label} to`}>
             <Input
               value={to}
@@ -1254,7 +1254,7 @@ export function RequestTab({
         </p>
       </div>
       {!myName ? (
-        <div className="rounded-[20px] border border-neutral-200 bg-white p-6 text-center sm:p-8">
+        <div className="rounded-2xl border border-neutral-200/80 bg-white p-6 text-center sm:p-8">
           <p className="text-[15px] font-medium text-neutral-900">
             You need a handle first
           </p>
@@ -1270,7 +1270,7 @@ export function RequestTab({
         </div>
       ) : (
         <div className="grid items-start gap-5 xl:grid-cols-[320px_1fr_320px]">
-          <div className="h-fit py-1">
+          <div className="h-fit rounded-2xl border border-neutral-200/80 bg-white p-6">
             <Field label="Amount (tUSDC, optional)">
               <input
                 value={amount}
@@ -1343,7 +1343,7 @@ export function RequestTab({
             </div>
           </div>
 
-          <div className="h-fit py-1 lg:sticky lg:top-6">
+          <div className="h-fit rounded-2xl border border-neutral-200/80 bg-white p-5 lg:sticky lg:top-6">
             <p className="mb-3 flex items-center gap-1.5 text-[13px] font-medium text-neutral-500">
               <QrCode className="size-3.5" /> Scan or share
             </p>
@@ -1507,7 +1507,7 @@ function AutoEarn({ address }: { address: Address }) {
   }
 
   return (
-    <div className="border-y border-neutral-200 py-5">
+    <div className="rounded-2xl border border-neutral-200/80 bg-white p-5 sm:p-6">
       <div className="flex items-center justify-between gap-4">
         <div>
           <p className="text-[15px] font-semibold text-neutral-900">
@@ -1839,7 +1839,7 @@ export function EarnTab({ address }: { address: Address }) {
         })}
       </div>
 
-      <div className="mt-4 border-b border-neutral-200">
+      <div className="mt-4 rounded-2xl border border-neutral-200/80 bg-white px-5 sm:px-6">
         {venueRows.map((v) => {
           const expanded = venue === v.id
           return (

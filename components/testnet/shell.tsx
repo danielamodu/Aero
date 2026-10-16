@@ -24,8 +24,9 @@ import {
   Send,
   Sprout,
   SquareTerminal,
+  Wallet,
+  Zap,
 } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { AeroMark } from "@/components/aero/logo"
 import { BrandLockup } from "@/components/aero/brand-logo"
@@ -252,7 +253,7 @@ export function Sidebar({
               className={cn(
                 "relative flex h-11 w-full items-center gap-3 rounded-2xl px-3.5 text-[15px] transition-colors",
                 active
-                  ? "font-semibold text-neutral-900"
+                  ? "font-semibold text-aero-900"
                   : "font-medium text-neutral-500 hover:text-neutral-900"
               )}
             >
@@ -260,7 +261,7 @@ export function Sidebar({
                 <motion.span
                   layoutId="side-active"
                   transition={{ type: "spring", stiffness: 500, damping: 38 }}
-                  className="absolute inset-0 rounded-2xl bg-neutral-100"
+                  className="absolute inset-0 rounded-2xl bg-aero-50"
                 />
               )}
               <n.icon className="relative size-[18px]" />
@@ -550,7 +551,7 @@ export function Checklist({
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-[20px] border border-neutral-200 bg-white p-5"
+      className="rounded-2xl border border-neutral-200/80 bg-white p-5"
     >
       <div className="flex items-center justify-between">
         <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
@@ -639,7 +640,7 @@ export function Portfolio({
   const total = chains.reduce((n, c) => n + (c.balance ?? 0), 0)
 
   return (
-    <div className="mt-5">
+    <div className="rounded-2xl border border-neutral-200/80 bg-white p-5 sm:p-6">
       <div className="flex items-baseline justify-between gap-3">
         <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
           Your Avalanche portfolio
@@ -652,7 +653,7 @@ export function Portfolio({
           })}
         </p>
       </div>
-      <div className="mt-1 divide-y divide-neutral-200 border-y border-neutral-200">
+      <div className="mt-2 divide-y divide-neutral-100">
         {chains.map((c) => (
           <div key={c.name} className="flex items-center gap-3 py-3.5">
             <span className={cn("size-2.5 shrink-0 rounded-full", c.dot)} />
@@ -665,9 +666,16 @@ export function Portfolio({
               )}
             </p>
             <span className="shrink-0 font-mono tabular-nums">
-              {c.balance === null
-                ? "—"
-                : `$${c.balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              {c.balance === null ? (
+                "—"
+              ) : (
+                <>
+                  {`$${c.balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}{" "}
+                  <span className="text-xs text-neutral-400">
+                    {total > 0 ? Math.round((c.balance / total) * 100) : 0}%
+                  </span>
+                </>
+              )}
             </span>
             <button
               type="button"
@@ -916,6 +924,166 @@ function greeting(): string {
   return "Good evening"
 }
 
+/* ------------------------------ balance chart ----------------------------- */
+
+function BalanceChart({
+  feed,
+  current,
+}: {
+  feed: { hash: string; label: string; amount: string; ts: number }[]
+  current: number
+}) {
+  const [now] = useState(() => Date.now())
+  const { pts, flows } = useMemo(() => {
+    const seen = new Set<string>()
+    const deltas = feed
+      .filter((a) => {
+        const k = a.hash.toLowerCase()
+        if (seen.has(k)) return false
+        seen.add(k)
+        return true
+      })
+      .map((a) => {
+        const num = parseFloat(a.amount.replace(/[^0-9.]/g, "")) || 0
+        const plus = /^(Received|Faucet)/.test(a.label)
+        const minus = /^(Sent|You)/.test(a.label)
+        return {
+          ts: a.ts > 0 ? a.ts : now,
+          v: plus ? num : minus ? -num : 0,
+        }
+      })
+      .filter((f) => f.v !== 0)
+      .sort((x, y) => x.ts - y.ts)
+    if (deltas.length === 0) {
+      return {
+        pts: [
+          { t: now - 86400000, v: current },
+          { t: now, v: current },
+        ],
+        flows: 0,
+      }
+    }
+    let run = current
+    const pts = [{ t: now, v: current }]
+    for (let i = deltas.length - 1; i >= 0; i--) {
+      run = Math.max(0, run - deltas[i].v)
+      pts.push({ t: deltas[i].ts, v: run })
+    }
+    const ordered = pts.reverse()
+    if (ordered.length === 1)
+      ordered.unshift({ t: ordered[0].t - 86400000, v: ordered[0].v })
+    return { pts: ordered, flows: deltas.length }
+  }, [feed, current, now])
+
+  const W = 600
+  const H = 220
+  const L = 46
+  const R = 14
+  const T = 12
+  const B = 26
+  const tVals = pts.map((p) => p.t)
+  const vVals = pts.map((p) => p.v)
+  const t0 = Math.min(...tVals)
+  const t1 = Math.max(...tVals)
+  const lo = Math.min(...vVals)
+  const hi = Math.max(...vVals)
+  const span = Math.max(t1 - t0, 3600000)
+  const pad = Math.max((hi - lo) * 0.15, hi * 0.02, 1)
+  const y0 = Math.max(0, lo - pad)
+  const y1 = hi + pad
+  const X = (t: number) => L + ((t - t0) / span) * (W - L - R)
+  const Y = (v: number) =>
+    T + (1 - (v - y0) / Math.max(y1 - y0, 1e-9)) * (H - T - B)
+  const line = pts
+    .map(
+      (p, i) =>
+        `${i === 0 ? "M" : "L"}${X(p.t).toFixed(1)},${Y(p.v).toFixed(1)}`
+    )
+    .join(" ")
+  const area = `${line} L${X(t1).toFixed(1)},${H - B} L${X(t0).toFixed(1)},${H - B} Z`
+  const grid = [0, 1, 2, 3].map((i) => y0 + ((y1 - y0) * i) / 3)
+  const fmtD = (t: number) =>
+    new Date(t).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+  const last = pts[pts.length - 1]
+
+  return (
+    <div>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="mt-4 w-full"
+        role="img"
+        aria-label="Balance history"
+      >
+        <defs>
+          <linearGradient id="aero-bal-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop
+              offset="0%"
+              stopColor="var(--color-aero-800)"
+              stopOpacity="0.18"
+            />
+            <stop
+              offset="100%"
+              stopColor="var(--color-aero-800)"
+              stopOpacity="0"
+            />
+          </linearGradient>
+        </defs>
+        {grid.map((g, i) => (
+          <g key={i}>
+            <line
+              x1={L}
+              x2={W - R}
+              y1={Y(g)}
+              y2={Y(g)}
+              stroke="#E4E4E7"
+              strokeWidth="1"
+            />
+            <text
+              x={L - 8}
+              y={Y(g) + 3.5}
+              textAnchor="end"
+              fontSize="10"
+              fill="#A3A3A3"
+              fontFamily="monospace"
+            >
+              ${g >= 1000 ? `${(g / 1000).toFixed(1)}K` : g.toFixed(0)}
+            </text>
+          </g>
+        ))}
+        <path d={area} fill="url(#aero-bal-fill)" />
+        <path
+          d={line}
+          fill="none"
+          stroke="var(--color-aero-800)"
+          strokeWidth="2"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+        <circle
+          cx={X(last.t)}
+          cy={Y(last.v)}
+          r="4"
+          fill="var(--color-aero-800)"
+          stroke="#fff"
+          strokeWidth="2"
+        />
+        <text x={L} y={H - 8} fontSize="10" fill="#A3A3A3">
+          {fmtD(t0)}
+        </text>
+        <text x={W - R} y={H - 8} textAnchor="end" fontSize="10" fill="#A3A3A3">
+          {fmtD(t1)}
+        </text>
+      </svg>
+      {flows === 0 && (
+        <p className="mt-1 text-xs text-neutral-400">
+          History builds as you transact — claim, send, or deposit to draw the
+          line.
+        </p>
+      )}
+    </div>
+  )
+}
+
 export function Overview({
   address,
   go,
@@ -1050,66 +1218,70 @@ export function Overview({
         </h1>
       </motion.div>
 
+      <div className="mt-6 grid grid-cols-2 gap-4 xl:grid-cols-4">
+        {[
+          {
+            icon: Wallet,
+            label: "Total balance",
+            value: `$${animatedTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            sub: "tUSDC · Fuji",
+          },
+          {
+            icon: HandCoins,
+            label: "Available",
+            value: `$${formatUsdc(usdc)}`,
+            sub: "Ready to send",
+          },
+          {
+            icon: Sprout,
+            label: "Earning",
+            value: `$${formatUsdc(earning === BigInt(0) && !shares ? undefined : earning)}`,
+            sub: `${apr}% APR`,
+          },
+          {
+            icon: Zap,
+            label: "Transactions",
+            value: `${feed.length}`,
+            sub: "Confirmed on-chain",
+          },
+        ].map((s) => (
+          <motion.div
+            key={s.label}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45 }}
+            className="rounded-2xl border border-neutral-200/80 bg-white p-5"
+          >
+            <p className="flex items-center gap-1.5 text-[13px] text-neutral-500">
+              <s.icon className="size-3.5 text-neutral-400" /> {s.label}
+            </p>
+            <p className="mt-2 text-[26px] font-semibold tracking-tight text-neutral-900 tabular-nums">
+              {s.value}
+            </p>
+            <p className="mt-1 text-xs text-neutral-400">{s.sub}</p>
+          </motion.div>
+        ))}
+      </div>
+
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.08 }}
-        className="relative mt-6 overflow-hidden rounded-[24px] bg-aero-950 p-6 text-white sm:p-8"
+        className="mt-4 rounded-2xl border border-neutral-200/80 bg-white p-5 sm:p-6"
       >
-        <AeroMark
-          aria-hidden
-          className="pointer-events-none absolute -right-12 -bottom-16 size-64 text-white/[0.06]"
-        />
-        <div className="relative">
-          <p className="text-[13px] font-medium text-white/50">Total balance</p>
-          <p className="mt-1 font-mono text-5xl font-medium tracking-tight tabular-nums sm:text-6xl">
-            $
-            {animatedTotal.toLocaleString("en-US", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
+        <div className="flex items-baseline justify-between gap-3">
+          <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
+            Balance
           </p>
-          <div className="mt-5 grid grid-cols-2 gap-4 border-t border-white/10 pt-5 font-mono text-[15px] tabular-nums">
-            <div>
-              <p className="font-sans text-[13px] text-white/45">Available</p>
-              <p className="mt-0.5">${formatUsdc(usdc)}</p>
-            </div>
-            <div>
-              <p className="font-sans text-[13px] text-white/45">
-                Earning ·{" "}
-                <span className="font-medium text-emerald-300">{apr}% APR</span>
-              </p>
-              <p className="mt-0.5">
-                $
-                {formatUsdc(
-                  earning === BigInt(0) && !shares ? undefined : earning
-                )}
-              </p>
-            </div>
-          </div>
-          <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-            {(
-              [
-                ["Send", "send"],
-                ["Request", "request"],
-                ["Pay", "pay"],
-                ["Earn", "earn"],
-              ] as const
-            ).map(([label, id]) => (
-              <Button
-                key={id}
-                onClick={() => go(id)}
-                className="pressable h-11 rounded-full bg-white/10 font-medium text-white backdrop-blur transition hover:bg-white/20"
-              >
-                {label}
-              </Button>
-            ))}
-          </div>
+          <p className="font-mono text-xs text-neutral-400">
+            All history · Fuji
+          </p>
         </div>
+        <BalanceChart feed={feed} current={Number(total) / 1e6} />
       </motion.div>
 
       <div className="mt-5 grid items-start gap-5 xl:grid-cols-[1.8fr_1fr]">
-        <div>
+        <div className="rounded-2xl border border-neutral-200/80 bg-white p-5 sm:p-6">
           <div className="flex items-center justify-between">
             <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
               Recent activity
@@ -1162,7 +1334,7 @@ export function Overview({
               </button>
             </div>
           ) : (
-            <div className="divide-y divide-neutral-200 border-y border-neutral-200">
+            <div className="mt-2 divide-y divide-neutral-100">
               {feed.slice(0, 10).map((a) => {
                 const peerLabel = a.peer
                   ? (names.get(a.peer.toLowerCase()) ??
@@ -1203,6 +1375,9 @@ export function Overview({
                         {a.ts > 0 ? `${timeAgo(a.ts)} · ` : ""}Confirmed
                         {a.memo ? ` · “${a.memo}”` : ""}
                       </span>
+                    </span>
+                    <span className="hidden shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 sm:inline">
+                      Confirmed
                     </span>
                     <a
                       href={`https://testnet.snowtrace.io/tx/${a.hash}`}

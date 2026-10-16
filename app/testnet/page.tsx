@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react"
 import { AnimatePresence, motion } from "motion/react"
 import { useAccount, useSwitchChain } from "wagmi"
 import { Button } from "@/components/ui/button"
+import { Search } from "lucide-react"
 import {
   LoginView,
   MobileTabs,
@@ -28,6 +29,15 @@ import {
 
 export type TestnetTab =
   "overview" | "send" | "request" | "pay" | "earn" | "terminal"
+
+const TAB_LABELS: Record<TestnetTab, string> = {
+  overview: "Overview",
+  send: "Send",
+  request: "Request",
+  pay: "Pay",
+  earn: "Earn",
+  terminal: "Terminal",
+}
 
 function SetupNotice({
   title,
@@ -167,8 +177,8 @@ function TestnetConnected({
     <div
       className={
         isTerm
-          ? "flex h-svh flex-col overflow-hidden bg-white lg:flex-row"
-          : "min-h-svh bg-white lg:flex"
+          ? "flex h-svh flex-col overflow-hidden bg-[#F6F6F8] lg:flex-row"
+          : "min-h-svh bg-[#F6F6F8] lg:flex"
       }
     >
       <Sidebar tab={tab} setTab={setTab} address={address} />
@@ -185,6 +195,29 @@ function TestnetConnected({
               : "mx-auto w-full px-5 pt-6 pb-28 lg:px-8 lg:pb-16"
           }
         >
+          {!isTerm && (
+            <header className="mb-6 hidden items-center justify-between lg:flex">
+              <p className="text-sm text-neutral-400">
+                Testnet <span className="mx-1 text-neutral-300">/</span>{" "}
+                <span className="font-medium text-neutral-900">
+                  {TAB_LABELS[tab]}
+                </span>
+              </p>
+              <button
+                type="button"
+                onClick={() =>
+                  window.dispatchEvent(new CustomEvent("aero:palette"))
+                }
+                className="flex h-9 items-center gap-2.5 rounded-full border border-neutral-200/80 bg-white pr-2 pl-4 text-sm text-neutral-400 shadow-[0_1px_2px_rgba(16,24,40,0.05)] transition hover:text-neutral-600"
+              >
+                <Search className="size-4" />
+                Search…
+                <kbd className="rounded-md bg-neutral-100 px-1.5 py-0.5 font-mono text-[11px] text-neutral-500">
+                  ⌘K
+                </kbd>
+              </button>
+            </header>
+          )}
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={tab}

@@ -37,6 +37,10 @@ export function CommandPalette({ go }: { go: (t: TestnetTab) => void }) {
 
   useEffect(() => {
     const focus = () => setTimeout(() => inputRef.current?.focus(), 30)
+    const reset = () => {
+      setQ("")
+      setCursor(0)
+    }
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null
       const typing =
@@ -61,7 +65,16 @@ export function CommandPalette({ go }: { go: (t: TestnetTab) => void }) {
       }
     }
     window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
+    const onExternal = () => {
+      reset()
+      setOpen(true)
+      focus()
+    }
+    window.addEventListener("aero:palette", onExternal)
+    return () => {
+      window.removeEventListener("keydown", onKey)
+      window.removeEventListener("aero:palette", onExternal)
+    }
   }, [])
 
   const copyAddr = async () => {
