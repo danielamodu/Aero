@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils"
 import { AeroMark } from "@/components/aero/logo"
 import { BrandLockup } from "@/components/aero/brand-logo"
 import { AppKitConnectButton } from "@/components/testnet/providers"
+import { FaucetBar } from "./views"
 import { adapterAbi, namesAbi, routerAbi, usdcAbi, vaultAbi } from "@/lib/contracts"
 import type { Address } from "viem"
 import { CONTRACTS, FUJI_AVAX_FAUCET, formatUsdc, routerConfigured } from "@/lib/testnet"
@@ -192,9 +193,6 @@ export function Sidebar({
     <aside className="sticky top-0 hidden h-svh w-[260px] shrink-0 flex-col border-r border-neutral-200 bg-white px-4 py-5 lg:flex">
       <div className="flex items-center gap-2 px-2">
         <BrandLockup tone="dark" height={24} />
-        <span className="rounded-full bg-amber-100 px-2 py-0.5 font-mono text-[10px] font-bold tracking-wider text-amber-800">
-          TESTNET
-        </span>
         <span className="ml-auto">
           <NotificationBell address={address} align="left" />
         </span>
@@ -275,9 +273,6 @@ export function MobileTop({ address }: { address: Address }) {
     <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-neutral-200 bg-white/90 px-5 backdrop-blur-xl lg:hidden">
       <span className="flex items-center gap-2">
         <BrandLockup tone="dark" height={24} />
-        <span className="rounded-full bg-amber-100 px-2 py-0.5 font-mono text-[10px] font-bold tracking-wider text-amber-800">
-          TESTNET
-        </span>
       </span>
       <span className="flex items-center gap-2">
         <NotificationBell address={address} />
@@ -760,7 +755,7 @@ export function Overview({
   const animatedTotal = useTweenNumber(Number(total) / 1e6)
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
+    <div className="w-full">
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
         <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">Overview</p>
         <h1 className="mt-2 text-3xl font-medium tracking-[-0.02em] text-neutral-900 sm:text-4xl">
@@ -792,10 +787,11 @@ export function Overview({
             <p className="mt-0.5 font-medium">${formatUsdc(earning === BigInt(0) && !shares ? undefined : earning)}</p>
           </div>
         </div>
-        <div className="mt-6 grid grid-cols-3 gap-2.5">
+        <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
           {(
             [
               ["Send", "send"],
+              ["Request", "request"],
               ["Pay", "pay"],
               ["Earn", "earn"],
             ] as const
@@ -824,7 +820,8 @@ export function Overview({
         }}
       />
 
-      <div className="mt-5 rounded-[20px] border border-neutral-200 bg-white p-6">
+      <div className="mt-5 grid items-start gap-5 xl:grid-cols-[1.5fr_1fr]">
+      <div className="rounded-[20px] border border-neutral-200 bg-white p-6">
         <div className="flex items-center justify-between">
           <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">Recent activity</p>
           <span className="flex items-center gap-2">
@@ -905,6 +902,10 @@ export function Overview({
             })}
           </div>
         )}
+        </div>
+        <div className="space-y-5">
+          <FaucetBar address={address} />
+        </div>
       </div>
     </div>
   )

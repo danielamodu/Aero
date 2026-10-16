@@ -108,7 +108,7 @@ function TestnetConnected({
       <Sidebar tab={tab} setTab={setTab} address={address} />
       <div className="min-w-0 flex-1">
         <MobileTop address={address} />
-        <main className="mx-auto w-full max-w-3xl px-5 pt-6 pb-28 lg:pb-16">
+        <main className="mx-auto w-full max-w-5xl px-5 pt-6 pb-28 lg:px-8 lg:pb-16">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={tab}
