@@ -1128,7 +1128,7 @@ export function Overview({
                   requestPayMode("send")
                   go("pay")
                 }}
-                className="pressable pressable mt-4 inline-flex h-11 items-center gap-2 rounded-full bg-aero-800 px-6 text-[15px] font-medium text-white transition hover:bg-aero-900"
+                className="pressable mt-4 inline-flex h-11 items-center gap-2 rounded-full bg-aero-800 px-6 text-[15px] font-medium text-white transition hover:bg-aero-900"
               >
                 <Send className="size-4" /> Send your first payment
               </button>
