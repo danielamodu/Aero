@@ -42,7 +42,7 @@ export function AppKitConnectButton({ className }: { className?: string }) {
       type="button"
       onClick={() => open(isConnected ? { view: "Account" } : undefined)}
       className={cn(
-        "inline-flex h-11 items-center justify-center gap-2 rounded-full bg-aero-800 px-6 text-[15px] font-medium text-white transition hover:bg-aero-900",
+        "inline-flex h-11 items-center justify-center gap-2 rounded-full bg-aero-800 px-6 text-[15px] font-medium text-white transition hover:bg-aero-900 pressable",
         className
       )}
     >

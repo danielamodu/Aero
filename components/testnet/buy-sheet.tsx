@@ -92,7 +92,7 @@ export function BuySheet({
             <div className="mt-3 flex justify-center">
               <TxStatus hash={tx.hash} error={tx.error} />
             </div>
-            <Button onClick={() => close(false)} className="mt-5 h-11 rounded-full bg-aero-800 px-7 font-medium text-white hover:bg-aero-900">
+            <Button onClick={() => close(false)} className="mt-5 h-11 rounded-full bg-aero-800 px-7 font-medium text-white hover:bg-aero-900 pressable">
               Done
             </Button>
           </div>

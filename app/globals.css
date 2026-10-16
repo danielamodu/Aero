@@ -199,3 +199,11 @@
     animation: none;
   }
 }
+
+/* Press feedback for buttons. Unlayered on purpose: beats utility transitions. */
+.pressable {
+  transition: transform 0.15s ease;
+}
+.pressable:active:not(:disabled) {
+  transform: scale(0.98);
+}

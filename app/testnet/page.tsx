@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, type ReactNode } from "react"
+import { AnimatePresence, motion } from "motion/react"
 import { useAccount, useSwitchChain } from "wagmi"
 import { Button } from "@/components/ui/button"
 import { LoginView, MobileTabs, MobileTop, Overview, Sidebar } from "@/components/testnet/shell"
@@ -108,6 +109,14 @@ function TestnetConnected({
       <div className="min-w-0 flex-1">
         <MobileTop address={address} />
         <main className="mx-auto w-full max-w-3xl px-5 pt-6 pb-28 lg:pb-16">
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={tab}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+            >
           {tab === "overview" && <Overview address={address} go={setTab} />}
           {tab === "send" && <SendTab address={address} initialTo={prefill.to} initialAmount={prefill.amount} />}
           {tab === "request" && <RequestTab address={address} go={setTab} />}
@@ -118,6 +127,8 @@ function TestnetConnected({
               <FaucetBar address={address} />
             </div>
           )}
+            </motion.div>
+          </AnimatePresence>
         </main>
       </div>
       <MobileTabs tab={tab} setTab={setTab} />

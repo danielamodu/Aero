@@ -155,7 +155,7 @@ export function FaucetBar({ address }: { address: Address }) {
           <Button
             onClick={() => setBuyOpen(true)}
             variant="outline"
-            className="h-11 rounded-full border-neutral-300 px-6 font-medium text-neutral-900 hover:bg-neutral-50"
+            className="h-11 rounded-full border-neutral-300 px-6 font-medium text-neutral-900 hover:bg-neutral-50 pressable"
           >
             Buy
           </Button>
@@ -663,7 +663,7 @@ export function RouterPanel({ address }: { address: Address }) {
               }
               refresh()
             }}
-            className="h-12 flex-1 rounded-full bg-white px-6 font-medium text-aero-900 hover:bg-aero-50 disabled:opacity-60 sm:flex-none"
+            className="h-12 flex-1 rounded-full bg-white px-6 font-medium text-aero-900 hover:bg-aero-50 disabled:opacity-60 pressable sm:flex-none"
           >
             {approveTx.busy ? "…" : depositTx.busy ? "…" : needsApprove ? "Approve" : "Deposit"}
           </Button>
@@ -674,7 +674,7 @@ export function RouterPanel({ address }: { address: Address }) {
               refresh()
             }}
             variant="outline"
-            className="h-12 shrink-0 rounded-full border-white/25 bg-transparent font-medium text-white hover:bg-white/10 hover:text-white disabled:opacity-60"
+            className="h-12 shrink-0 rounded-full border-white/25 bg-transparent font-medium text-white hover:bg-white/10 hover:text-white disabled:opacity-60 pressable"
           >
             {withdrawTx.busy ? "…" : "Withdraw all"}
           </Button>
@@ -738,7 +738,7 @@ export function RequestTab({ address, go }: { address: Address; go: (t: TestnetT
         <div className="mt-4 rounded-2xl bg-[#f7f7f7] p-5 text-center">
           <p className="text-[15px] font-medium text-neutral-900">You need a handle first</p>
           <p className="mt-1 text-sm text-neutral-500">Payment links point at your @username.</p>
-          <Button onClick={() => go("send")} className="mt-4 h-11 rounded-full bg-aero-800 px-6 font-medium text-white hover:bg-aero-900">
+          <Button onClick={() => go("send")} className="mt-4 h-11 rounded-full bg-aero-800 px-6 font-medium text-white hover:bg-aero-900 pressable">
             Claim a handle
           </Button>
         </div>
@@ -768,7 +768,7 @@ export function RequestTab({ address, go }: { address: Address; go: (t: TestnetT
                   <span className="inline-flex items-center gap-1.5"><Copy className="size-4" /> Copy link</span>
                 )}
               </Button>
-              <Button onClick={share} className="h-11 rounded-full bg-aero-800 px-6 font-medium text-white hover:bg-aero-900">
+              <Button onClick={share} className="h-11 rounded-full bg-aero-800 px-6 font-medium text-white hover:bg-aero-900 pressable">
                 <Share className="size-4" /> Share
               </Button>
             </div>

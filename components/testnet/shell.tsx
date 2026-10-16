@@ -1,17 +1,20 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { motion } from "motion/react"
 import { useDisconnect, useReadContract, useReadContracts } from "wagmi"
+import { useQueryClient } from "@tanstack/react-query"
 import {
   ArrowDownLeft,
   ArrowUpRight,
   Bell,
   Check,
+  Copy,
   HandCoins,
   LayoutGrid,
   LogOut,
   ReceiptText,
+  RefreshCw,
   Send,
   Sprout,
 } from "lucide-react"
@@ -161,6 +164,7 @@ export function Sidebar({
   address: Address
 }) {
   const { disconnect } = useDisconnect()
+  const [copiedAddr, setCopiedAddr] = useState(false)
   const { data: handle } = useReadContract({
     address: CONTRACTS.names,
     abi: namesAbi,
@@ -179,23 +183,31 @@ export function Sidebar({
         </span>
       </div>
       <nav className="mt-8 space-y-1">
-        {NAV.map((n) => (
-          <button
-            key={n.id}
-            type="button"
-            onClick={() => setTab(n.id)}
-            className={cn(
-              "flex h-11 w-full items-center gap-3 rounded-2xl px-3.5 text-[15px] transition",
-              tab === n.id
-                ? "bg-neutral-100 font-semibold text-neutral-900"
-                : "font-medium text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900"
-            )}
-          >
-            <n.icon className="size-[18px]" />
-            {n.label}
-            {tab === n.id && <span className="ml-auto size-1.5 rounded-full bg-aero-800" />}
-          </button>
-        ))}
+        {NAV.map((n) => {
+          const active = tab === n.id
+          return (
+            <button
+              key={n.id}
+              type="button"
+              onClick={() => setTab(n.id)}
+              className={cn(
+                "relative flex h-11 w-full items-center gap-3 rounded-2xl px-3.5 text-[15px] transition-colors",
+                active ? "font-semibold text-neutral-900" : "font-medium text-neutral-500 hover:text-neutral-900"
+              )}
+            >
+              {active && (
+                <motion.span
+                  layoutId="side-active"
+                  transition={{ type: "spring", stiffness: 500, damping: 38 }}
+                  className="absolute inset-0 rounded-2xl bg-neutral-100"
+                />
+              )}
+              <n.icon className="relative size-[18px]" />
+              <span className="relative">{n.label}</span>
+              {active && <span className="relative ml-auto size-1.5 rounded-full bg-aero-800" />}
+            </button>
+          )
+        })}
       </nav>
       <div className="mt-auto space-y-3">
         <a
@@ -206,12 +218,28 @@ export function Sidebar({
           Testnet guide
         </a>
         <div className="rounded-2xl bg-[#f7f7f7] p-3.5">
-          <p className="font-mono text-sm font-bold text-neutral-900">
-            {handle ? `@${handle}` : shortAddress(address)}
-          </p>
-          <p className="mt-0.5 font-mono text-[11px] text-neutral-400">
-            {handle ? shortAddress(address) : "No handle yet"} · Fuji
-          </p>
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(address)
+                setCopiedAddr(true)
+                setTimeout(() => setCopiedAddr(false), 1500)
+              } catch {
+                /* clipboard unavailable */
+              }
+            }}
+            title="Copy wallet address"
+            className="block w-full text-left"
+          >
+            <p className="font-mono text-sm font-bold text-neutral-900">
+              {handle ? `@${handle}` : shortAddress(address)}
+            </p>
+            <p className="mt-0.5 flex items-center gap-1 font-mono text-[11px] text-neutral-400">
+              {handle ? shortAddress(address) : "No handle yet"} · Fuji ·{" "}
+              {copiedAddr ? <span className="font-bold text-emerald-600">Copied</span> : <Copy className="size-3" />}
+            </p>
+          </button>
           <button
             type="button"
             onClick={() => disconnect()}
@@ -251,12 +279,15 @@ export function MobileTabs({ tab, setTab }: { tab: TestnetTab; setTab: (t: Testn
           type="button"
           onClick={() => setTab(n.id)}
           className={cn(
-            "flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition",
+            "relative flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors",
             tab === n.id ? "text-aero-800" : "text-neutral-400"
           )}
         >
           <n.icon className="size-5" />
           {n.label}
+          <span className="flex h-1 items-center justify-center">
+            {tab === n.id && <motion.span layoutId="mtab-dot" className="size-1 rounded-full bg-aero-800" />}
+          </span>
         </button>
       ))}
     </nav>
@@ -599,6 +630,28 @@ export function NotificationBell({ address, align = "right" }: { address: Addres
 
 /* -------------------------------- overview -------------------------------- */
 
+function useTweenNumber(target: number): number {
+  const [val, setVal] = useState(0)
+  const prev = useRef(0)
+  useEffect(() => {
+    let raf = 0
+    const from = prev.current
+    const start = performance.now()
+    const dur = 900
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - start) / dur)
+      const eased = 1 - Math.pow(1 - p, 3)
+      const v = from + (target - from) * eased
+      setVal(v)
+      prev.current = v
+      if (p < 1) raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [target])
+  return val
+}
+
 function greeting(): string {
   const h = new Date().getHours()
   if (h < 12) return "Good morning"
@@ -617,6 +670,9 @@ export function Overview({
   const [chain, setChain] = useState<ChainActivity[] | null>(null)
   const [memos, setMemos] = useState<Map<string, string>>(new Map())
   const [names, setNames] = useState<Map<string, string>>(new Map())
+  const queryClient = useQueryClient()
+  const [nonce, setNonce] = useState(0)
+  const [spinning, setSpinning] = useState(false)
   useEffect(() => {
     let live = true
     fetchOnchainActivity(address, CONTRACTS)
@@ -634,7 +690,7 @@ export function Overview({
     return () => {
       live = false
     }
-  }, [address])
+  }, [address, nonce])
   useEffect(() => {
     if (!chain) return
     let live = true
@@ -684,6 +740,7 @@ export function Overview({
   const earning = shares && index ? (shares * index) / BigInt(1e18) : BigInt(0)
   const total = (usdc ?? BigInt(0)) + earning
   const apr = rate !== undefined ? (((Number(rate) * 31_557_600) / 1e18) * 100).toFixed(2) : "—"
+  const animatedTotal = useTweenNumber(Number(total) / 1e6)
 
   return (
     <div className="mx-auto w-full max-w-3xl">
@@ -704,7 +761,7 @@ export function Overview({
       >
         <p className="text-[13px] font-medium text-neutral-500">Total balance</p>
         <p className="mt-1 text-5xl font-medium tracking-tight tabular-nums sm:text-6xl">
-          ${(Number(total) / 1e6).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          ${animatedTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </p>
         <div className="mt-5 grid grid-cols-2 gap-4 border-t border-neutral-100 pt-5 text-[15px] tabular-nums">
           <div>
@@ -729,7 +786,7 @@ export function Overview({
             <Button
               key={id}
               onClick={() => go(id)}
-              className="h-11 rounded-full bg-aero-800 font-medium text-white hover:bg-aero-900"
+              className="h-11 rounded-full bg-aero-800 font-medium text-white hover:bg-aero-900 pressable"
             >
               {label}
             </Button>
@@ -753,9 +810,23 @@ export function Overview({
       <div className="mt-5 rounded-[20px] border border-neutral-200 bg-white p-6">
         <div className="flex items-center justify-between">
           <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">Recent activity</p>
-          {feed.length > 0 && (
-            <span className="font-mono text-xs text-neutral-400 tabular-nums">{feed.length}</span>
-          )}
+          <span className="flex items-center gap-2">
+            {feed.length > 0 && (
+              <span className="font-mono text-xs text-neutral-400 tabular-nums">{feed.length}</span>
+            )}
+            <button
+              type="button"
+              aria-label="Refresh activity"
+              onClick={() => {
+                setSpinning(true)
+                queryClient.invalidateQueries().finally(() => setSpinning(false))
+                setNonce((n) => n + 1)
+              }}
+              className="flex size-7 items-center justify-center rounded-full text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-700"
+            >
+              <RefreshCw className={cn("size-3.5", spinning && "animate-spin")} />
+            </button>
+          </span>
         </div>
         {chain === null ? (
           <div className="mt-3 space-y-2.5" aria-label="Loading activity">
@@ -764,9 +835,18 @@ export function Overview({
             ))}
           </div>
         ) : feed.length === 0 ? (
-          <p className="mt-3 text-[15px] leading-relaxed text-neutral-500">
-            Nothing yet — send your first payment and it&apos;ll show up here with its receipt.
-          </p>
+          <div className="mt-3">
+            <p className="text-[15px] leading-relaxed text-neutral-500">
+              Nothing yet — send your first payment and it&apos;ll show up here with its receipt.
+            </p>
+            <button
+              type="button"
+              onClick={() => go("send")}
+              className="pressable mt-4 inline-flex h-11 items-center gap-2 rounded-full bg-aero-800 px-6 text-[15px] font-medium text-white transition hover:bg-aero-900 pressable"
+            >
+              <Send className="size-4" /> Send your first payment
+            </button>
+          </div>
         ) : (
           <div className="mt-2 divide-y divide-neutral-100">
             {feed.slice(0, 10).map((a) => {
