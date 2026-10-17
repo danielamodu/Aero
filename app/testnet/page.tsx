@@ -25,13 +25,6 @@ import {
 
 export type TestnetTab = "home" | "pay" | "earn" | "terminal"
 
-const TAB_LABELS: Record<TestnetTab, string> = {
-  home: "Home",
-  pay: "Pay",
-  earn: "Earn",
-  terminal: "Terminal",
-}
-
 function SetupNotice({
   title,
   children,
@@ -182,13 +175,19 @@ function TestnetConnected({
       className={
         isTerm
           ? "flex h-svh flex-col overflow-hidden bg-[#F6F6F8] lg:flex-row"
-          : "min-h-svh bg-[#F6F6F8] lg:flex"
+          : tab === "home"
+            ? "flex min-h-svh flex-col bg-[#F6F6F8] lg:h-svh lg:flex-row lg:overflow-hidden"
+            : "min-h-svh bg-[#F6F6F8] lg:flex"
       }
     >
       <Sidebar tab={tab} setTab={setTab} address={address} />
       <div
         className={
-          isTerm ? "flex min-h-0 min-w-0 flex-1 flex-col" : "min-w-0 flex-1"
+          isTerm
+            ? "flex min-h-0 min-w-0 flex-1 flex-col"
+            : tab === "home"
+              ? "flex min-w-0 flex-1 flex-col lg:min-h-0"
+              : "min-w-0 flex-1"
         }
       >
         <MobileTop address={address} />
@@ -196,17 +195,13 @@ function TestnetConnected({
           className={
             isTerm
               ? "flex min-h-0 w-full flex-1 flex-col px-5 pt-6 pb-24 lg:px-8 lg:pb-8"
-              : "mx-auto w-full px-5 pt-6 pb-28 lg:px-8 lg:pb-16"
+              : tab === "home"
+                ? "mx-auto flex w-full flex-1 flex-col px-5 pt-6 pb-28 lg:min-h-0 lg:px-8 lg:pb-8"
+                : "mx-auto w-full px-5 pt-6 pb-28 lg:px-8 lg:pb-16"
           }
         >
           {!isTerm && (
-            <header className="mb-6 hidden items-center justify-between lg:flex">
-              <p className="text-sm text-neutral-400">
-                Testnet <span className="mx-1 text-neutral-300">/</span>{" "}
-                <span className="font-medium text-neutral-900">
-                  {TAB_LABELS[tab]}
-                </span>
-              </p>
+            <header className="mb-6 hidden items-center justify-end lg:flex">
               <button
                 type="button"
                 onClick={() =>
@@ -225,7 +220,11 @@ function TestnetConnected({
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={tab}
-              className={isTerm ? "flex min-h-0 flex-1 flex-col" : undefined}
+              className={
+                isTerm || tab === "home"
+                  ? "flex min-h-0 flex-1 flex-col"
+                  : undefined
+              }
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}

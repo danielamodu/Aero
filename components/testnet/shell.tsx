@@ -684,7 +684,7 @@ export function Portfolio({
   const total = chains.reduce((n, c) => n + (c.balance ?? 0), 0)
 
   return (
-    <div className="rounded-2xl border border-neutral-200/80 bg-white p-5 sm:p-6">
+    <div className="flex h-full flex-col rounded-2xl border border-neutral-200/80 bg-white p-5 sm:p-6">
       <div className="flex items-baseline justify-between gap-3">
         <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
           Your Avalanche portfolio
@@ -732,7 +732,7 @@ export function Portfolio({
           </div>
         ))}
       </div>
-      <p className="mt-2.5 text-xs leading-relaxed text-neutral-400">
+      <p className="mt-auto pt-2.5 text-xs leading-relaxed text-neutral-400">
         Beam and DFK balances are simulated — those chains have no testnet.
         Moves settle on Fuji for now.
       </p>
@@ -1064,7 +1064,7 @@ export function Overview({
       ? (((Number(rate) * 31_557_600) / 1e18) * 100).toFixed(2)
       : "—"
   return (
-    <div className="w-full">
+    <div className="flex min-h-0 w-full flex-1 flex-col">
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -1122,8 +1122,8 @@ export function Overview({
       </div>
       <BuySheet open={buyOpen} onOpenChange={setBuyOpen} />
 
-      <div className="mt-5 grid items-start gap-5 xl:grid-cols-[1.8fr_1fr]">
-        <div className="rounded-2xl border border-neutral-200/80 bg-white p-5 sm:p-6">
+      <div className="mt-5 grid min-h-0 flex-1 items-stretch gap-5 xl:grid-cols-[1.8fr_1fr]">
+        <div className="flex min-h-0 flex-col rounded-2xl border border-neutral-200/80 bg-white p-5 sm:p-6">
           <div className="flex items-center justify-between">
             <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
               Recent activity
@@ -1152,93 +1152,95 @@ export function Overview({
               </button>
             </span>
           </div>
-          {chain === null ? (
-            <div className="mt-3 space-y-2.5" aria-label="Loading activity">
-              {[0, 1, 2].map((i) => (
-                <div
-                  key={i}
-                  className="h-9 animate-pulse rounded-xl bg-neutral-100"
-                />
-              ))}
-            </div>
-          ) : feed.length === 0 ? (
-            <div className="mt-3">
-              <p className="text-[15px] leading-relaxed text-neutral-500">
-                Nothing yet — send your first payment and it&apos;ll show up
-                here with its receipt.
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  requestPayMode("send")
-                  go("pay")
-                }}
-                className="pressable mt-4 inline-flex h-11 items-center gap-2 rounded-full bg-aero-800 px-6 text-[15px] font-medium text-white transition hover:bg-aero-900"
-              >
-                <Send className="size-4" /> Send your first payment
-              </button>
-            </div>
-          ) : (
-            <div className="mt-2 divide-y divide-neutral-100">
-              {feed.slice(0, 10).map((a) => {
-                const peerLabel = a.peer
-                  ? (names.get(a.peer.toLowerCase()) ??
-                    `${a.peer.slice(0, 6)}…${a.peer.slice(-4)}`)
-                  : null
-                const Incoming = a.dir === "in"
-                return (
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {chain === null ? (
+              <div className="mt-3 space-y-2.5" aria-label="Loading activity">
+                {[0, 1, 2].map((i) => (
                   <div
-                    key={a.hash}
-                    className="flex items-center gap-3 py-2.5 text-sm"
-                  >
-                    <span
-                      className={cn(
-                        "flex size-8 shrink-0 items-center justify-center rounded-full",
-                        Incoming
-                          ? "bg-emerald-50 text-emerald-600"
-                          : "bg-neutral-100 text-neutral-500"
-                      )}
+                    key={i}
+                    className="h-9 animate-pulse rounded-xl bg-neutral-100"
+                  />
+                ))}
+              </div>
+            ) : feed.length === 0 ? (
+              <div className="mt-3">
+                <p className="text-[15px] leading-relaxed text-neutral-500">
+                  Nothing yet — send your first payment and it&apos;ll show up
+                  here with its receipt.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    requestPayMode("send")
+                    go("pay")
+                  }}
+                  className="pressable mt-4 inline-flex h-11 items-center gap-2 rounded-full bg-aero-800 px-6 text-[15px] font-medium text-white transition hover:bg-aero-900"
+                >
+                  <Send className="size-4" /> Send your first payment
+                </button>
+              </div>
+            ) : (
+              <div className="mt-2 divide-y divide-neutral-100">
+                {feed.slice(0, 10).map((a) => {
+                  const peerLabel = a.peer
+                    ? (names.get(a.peer.toLowerCase()) ??
+                      `${a.peer.slice(0, 6)}…${a.peer.slice(-4)}`)
+                    : null
+                  const Incoming = a.dir === "in"
+                  return (
+                    <div
+                      key={a.hash}
+                      className="flex items-center gap-3 py-2.5 text-sm"
                     >
-                      {Incoming ? (
-                        <ArrowDownLeft className="size-4" />
-                      ) : (
-                        <ArrowUpRight className="size-4" />
-                      )}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate">
-                      <span className="block truncate font-medium text-neutral-900">
-                        {Incoming ? "Received" : "Sent"}
-                        {peerLabel ? (
-                          <span className="font-normal text-neutral-500">
-                            {" "}
-                            · {peerLabel}
-                          </span>
-                        ) : null}{" "}
-                        <span className="tabular-nums">{a.amount}</span>
+                      <span
+                        className={cn(
+                          "flex size-8 shrink-0 items-center justify-center rounded-full",
+                          Incoming
+                            ? "bg-emerald-50 text-emerald-600"
+                            : "bg-neutral-100 text-neutral-500"
+                        )}
+                      >
+                        {Incoming ? (
+                          <ArrowDownLeft className="size-4" />
+                        ) : (
+                          <ArrowUpRight className="size-4" />
+                        )}
                       </span>
-                      <span className="block truncate text-[13px] text-neutral-400">
-                        {a.ts > 0 ? `${timeAgo(a.ts)} · ` : ""}Confirmed
-                        {a.memo ? ` · “${a.memo}”` : ""}
+                      <span className="min-w-0 flex-1 truncate">
+                        <span className="block truncate font-medium text-neutral-900">
+                          {Incoming ? "Received" : "Sent"}
+                          {peerLabel ? (
+                            <span className="font-normal text-neutral-500">
+                              {" "}
+                              · {peerLabel}
+                            </span>
+                          ) : null}{" "}
+                          <span className="tabular-nums">{a.amount}</span>
+                        </span>
+                        <span className="block truncate text-[13px] text-neutral-400">
+                          {a.ts > 0 ? `${timeAgo(a.ts)} · ` : ""}Confirmed
+                          {a.memo ? ` · “${a.memo}”` : ""}
+                        </span>
                       </span>
-                    </span>
-                    <span className="hidden shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 sm:inline">
-                      Confirmed
-                    </span>
-                    <a
-                      href={`https://testnet.snowtrace.io/tx/${a.hash}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="shrink-0 font-medium text-aero-800 hover:underline"
-                    >
-                      Receipt
-                    </a>
-                  </div>
-                )
-              })}
-            </div>
-          )}
+                      <span className="hidden shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 sm:inline">
+                        Confirmed
+                      </span>
+                      <a
+                        href={`https://testnet.snowtrace.io/tx/${a.hash}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="shrink-0 font-medium text-aero-800 hover:underline"
+                      >
+                        Receipt
+                      </a>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         </div>
-        <div className="space-y-5">
+        <div className="flex min-h-0 flex-col space-y-5">
           <Portfolio
             address={address}
             fujiUsdc={usdc}
