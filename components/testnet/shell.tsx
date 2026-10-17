@@ -43,6 +43,7 @@ import {
   CONTRACTS,
   FUJI_AVAX_FAUCET,
   formatUsdc,
+  isAddress,
   routerConfigured,
 } from "@/lib/testnet"
 import { readActivity } from "@/lib/testnet-activity"
@@ -60,6 +61,7 @@ import {
   fetchOnchainActivity,
   fetchRecentTransfers,
   fetchMemos,
+  fujiClient,
   getLatestBlockNumber,
   hasOnchainSends,
   type ChainActivity,
@@ -77,6 +79,34 @@ export function LoginView() {
   const ay = useTransform(my, [-0.5, 0.5], [-14, 14])
   const [block, setBlock] = useState<bigint | null>(null)
   const [recent, setRecent] = useState<RecentTransfer[]>([])
+  const [lastUser, setLastUser] = useState<string | null>(null)
+  const [lastHandle, setLastHandle] = useState<string | null>(null)
+
+  useEffect(() => {
+    // Mount-only read of the remembered wallet (external store) + handle lookup.
+    /* eslint-disable react-hooks/set-state-in-effect */
+    let addr: string | null = null
+    try {
+      addr = window.localStorage.getItem("aero_last_user")
+    } catch {
+      /* ignore */
+    }
+    if (addr && isAddress(addr)) {
+      setLastUser(addr)
+      fujiClient
+        .readContract({
+          address: CONTRACTS.names,
+          abi: namesAbi,
+          functionName: "resolveUsername",
+          args: [addr],
+        })
+        .then((h) => {
+          if (typeof h === "string" && h !== "") setLastHandle(h)
+        })
+        .catch(() => {})
+    }
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [])
 
   useEffect(() => {
     let live = true
@@ -146,7 +176,9 @@ export function LoginView() {
           transition={{ duration: 0.6, delay: 0.1 }}
           className="mt-5 max-w-md text-lg leading-relaxed text-white/65"
         >
-          Connect a wallet — 30 seconds, test dollars only.
+          {lastUser
+            ? `Welcome back${lastHandle ? `, @${lastHandle}` : ""} — one tap to continue.`
+            : "Connect a wallet — 30 seconds, test dollars only."}
         </motion.p>
         <motion.div
           initial={{ opacity: 0, y: 26 }}
@@ -194,6 +226,19 @@ export function LoginView() {
         </div>
       </footer>
     </section>
+  )
+}
+
+export function ReconnectingSplash() {
+  return (
+    <div className="flex min-h-svh flex-col items-center justify-center gap-3 bg-[#F6F6F8] px-5 text-center">
+      <span className="relative flex size-2.5">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-aero-800 opacity-40" />
+        <span className="relative inline-flex size-2.5 rounded-full bg-aero-800" />
+      </span>
+      <p className="text-[15px] font-medium text-neutral-900">Welcome back</p>
+      <p className="text-sm text-neutral-500">Reconnecting your wallet…</p>
+    </div>
   )
 }
 

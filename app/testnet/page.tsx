@@ -10,6 +10,7 @@ import {
   MobileTabs,
   MobileTop,
   Overview,
+  ReconnectingSplash,
   Sidebar,
 } from "@/components/testnet/shell"
 import { EarnTab, PayScreen } from "@/components/testnet/views"
@@ -159,29 +160,20 @@ function TestnetConnected({
   setTab: (t: TestnetTab) => void
   prefill: { to: string; amount: string }
 }) {
-  const { address, isConnected, chainId } = useAccount()
+  const { address, isConnected, chainId, status } = useAccount()
   const isTerm = tab === "terminal"
 
-  // Mark this browser as returning: the marketing root redirects holders
-  // of this cookie straight into the app (middleware). Domain-scoped so
-  // useaero.org can read what testnet.useaero.org wrote.
   useEffect(() => {
-    try {
-      const host = window.location.hostname.toLowerCase()
-      const local =
-        host === "localhost" ||
-        host.endsWith(".localhost") ||
-        /^\d+\.\d+\.\d+\.\d+$/.test(host)
-      const domain = local
-        ? ""
-        : `; domain=.${host.split(".").slice(-2).join(".")}`
-      const secure = window.location.protocol === "https:" ? "; secure" : ""
-      document.cookie = `aero_returning=1; path=/; max-age=31536000; samesite=lax${domain}${secure}`
-    } catch {
-      /* private mode — the landing redirect just won't trigger */
+    if (isConnected && address) {
+      try {
+        window.localStorage.setItem("aero_last_user", address)
+      } catch {
+        /* ignore */
+      }
     }
-  }, [])
+  }, [isConnected, address])
 
+  if (status === "reconnecting") return <ReconnectingSplash />
   if (!isConnected || !address) return <LoginView />
   if (chainId !== FUJI_CHAIN_ID) return <WrongNetwork />
 
