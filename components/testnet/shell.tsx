@@ -7,7 +7,7 @@ import {
   useReducedMotion,
   useTransform,
 } from "motion/react"
-import { useBytecode, useDisconnect, useReadContract, useReadContracts } from "wagmi"
+import { useDisconnect, useReadContract, useReadContracts } from "wagmi"
 import { useQueryClient } from "@tanstack/react-query"
 import {
   ArrowDownLeft,
@@ -30,7 +30,7 @@ import { AeroMark } from "@/components/aero/logo"
 import { BrandLockup } from "@/components/aero/brand-logo"
 import { AppKitConnectButton } from "@/components/testnet/providers"
 import { BuySheet } from "./buy-sheet"
-import { FaucetMini, requestPayMode } from "./views"
+import { FaucetMini, requestPayMode, useRouterDeploymentGate } from "./views"
 import {
   namesAbi,
   routerAbi,
@@ -41,11 +41,10 @@ import type { Address } from "viem"
 import {
   CONTRACTS,
   FUJI_AVAX_FAUCET,
-  FUJI_CHAIN_ID,
   formatUsdc,
   isAddress,
-  routerConfigured,
 } from "@/lib/testnet"
+import { positionAssets, totalPortfolioAssets } from "@/lib/router-portfolio.mjs"
 import { readActivity } from "@/lib/testnet-activity"
 import { buildContacts } from "@/lib/contacts"
 import {
@@ -846,32 +845,8 @@ export function NotificationBell({
     setUnread(unreadCount())
   }
 
-  const { data: routerCode } = useBytecode({
-    address: CONTRACTS.router,
-    chainId: FUJI_CHAIN_ID,
-    query: { enabled: routerConfigured },
-  })
-  const routerHasCode = typeof routerCode === "string" && routerCode !== "0x"
-  const routerGateReads = routerConfigured && routerHasCode
-  const { data: routerVersion } = useReadContract({
-    address: CONTRACTS.router, abi: routerAbi, functionName: "deploymentVersion",
-    chainId: FUJI_CHAIN_ID, query: { enabled: routerGateReads },
-  })
-  const { data: routerAsset } = useReadContract({
-    address: CONTRACTS.router, abi: routerAbi, functionName: "asset",
-    chainId: FUJI_CHAIN_ID, query: { enabled: routerGateReads },
-  })
-  const { data: routerSlots } = useReadContract({
-    address: CONTRACTS.router, abi: routerAbi, functionName: "slotCount",
-    chainId: FUJI_CHAIN_ID, query: { enabled: routerGateReads },
-  })
-  const { data: routerConfigValid } = useReadContract({
-    address: CONTRACTS.router, abi: routerAbi, functionName: "configurationValid",
-    chainId: FUJI_CHAIN_ID, query: { enabled: routerGateReads },
-  })
-  const routerReadSafe = routerGateReads && routerVersion === BigInt(2_111) &&
-    typeof routerAsset === "string" && routerAsset.toLowerCase() === CONTRACTS.usdc.toLowerCase() &&
-    typeof routerSlots === "bigint" && routerSlots > BigInt(0) && routerConfigValid === true
+  const routerGate = useRouterDeploymentGate()
+  const routerReadSafe = routerGate.ready
 
   const { data: positions } = useReadContracts({
     contracts: [
@@ -920,24 +895,30 @@ export function NotificationBell({
         addSeenHashes(items.map((i) => i.hash))
 
         // Weekly yield digest from position growth.
-        if (positions) {
-          const [vShares, vIndex, rShares, rPrice] =
-            positions.map((p) =>
-              p.status === "success" ? (p.result as bigint) : BigInt(0)
-            )
-          const total = Number(vShares * vIndex + rShares * rPrice) / 1e24
-          const base = yieldBaseline()
-          const now = Date.now()
-          if (!base) {
-            saveYieldBaseline(now, total)
-          } else if (now - base.ts > WEEK) {
-            if (total > base.value + 0.01) {
-              pushNotice(
-                `Your yield earned $${(total - base.value).toFixed(2)} this week`,
-                "Idle money, working nights. Keep it rolling."
-              )
+        if (positions && routerReadSafe) {
+          const [vSharesRead, vIndexRead, rSharesRead, rPriceRead] = positions
+          const vaultAssets = vSharesRead.status === "success" && vIndexRead.status === "success"
+            ? positionAssets(vSharesRead.result as bigint, vIndexRead.result as bigint)
+            : undefined
+          const routerAssets = rSharesRead.status === "success" && rPriceRead.status === "success"
+            ? positionAssets(rSharesRead.result as bigint, rPriceRead.result as bigint)
+            : undefined
+          const assets = totalPortfolioAssets(vaultAssets, routerAssets)
+          if (assets !== undefined) {
+            const total = Number(assets) / 1e6
+            const base = yieldBaseline()
+            const now = Date.now()
+            if (!base) {
+              saveYieldBaseline(now, total)
+            } else if (now - base.ts > WEEK) {
+              if (total > base.value + 0.01) {
+                pushNotice(
+                  `Your yield earned $${(total - base.value).toFixed(2)} this week`,
+                  "Idle money, working nights. Keep it rolling."
+                )
+              }
+              saveYieldBaseline(now, total)
             }
-            saveYieldBaseline(now, total)
           }
         }
         refresh()

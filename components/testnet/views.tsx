@@ -1,11 +1,13 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
 import {
   useAccount,
   useBytecode,
+  usePublicClient,
   useReadContract,
+  useReadContracts,
   useWaitForTransactionReceipt,
   useWriteContract,
 } from "wagmi"
@@ -49,6 +51,9 @@ import {
   snowtraceTx,
 } from "@/lib/testnet"
 import { pushActivity } from "@/lib/testnet-activity"
+import { FUJI_ROUTER_MANIFEST } from "@/lib/fuji-router-manifest"
+import { isCompleteRouterManifest, verifyRouterDeploymentIdentity } from "@/lib/router-deployment-identity.mjs"
+import { positionAssets, totalPortfolioAssets } from "@/lib/router-portfolio.mjs"
 import { pushNotice } from "@/lib/notifications"
 import {
   buildContacts,
@@ -965,19 +970,64 @@ function useRouterDeploymentGate() {
     address: CONTRACTS.router, abi: routerAbi, functionName: "configurationValid", ...readOptions,
   })
 
-  const ready = routerConfigured && chainId === FUJI_CHAIN_ID && hasCode &&
-    version === BigInt(2_111) && typeof asset === "string" &&
-    asset.toLowerCase() === CONTRACTS.usdc.toLowerCase() &&
-    typeof slotCount === "bigint" && slotCount > BigInt(0) && slotCount <= BigInt(16) && configurationValid === true
+  const slotCountNumber = typeof slotCount === "bigint" && slotCount > BigInt(0) && slotCount <= BigInt(16)
+    ? Number(slotCount)
+    : 0
+  const slotContracts = useMemo(() => Array.from({ length: slotCountNumber }, (_, index) => ({
+    address: CONTRACTS.router,
+    abi: routerAbi,
+    functionName: "slots" as const,
+    args: [BigInt(index)] as const,
+  })), [slotCountNumber])
+  const { data: slotReads } = useReadContracts({
+    contracts: slotContracts,
+    chainId: FUJI_CHAIN_ID,
+    query: { enabled: enabled && slotCountNumber > 0 },
+  })
+  const slotAddresses = (slotReads ?? []).map((entry) => {
+    if (entry.status !== "success" || !Array.isArray(entry.result)) return undefined
+    const adapter = entry.result[0]
+    return typeof adapter === "string" ? adapter : undefined
+  })
+  const slotAddressesKey = slotAddresses.join("|")
+  const slotReadsComplete = slotCountNumber > 0 && slotAddresses.length === slotCountNumber &&
+    slotAddresses.every((address): address is Address => typeof address === "string")
+  const fujiClient = usePublicClient({ chainId: FUJI_CHAIN_ID })
+  const [adapterBytecodes, setAdapterBytecodes] = useState<(string | undefined)[]>([])
+  useEffect(() => {
+    let current = true
+    setAdapterBytecodes([])
+    if (!fujiClient || !slotReadsComplete) return () => { current = false }
+    const addresses = slotAddresses as Address[]
+    void Promise.all(addresses.map((address) => fujiClient.getBytecode({ address })))
+      .then((codes) => { if (current) setAdapterBytecodes(codes) })
+      .catch(() => { if (current) setAdapterBytecodes(addresses.map(() => undefined)) })
+    return () => { current = false }
+  }, [fujiClient, slotAddressesKey, slotReadsComplete])
+
+  const identity = verifyRouterDeploymentIdentity({
+    chainId: chainId ?? 0,
+    configuredRouterAddress: CONTRACTS.router,
+    configuredAssetAddress: CONTRACTS.usdc,
+    routerBytecode: typeof bytecode === "string" ? bytecode : undefined,
+    deploymentVersion: typeof version === "bigint" ? Number(version) : undefined,
+    assetAddress: typeof asset === "string" ? asset : undefined,
+    slotCount: typeof slotCount === "bigint" ? Number(slotCount) : undefined,
+    configurationValid: configurationValid === true,
+    slotAddresses,
+    adapterBytecodes,
+  }, FUJI_ROUTER_MANIFEST)
+
+  const ready = routerConfigured && identity.ok
   let message = ""
   if (!routerConfigured) message = "Yield router is not configured; the simulated AeroVault remains available."
   else if (chainId !== FUJI_CHAIN_ID) message = "Switch the connected wallet to Avalanche Fuji to use the router."
+  else if (!isCompleteRouterManifest(FUJI_ROUTER_MANIFEST)) message = "No complete, reviewed Fuji router identity manifest is available. Router actions are disabled."
   else if (checkingCode) message = "Verifying the configured router deployment on Fuji…"
   else if (codeError || !hasCode) message = "Configured router has no readable contract bytecode on Fuji. Router actions are disabled."
-  else if (version === undefined || asset === undefined || slotCount === undefined || configurationValid === undefined)
+  else if (version === undefined || asset === undefined || slotCount === undefined || configurationValid === undefined || !slotReadsComplete || adapterBytecodes.length !== slotCountNumber)
     message = "Router deployment checks are still loading or failed. Router actions are disabled."
-  else if (version !== BigInt(2_111) || asset.toLowerCase() !== CONTRACTS.usdc.toLowerCase() || slotCount === BigInt(0) || slotCount > BigInt(16) || configurationValid !== true)
-    message = "Configured router is incompatible or incompletely bound. Router actions are disabled."
+  else if (!identity.ok) message = `Router deployment identity check failed: ${identity.errors[0]} Router actions are disabled.`
   return { ready, message, slotCount }
 }
 
@@ -1107,8 +1157,7 @@ export function RouterPanel({ address }: { address: Address }) {
     refetchPreview()
   }
   const needsApprove = raw !== null && (allowance ?? BigInt(0)) < raw
-  const myAssets =
-    myShares && price ? (myShares * price) / BigInt(1e18) : undefined
+  const myAssets = positionAssets(myShares, price)
 
   useEffect(() => {
     if (depositTx.done) {
@@ -1662,14 +1711,15 @@ export function EarnTab({ address }: { address: Address }) {
   const depositRaw = parseUsdc(depositAmt)
   const needsApprove =
     depositRaw !== null && (allowance ?? BigInt(0)) < depositRaw
-  const myAssets = shares && index ? (shares * index) / BigInt(1e18) : undefined
+  const myAssets = positionAssets(shares, index)
 
-  const vaultAssets = myAssets ?? BigInt(0)
-  const routerAssets =
-    routerGate.ready && routerShares && routerPrice
-      ? (routerShares * routerPrice) / BigInt(1e18)
-      : BigInt(0)
-  const earning = vaultAssets + routerAssets
+  const vaultAssets = myAssets
+  const routerAssets = routerGate.ready
+    ? positionAssets(routerShares, routerPrice)
+    : routerConfigured ? undefined : BigInt(0)
+  const earning = routerConfigured
+    ? routerGate.ready ? totalPortfolioAssets(vaultAssets, routerAssets) : undefined
+    : vaultAssets
 
   const vaultApr =
     rate !== undefined ? ((Number(rate) * 31_557_600) / 1e18) * 100 : null
@@ -1677,7 +1727,7 @@ export function EarnTab({ address }: { address: Address }) {
   const venueRows = [
     {
       id: "router" as const,
-      label: "Auto-router",
+      label: "Auto-router · mock rates",
       apr: routerApr,
       assets: routerAssets,
       show: routerGate.ready,
@@ -1747,6 +1797,11 @@ export function EarnTab({ address }: { address: Address }) {
 
   return (
     <div>
+      {routerConfigured && !routerGate.ready && (
+        <p role="status" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Yield router unavailable: {routerGate.message} The Mock vault below is a separate simulated venue.
+        </p>
+      )}
       <p className="flex items-center gap-1.5 text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
         <Zap className="size-3.5" /> Earning across venues
       </p>
@@ -1770,8 +1825,9 @@ export function EarnTab({ address }: { address: Address }) {
 
       <div className="mt-6 flex h-2.5 w-full overflow-hidden rounded-full bg-neutral-100">
         {venueRows.map((v) => {
-          const pct =
-            earning > BigInt(0) ? (Number(v.assets) / Number(earning)) * 100 : 0
+          const pct = typeof earning === "bigint" && earning > BigInt(0) && typeof v.assets === "bigint"
+            ? (Number(v.assets) / Number(earning)) * 100
+            : 0
           if (pct <= 0) return null
           return (
             <div

@@ -21,6 +21,8 @@ import {
   routerConfigured,
 } from "@/lib/testnet"
 import { fujiClient } from "@/lib/onchain-activity"
+import { FUJI_ROUTER_MANIFEST } from "@/lib/fuji-router-manifest"
+import { readAndVerifyRouterDeployment } from "@/lib/router-deployment-identity.mjs"
 
 type Line = {
   text: string
@@ -323,16 +325,16 @@ export function TerminalView({ address }: { address: Address }) {
             read(async () => {
               if (!routerConfigured) return undefined
               try {
-                const code = await fujiClient.getBytecode({ address: CONTRACTS.router })
-                if (!code || code === "0x") return undefined
-                const [version, asset, slots, valid] = await Promise.all([
-                  fujiClient.readContract({ address: CONTRACTS.router, abi: routerAbi, functionName: "deploymentVersion" }),
-                  fujiClient.readContract({ address: CONTRACTS.router, abi: routerAbi, functionName: "asset" }),
-                  fujiClient.readContract({ address: CONTRACTS.router, abi: routerAbi, functionName: "slotCount" }),
-                  fujiClient.readContract({ address: CONTRACTS.router, abi: routerAbi, functionName: "configurationValid" }),
-                ])
-                if (version !== BigInt(2_111) || typeof asset !== "string" || asset.toLowerCase() !== CONTRACTS.usdc.toLowerCase() || slots === BigInt(0) || !valid)
-                  return undefined
+                const identity = await readAndVerifyRouterDeployment(
+                  fujiClient,
+                  routerAbi,
+                  {
+                    configuredRouterAddress: CONTRACTS.router,
+                    configuredAssetAddress: CONTRACTS.usdc,
+                  },
+                  FUJI_ROUTER_MANIFEST,
+                )
+                if (!identity.ok) return undefined
                 return fujiClient.readContract({ address: CONTRACTS.router, abi: routerAbi, functionName: "liveApyBps" })
               } catch {
                 return undefined
