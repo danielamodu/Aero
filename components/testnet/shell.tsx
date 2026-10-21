@@ -7,7 +7,7 @@ import {
   useReducedMotion,
   useTransform,
 } from "motion/react"
-import { useDisconnect, useReadContract, useReadContracts } from "wagmi"
+import { useBytecode, useDisconnect, useReadContract, useReadContracts } from "wagmi"
 import { useQueryClient } from "@tanstack/react-query"
 import {
   ArrowDownLeft,
@@ -32,7 +32,6 @@ import { AppKitConnectButton } from "@/components/testnet/providers"
 import { BuySheet } from "./buy-sheet"
 import { FaucetMini, requestPayMode } from "./views"
 import {
-  adapterAbi,
   namesAbi,
   routerAbi,
   usdcAbi,
@@ -42,6 +41,7 @@ import type { Address } from "viem"
 import {
   CONTRACTS,
   FUJI_AVAX_FAUCET,
+  FUJI_CHAIN_ID,
   formatUsdc,
   isAddress,
   routerConfigured,
@@ -226,6 +226,71 @@ export function LoginView() {
         </div>
       </footer>
     </section>
+  )
+}
+
+function FeedRow({
+  a,
+  names,
+}: {
+  a: { label: string; amount: string; hash: string; ts: number; memo?: string; dir: "in" | "out"; peer: string | null }
+  names: Map<string, string>
+}) {
+  const peerLabel = a.peer
+    ? (names.get(a.peer.toLowerCase()) ??
+      `${a.peer.slice(0, 6)}…${a.peer.slice(-4)}`)
+    : null
+  const Incoming = a.dir === "in"
+
+  return (
+    <motion.div
+      className="flex items-center gap-3 py-2.5 text-sm"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{
+        duration: 0.35,
+        ease: [0.22, 1, 0.36, 1],
+      }}
+    >
+      <span
+        className={cn(
+          "flex size-8 shrink-0 items-center justify-center rounded-full",
+          Incoming
+            ? "bg-emerald-50 text-emerald-600"
+            : "bg-neutral-100 text-neutral-500"
+        )}
+      >
+        {Incoming ? (
+          <ArrowDownLeft className="size-4" />
+        ) : (
+          <ArrowUpRight className="size-4" />
+        )}
+      </span>
+      <span className="min-w-0 flex-1 truncate">
+        <span className="block truncate font-medium text-neutral-900">
+          {Incoming ? "Received" : "Sent"}
+          {peerLabel ? (
+            <span className="font-normal text-neutral-500"> · {peerLabel}</span>
+          ) : null}{" "}
+          <span className="tabular-nums">{a.amount}</span>
+        </span>
+        <span className="block truncate text-[13px] text-neutral-400">
+          {a.ts > 0 ? `${timeAgo(a.ts)} · ` : ""}Confirmed
+          {a.memo ? ` · “${a.memo}”` : ""}
+        </span>
+      </span>
+      <span className="hidden shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 sm:inline">
+        Confirmed
+      </span>
+      <a
+        href={`https://testnet.snowtrace.io/tx/${a.hash}`}
+        target="_blank"
+        rel="noreferrer"
+        className="shrink-0 font-medium text-aero-800 hover:underline"
+      >
+        Receipt
+      </a>
+    </motion.div>
   )
 }
 
@@ -781,6 +846,33 @@ export function NotificationBell({
     setUnread(unreadCount())
   }
 
+  const { data: routerCode } = useBytecode({
+    address: CONTRACTS.router,
+    chainId: FUJI_CHAIN_ID,
+    query: { enabled: routerConfigured },
+  })
+  const routerHasCode = typeof routerCode === "string" && routerCode !== "0x"
+  const routerGateReads = routerConfigured && routerHasCode
+  const { data: routerVersion } = useReadContract({
+    address: CONTRACTS.router, abi: routerAbi, functionName: "deploymentVersion",
+    chainId: FUJI_CHAIN_ID, query: { enabled: routerGateReads },
+  })
+  const { data: routerAsset } = useReadContract({
+    address: CONTRACTS.router, abi: routerAbi, functionName: "asset",
+    chainId: FUJI_CHAIN_ID, query: { enabled: routerGateReads },
+  })
+  const { data: routerSlots } = useReadContract({
+    address: CONTRACTS.router, abi: routerAbi, functionName: "slotCount",
+    chainId: FUJI_CHAIN_ID, query: { enabled: routerGateReads },
+  })
+  const { data: routerConfigValid } = useReadContract({
+    address: CONTRACTS.router, abi: routerAbi, functionName: "configurationValid",
+    chainId: FUJI_CHAIN_ID, query: { enabled: routerGateReads },
+  })
+  const routerReadSafe = routerGateReads && routerVersion === BigInt(2_111) &&
+    typeof routerAsset === "string" && routerAsset.toLowerCase() === CONTRACTS.usdc.toLowerCase() &&
+    typeof routerSlots === "bigint" && routerSlots > BigInt(0) && routerConfigValid === true
+
   const { data: positions } = useReadContracts({
     contracts: [
       {
@@ -791,17 +883,6 @@ export function NotificationBell({
       },
       { address: CONTRACTS.vault, abi: vaultAbi, functionName: "index" },
       {
-        address: CONTRACTS.adapter,
-        abi: adapterAbi,
-        functionName: "balanceOf",
-        args: [address],
-      },
-      {
-        address: CONTRACTS.adapter,
-        abi: adapterAbi,
-        functionName: "sharePrice",
-      },
-      {
         address: CONTRACTS.router,
         abi: routerAbi,
         functionName: "balanceOf",
@@ -809,7 +890,7 @@ export function NotificationBell({
       },
       { address: CONTRACTS.router, abi: routerAbi, functionName: "sharePrice" },
     ],
-    query: { enabled: routerConfigured },
+    query: { enabled: routerReadSafe },
   })
 
   useEffect(() => {
@@ -840,13 +921,11 @@ export function NotificationBell({
 
         // Weekly yield digest from position growth.
         if (positions) {
-          const [vShares, vIndex, aShares, aPrice, rShares, rPrice] =
+          const [vShares, vIndex, rShares, rPrice] =
             positions.map((p) =>
               p.status === "success" ? (p.result as bigint) : BigInt(0)
             )
-          const total =
-            Number(vShares * vIndex + aShares * aPrice + rShares * rPrice) /
-            1e24
+          const total = Number(vShares * vIndex + rShares * rPrice) / 1e24
           const base = yieldBaseline()
           const now = Date.now()
           if (!base) {
@@ -1063,67 +1142,155 @@ export function Overview({
     rate !== undefined
       ? (((Number(rate) * 31_557_600) / 1e18) * 100).toFixed(2)
       : "—"
+  const showBalance = Number(total) > 0
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col">
       <motion.div
-        initial={{ opacity: 0, y: 16 }}
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="relative overflow-hidden"
       >
-        <h1 className="text-3xl font-medium tracking-[-0.02em] text-neutral-900 sm:text-4xl">
+        <motion.span
+          aria-hidden
+          className="pointer-events-none absolute -right-[18%] -bottom-[22%] hidden font-medium tracking-[-0.06em] text-neutral-900/[0.04] select-none sm:block"
+          style={{ fontSize: "22rem", lineHeight: 0.85 }}
+          initial={{ y: 30, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
+        >
+          $
+        </motion.span>
+        <motion.h1
+          className="relative text-3xl font-medium tracking-[-0.02em] text-neutral-900 sm:text-4xl"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{
+            duration: 0.45,
+            ease: [0.22, 1, 0.36, 1],
+            delay: 0.05,
+          }}
+        >
           {greeting()}
           {myName ? `, @${myName}` : ""}.
-        </h1>
+        </motion.h1>
+        <motion.p
+          className="relative mt-3 text-5xl font-medium tracking-tight text-neutral-900 tabular-nums sm:text-7xl"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{
+            duration: 0.5,
+            ease: [0.22, 1, 0.36, 1],
+            delay: 0.12,
+          }}
+        >
+          <motion.span
+            key={String(total)}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className="inline-block tabular-nums"
+          >
+            ${formatUsdc(total)}
+          </motion.span>
+          <motion.span
+            animate={showBalance ? { scale: [1, 1.02, 1] } : {}}
+            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+            className="ml-2 inline-block origin-left text-xs font-semibold text-emerald-600"
+          >
+            {showBalance ? "· live" : ""}
+          </motion.span>
+        </motion.p>
+        <motion.p
+          className="relative mt-2 text-[15px] text-neutral-500 tabular-nums"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.45, delay: 0.18 }}
+        >
+          Available ${formatUsdc(usdc)} · Earning $
+          {formatUsdc(earning === BigInt(0) && !shares ? undefined : earning)} ·{" "}
+          <motion.span
+            key={apr}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.35 }}
+            className="font-medium text-emerald-600"
+          >
+            {apr}% APR
+          </motion.span>
+        </motion.p>
       </motion.div>
-
-      <p className="mt-4 text-6xl font-medium tracking-tight text-neutral-900 tabular-nums sm:text-7xl">
-        ${formatUsdc(total)}
-      </p>
-      <p className="mt-2 text-[15px] text-neutral-500 tabular-nums">
-        Available ${formatUsdc(usdc)} · Earning $
-        {formatUsdc(earning === BigInt(0) && !shares ? undefined : earning)} ·{" "}
-        {apr}% APR
-      </p>
-      <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-        <button
-          type="button"
-          onClick={() => {
-            requestPayMode("send")
-            go("pay")
-          }}
-          className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-neutral-200/80 bg-white text-[15px] font-medium text-neutral-900 transition hover:border-neutral-300"
-        >
-          <Send className="size-4" /> Send
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            requestPayMode("request")
-            go("pay")
-          }}
-          className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-neutral-200/80 bg-white text-[15px] font-medium text-neutral-900 transition hover:border-neutral-300"
-        >
-          <HandCoins className="size-4" /> Request
-        </button>
-        <button
-          type="button"
-          onClick={() => setBuyOpen(true)}
-          className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-neutral-200/80 bg-white text-[15px] font-medium text-neutral-900 transition hover:border-neutral-300"
-        >
-          <Plus className="size-4" /> Top up
-        </button>
-        <button
-          type="button"
-          onClick={() => go("earn")}
-          className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-neutral-200/80 bg-white text-[15px] font-medium text-neutral-900 transition hover:border-neutral-300"
-        >
-          <Sprout className="size-4" /> Earn
-        </button>
-      </div>
+      <motion.div
+        className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-4"
+        initial="hidden"
+        animate="show"
+        variants={{
+          hidden: {},
+          show: { transition: { staggerChildren: 0.06, delayChildren: 0.22 } },
+        }}
+      >
+        {[
+          {
+            id: "send",
+            onClick: () => {
+              requestPayMode("send")
+              go("pay")
+            },
+            icon: Send,
+            label: "Send",
+          },
+          {
+            id: "request",
+            onClick: () => {
+              requestPayMode("request")
+              go("pay")
+            },
+            icon: HandCoins,
+            label: "Request",
+          },
+          {
+            id: "topup",
+            onClick: () => setBuyOpen(true),
+            icon: Plus,
+            label: "Top up",
+          },
+          {
+            id: "earn",
+            onClick: () => go("earn"),
+            icon: Sprout,
+            label: "Earn",
+          },
+        ].map((a) => (
+          <motion.button
+            key={a.id}
+            type="button"
+            onClick={a.onClick}
+            variants={{
+              hidden: { opacity: 0, y: 10 },
+              show: {
+                opacity: 1,
+                y: 0,
+                transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] },
+              },
+            }}
+            whileHover={{ y: -2, scale: 1.015 }}
+            whileTap={{ scale: 0.98 }}
+            className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-neutral-200/80 bg-white text-[15px] font-medium text-neutral-900 shadow-sm transition-[border-color,box-shadow] hover:border-neutral-300 hover:shadow"
+          >
+            <a.icon className="size-4" /> {a.label}
+          </motion.button>
+        ))}
+      </motion.div>
       <BuySheet open={buyOpen} onOpenChange={setBuyOpen} />
 
       <div className="mt-5 grid min-h-0 flex-1 items-stretch gap-5 xl:grid-cols-[1.8fr_1fr]">
-        <div className="flex min-h-0 flex-col rounded-2xl border border-neutral-200/80 bg-white p-5 sm:p-6">
+        <motion.div
+          className="flex min-h-0 flex-col rounded-2xl border border-neutral-200/80 bg-white p-5 sm:p-6"
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: 0.32 }}
+          whileHover={{ y: -1 }}
+        >
           <div className="flex items-center justify-between">
             <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
               Recent activity
@@ -1156,107 +1323,91 @@ export function Overview({
             {chain === null ? (
               <div className="mt-3 space-y-2.5" aria-label="Loading activity">
                 {[0, 1, 2].map((i) => (
-                  <div
+                  <motion.div
                     key={i}
-                    className="h-9 animate-pulse rounded-xl bg-neutral-100"
+                    className="h-9 rounded-xl bg-neutral-100"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{
+                      duration: 0.35,
+                      delay: i * 0.08,
+                      repeat: i === 1 ? Infinity : 0,
+                      repeatType: "reverse",
+                      repeatDelay: 0.6,
+                    }}
                   />
                 ))}
               </div>
             ) : feed.length === 0 ? (
-              <div className="mt-3">
+              <motion.div
+                className="mt-3"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              >
                 <p className="text-[15px] leading-relaxed text-neutral-500">
                   Nothing yet — send your first payment and it&apos;ll show up
                   here with its receipt.
                 </p>
-                <button
+                <motion.button
                   type="button"
                   onClick={() => {
                     requestPayMode("send")
                     go("pay")
                   }}
+                  whileHover={{ scale: 1.02, y: -1 }}
+                  whileTap={{ scale: 0.98 }}
                   className="pressable mt-4 inline-flex h-11 items-center gap-2 rounded-full bg-aero-800 px-6 text-[15px] font-medium text-white transition hover:bg-aero-900"
                 >
                   <Send className="size-4" /> Send your first payment
-                </button>
-              </div>
+                </motion.button>
+              </motion.div>
             ) : (
               <div className="mt-2 divide-y divide-neutral-100">
-                {feed.slice(0, 10).map((a) => {
-                  const peerLabel = a.peer
-                    ? (names.get(a.peer.toLowerCase()) ??
-                      `${a.peer.slice(0, 6)}…${a.peer.slice(-4)}`)
-                    : null
-                  const Incoming = a.dir === "in"
-                  return (
-                    <div
-                      key={a.hash}
-                      className="flex items-center gap-3 py-2.5 text-sm"
-                    >
-                      <span
-                        className={cn(
-                          "flex size-8 shrink-0 items-center justify-center rounded-full",
-                          Incoming
-                            ? "bg-emerald-50 text-emerald-600"
-                            : "bg-neutral-100 text-neutral-500"
-                        )}
-                      >
-                        {Incoming ? (
-                          <ArrowDownLeft className="size-4" />
-                        ) : (
-                          <ArrowUpRight className="size-4" />
-                        )}
-                      </span>
-                      <span className="min-w-0 flex-1 truncate">
-                        <span className="block truncate font-medium text-neutral-900">
-                          {Incoming ? "Received" : "Sent"}
-                          {peerLabel ? (
-                            <span className="font-normal text-neutral-500">
-                              {" "}
-                              · {peerLabel}
-                            </span>
-                          ) : null}{" "}
-                          <span className="tabular-nums">{a.amount}</span>
-                        </span>
-                        <span className="block truncate text-[13px] text-neutral-400">
-                          {a.ts > 0 ? `${timeAgo(a.ts)} · ` : ""}Confirmed
-                          {a.memo ? ` · “${a.memo}”` : ""}
-                        </span>
-                      </span>
-                      <span className="hidden shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 sm:inline">
-                        Confirmed
-                      </span>
-                      <a
-                        href={`https://testnet.snowtrace.io/tx/${a.hash}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="shrink-0 font-medium text-aero-800 hover:underline"
-                      >
-                        Receipt
-                      </a>
-                    </div>
-                  )
-                })}
+                {feed.slice(0, 10).map((a) => (
+                  <FeedRow key={a.hash} a={a} names={names} />
+                ))}
               </div>
             )}
           </div>
-        </div>
-        <div className="flex min-h-0 flex-col space-y-5">
-          <Portfolio
-            address={address}
-            fujiUsdc={usdc}
-            goSend={(amt) => {
-              try {
-                window.localStorage.setItem(
-                  "aero_send_prefill",
-                  JSON.stringify({ amount: amt })
-                )
-              } catch {
-                /* ignore */
-              }
-              go("pay")
+        </motion.div>
+        <motion.div
+          className="flex min-h-0 flex-col space-y-5"
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{
+            duration: 0.45,
+            ease: [0.22, 1, 0.36, 1],
+            delay: 0.38,
+          }}
+        >
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              duration: 0.4,
+              ease: [0.22, 1, 0.36, 1],
+              delay: 0.44,
             }}
-          />
-        </div>
+            whileHover={{ y: -1 }}
+          >
+            <Portfolio
+              address={address}
+              fujiUsdc={usdc}
+              goSend={(amt) => {
+                try {
+                  window.localStorage.setItem(
+                    "aero_send_prefill",
+                    JSON.stringify({ amount: amt })
+                  )
+                } catch {
+                  /* ignore */
+                }
+                go("pay")
+              }}
+            />
+          </motion.div>
+        </motion.div>
       </div>
       <div className="mt-5 space-y-5 lg:hidden">
         <FaucetMini address={address} />

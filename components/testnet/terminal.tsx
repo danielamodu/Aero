@@ -8,7 +8,7 @@ import {
   payAbi,
   usdcAbi,
   vaultAbi,
-  adapterAbi,
+  routerAbi,
 } from "@/lib/contracts"
 import {
   CONTRACTS,
@@ -18,6 +18,7 @@ import {
   normalizeUsername,
   parseUsdc,
   payConfigured,
+  routerConfigured,
 } from "@/lib/testnet"
 import { fujiClient } from "@/lib/onchain-activity"
 
@@ -319,15 +320,24 @@ export function TerminalView({ address }: { address: Address }) {
                 functionName: "ratePerSecond",
               })
             ) as Promise<bigint>,
-            read(() =>
-              fujiClient
-                .readContract({
-                  address: CONTRACTS.adapter,
-                  abi: adapterAbi,
-                  functionName: "liveApyBps",
-                })
-                .catch(() => undefined)
-            ),
+            read(async () => {
+              if (!routerConfigured) return undefined
+              try {
+                const code = await fujiClient.getBytecode({ address: CONTRACTS.router })
+                if (!code || code === "0x") return undefined
+                const [version, asset, slots, valid] = await Promise.all([
+                  fujiClient.readContract({ address: CONTRACTS.router, abi: routerAbi, functionName: "deploymentVersion" }),
+                  fujiClient.readContract({ address: CONTRACTS.router, abi: routerAbi, functionName: "asset" }),
+                  fujiClient.readContract({ address: CONTRACTS.router, abi: routerAbi, functionName: "slotCount" }),
+                  fujiClient.readContract({ address: CONTRACTS.router, abi: routerAbi, functionName: "configurationValid" }),
+                ])
+                if (version !== BigInt(2_111) || typeof asset !== "string" || asset.toLowerCase() !== CONTRACTS.usdc.toLowerCase() || slots === BigInt(0) || !valid)
+                  return undefined
+                return fujiClient.readContract({ address: CONTRACTS.router, abi: routerAbi, functionName: "liveApyBps" })
+              } catch {
+                return undefined
+              }
+            }),
           ])
           const lines: Line[] = [
             {
@@ -337,7 +347,7 @@ export function TerminalView({ address }: { address: Address }) {
           ]
           if (typeof bps === "bigint")
             lines.push({
-              text: `benqi market  ${(Number(bps) / 100).toFixed(2)}% APR`,
+              text: `yield router  ${(Number(bps) / 100).toFixed(2)}% annualized`,
               kind: "ok",
             })
           print(lines)

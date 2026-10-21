@@ -28,11 +28,6 @@ export const routerAbi = [
         "name": "adapter",
         "type": "address",
         "internalType": "address"
-      },
-      {
-        "name": "targetBps",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ],
     "outputs": [],
@@ -139,6 +134,11 @@ export const routerAbi = [
         "name": "assets",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "minShares",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [
@@ -149,6 +149,41 @@ export const routerAbi = [
       }
     ],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "MAX_ADAPTERS",
+    "inputs": [],
+    "outputs": [{"name": "", "type": "uint256", "internalType": "uint256"}],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "deploymentVersion",
+    "inputs": [],
+    "outputs": [{"name": "", "type": "uint256", "internalType": "uint256"}],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "configurationValid",
+    "inputs": [],
+    "outputs": [{"name": "", "type": "bool", "internalType": "bool"}],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "previewDeposit",
+    "inputs": [{"name": "assets", "type": "uint256", "internalType": "uint256"}],
+    "outputs": [{"name": "shares", "type": "uint256", "internalType": "uint256"}],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "previewWithdraw",
+    "inputs": [{"name": "shares", "type": "uint256", "internalType": "uint256"}],
+    "outputs": [{"name": "assets", "type": "uint256", "internalType": "uint256"}],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -257,6 +292,25 @@ export const routerAbi = [
   },
   {
     "type": "function",
+    "name": "slotAssets",
+    "inputs": [
+      {
+        "name": "index",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "sharePrice",
     "inputs": [],
     "outputs": [
@@ -295,7 +349,7 @@ export const routerAbi = [
       {
         "name": "adapter",
         "type": "address",
-        "internalType": "contract IRouteAdapter"
+        "internalType": "contract IYieldAdapter"
       },
       {
         "name": "targetBps",

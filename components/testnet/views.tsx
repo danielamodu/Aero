@@ -1,8 +1,10 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
 import {
+  useAccount,
+  useBytecode,
   useReadContract,
   useWaitForTransactionReceipt,
   useWriteContract,
@@ -36,7 +38,7 @@ import {
 import {
   CONTRACTS,
   FUJI_AVAX_FAUCET,
-  adapterConfigured,
+  FUJI_CHAIN_ID,
   formatUsdc,
   isAddress,
   isUsername,
@@ -116,7 +118,6 @@ export function TxStatus({
     </a>
   )
 }
-
 export function Field({
   label,
   children,
@@ -936,46 +937,90 @@ export function PayScreen({
 
 function prettyMarket(id: string): string {
   const first = id.split("-")[0].toLowerCase()
-  if (first === "benqi") return "Benqi market"
-  if (first === "joe") return "Trader Joe market"
+  if (first === "benqi") return "Benqi mock market"
+  if (first === "joe") return "Trader Joe mock market"
   return first ? first.charAt(0).toUpperCase() + first.slice(1) : "Market"
 }
 
-function SlotRow({ index, total }: { index: number; total: bigint }) {
-  const { data: slot } = useReadContract({
+function useRouterDeploymentGate() {
+  const { chainId } = useAccount()
+  const { data: bytecode, isPending: checkingCode, isError: codeError } = useBytecode({
+    address: CONTRACTS.router,
+    chainId: FUJI_CHAIN_ID,
+    query: { enabled: routerConfigured },
+  })
+  const hasCode = typeof bytecode === "string" && bytecode !== "0x"
+  const enabled = routerConfigured && hasCode
+  const readOptions = { chainId: FUJI_CHAIN_ID, query: { enabled } } as const
+  const { data: version } = useReadContract({
+    address: CONTRACTS.router, abi: routerAbi, functionName: "deploymentVersion", ...readOptions,
+  })
+  const { data: asset } = useReadContract({
+    address: CONTRACTS.router, abi: routerAbi, functionName: "asset", ...readOptions,
+  })
+  const { data: slotCount } = useReadContract({
+    address: CONTRACTS.router, abi: routerAbi, functionName: "slotCount", ...readOptions,
+  })
+  const { data: configurationValid } = useReadContract({
+    address: CONTRACTS.router, abi: routerAbi, functionName: "configurationValid", ...readOptions,
+  })
+
+  const ready = routerConfigured && chainId === FUJI_CHAIN_ID && hasCode &&
+    version === BigInt(2_111) && typeof asset === "string" &&
+    asset.toLowerCase() === CONTRACTS.usdc.toLowerCase() &&
+    typeof slotCount === "bigint" && slotCount > BigInt(0) && slotCount <= BigInt(16) && configurationValid === true
+  let message = ""
+  if (!routerConfigured) message = "Yield router is not configured; the simulated AeroVault remains available."
+  else if (chainId !== FUJI_CHAIN_ID) message = "Switch the connected wallet to Avalanche Fuji to use the router."
+  else if (checkingCode) message = "Verifying the configured router deployment on Fuji…"
+  else if (codeError || !hasCode) message = "Configured router has no readable contract bytecode on Fuji. Router actions are disabled."
+  else if (version === undefined || asset === undefined || slotCount === undefined || configurationValid === undefined)
+    message = "Router deployment checks are still loading or failed. Router actions are disabled."
+  else if (version !== BigInt(2_111) || asset.toLowerCase() !== CONTRACTS.usdc.toLowerCase() || slotCount === BigInt(0) || slotCount > BigInt(16) || configurationValid !== true)
+    message = "Configured router is incompatible or incompletely bound. Router actions are disabled."
+  return { ready, message, slotCount }
+}
+
+function SlotRow({ index, total, onReadable }: { index: number; total: bigint; onReadable: (index: number, readable: boolean) => void }) {
+  const { data: slot, isLoading: slotLoading, isError: slotError } = useReadContract({
     address: CONTRACTS.router,
     abi: routerAbi,
     functionName: "slots",
     args: [BigInt(index)],
+    chainId: FUJI_CHAIN_ID,
   })
   const adapter = slot?.[0] as Address | undefined
   const targetBps = slot?.[1] as bigint | undefined
-  const { data: bal } = useReadContract({
-    address: adapter,
-    abi: adapterAbi,
-    functionName: "balance",
-    query: { enabled: !!adapter },
+  const { data: bal, isLoading: assetsLoading, isError: assetsError } = useReadContract({
+    address: CONTRACTS.router,
+    abi: routerAbi,
+    functionName: "slotAssets",
+    args: [BigInt(index)],
+    chainId: FUJI_CHAIN_ID,
   })
   const { data: mid } = useReadContract({
     address: adapter,
     abi: adapterAbi,
     functionName: "marketId",
+    chainId: FUJI_CHAIN_ID,
     query: { enabled: !!adapter },
   })
-  if (targetBps === undefined) return null
+  const readable = targetBps !== undefined && typeof bal === "bigint" && !slotError && !assetsError
+  useEffect(() => onReadable(index, readable), [index, onReadable, readable])
+  if (!readable) return <p className="text-sm text-amber-200">{slotLoading || assetsLoading ? `Loading slot ${index + 1}…` : `Slot ${index + 1} data unavailable`}</p>
   const target = Number(targetBps) / 100
   const actual =
     total > BigInt(0) && typeof bal === "bigint"
       ? (Number(bal) / Number(total)) * 100
-      : 0
+      : undefined
   return (
     <div>
       <div className="flex items-baseline justify-between text-sm">
         <span className="font-medium text-neutral-800">
-          {prettyMarket(typeof mid === "string" ? mid : "")}
+          {typeof mid === "string" ? prettyMarket(mid) : `Adapter ${adapter?.slice(0, 6)}…${adapter?.slice(-4)}`}
         </span>
         <span className="font-mono text-neutral-500 tabular-nums">
-          {actual.toFixed(1)}%{" "}
+          {actual === undefined ? "—" : `${actual.toFixed(1)}%`}{" "}
           <span className="text-neutral-300">
             / target {target.toFixed(0)}%
           </span>
@@ -984,7 +1029,7 @@ function SlotRow({ index, total }: { index: number; total: bigint }) {
       <div className="relative mt-1.5 h-2 overflow-visible rounded-full bg-neutral-100">
         <div
           className="h-full rounded-full bg-aero-800 transition-all"
-          style={{ width: `${Math.min(100, actual)}%` }}
+          style={{ width: `${Math.min(100, actual ?? 0)}%` }}
         />
         <span
           className="absolute top-1/2 h-3.5 w-0.5 -translate-y-1/2 rounded bg-neutral-900"
@@ -997,6 +1042,11 @@ function SlotRow({ index, total }: { index: number; total: bigint }) {
 
 export function RouterPanel({ address }: { address: Address }) {
   const [amount, setAmount] = useState("")
+  const [readableSlots, setReadableSlots] = useState<Record<number, boolean>>({})
+  const gate = useRouterDeploymentGate()
+  const markSlotReadable = useCallback((index: number, readable: boolean) => {
+    setReadableSlots((current) => current[index] === readable ? current : { ...current, [index]: readable })
+  }, [])
   const approveTx = useTx()
   const depositTx = useTx()
   const withdrawTx = useTx()
@@ -1006,28 +1056,47 @@ export function RouterPanel({ address }: { address: Address }) {
     address: CONTRACTS.router,
     abi: routerAbi,
     functionName: "liveApyBps",
+    chainId: FUJI_CHAIN_ID,
+    query: { enabled: gate.ready },
   })
   const { data: total, refetch: refetchTotal } = useReadContract({
     address: CONTRACTS.router,
     abi: routerAbi,
     functionName: "totalAssets",
+    chainId: FUJI_CHAIN_ID,
+    query: { enabled: gate.ready },
   })
   const { data: price } = useReadContract({
     address: CONTRACTS.router,
     abi: routerAbi,
     functionName: "sharePrice",
+    chainId: FUJI_CHAIN_ID,
+    query: { enabled: gate.ready },
   })
   const { data: myShares, refetch: refetchShares } = useReadContract({
     address: CONTRACTS.router,
     abi: routerAbi,
     functionName: "balanceOf",
     args: [address],
+    chainId: FUJI_CHAIN_ID,
+    query: { enabled: gate.ready },
   })
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
     address: CONTRACTS.usdc,
     abi: usdcAbi,
     functionName: "allowance",
     args: [address, CONTRACTS.router],
+    chainId: FUJI_CHAIN_ID,
+    query: { enabled: gate.ready },
+  })
+  const raw = parseUsdc(amount)
+  const { data: previewShares, refetch: refetchPreview } = useReadContract({
+    address: CONTRACTS.router,
+    abi: routerAbi,
+    functionName: "previewDeposit",
+    args: [raw ?? BigInt(0)],
+    chainId: FUJI_CHAIN_ID,
+    query: { enabled: gate.ready && raw !== null },
   })
 
   const refresh = () => {
@@ -1035,8 +1104,8 @@ export function RouterPanel({ address }: { address: Address }) {
     refetchTotal()
     refetchShares()
     refetchAllowance()
+    refetchPreview()
   }
-  const raw = parseUsdc(amount)
   const needsApprove = raw !== null && (allowance ?? BigInt(0)) < raw
   const myAssets =
     myShares && price ? (myShares * price) / BigInt(1e18) : undefined
@@ -1050,7 +1119,7 @@ export function RouterPanel({ address }: { address: Address }) {
       notifyOnce(depositTx.hash, () =>
         pushNotice(
           `Auto-earn deposited $${amount || "0"} into the router`,
-          "Split across live markets automatically."
+          "Split by the router's configured target weights."
         )
       )
       depositTx.reset()
@@ -1065,26 +1134,25 @@ export function RouterPanel({ address }: { address: Address }) {
   }, [depositTx.done, withdrawTx.done])
 
   if (!routerConfigured) return null
+  const count = gate.ready && typeof gate.slotCount === "bigint" ? Number(gate.slotCount) : 0
+  const allSlotsReadable = count > 0 && Array.from({ length: count }, (_, i) => readableSlots[i] === true).every(Boolean)
+  const metricsAvailable = allSlotsReadable && typeof total === "bigint"
 
   return (
     <div className="rounded-[20px] bg-aero-950 p-6 text-white sm:p-8">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="text-[13px] font-semibold tracking-[0.14em] text-white/50 uppercase">
-          Auto-router · live allocation
+          Yield router · mock market rates
         </p>
         <p className="font-mono text-4xl font-medium tracking-tight text-emerald-300 tabular-nums">
           {apy === undefined ? "—" : `${(Number(apy) / 100).toFixed(2)}%`}
         </p>
       </div>
       <div className="mt-5 space-y-4">
-        <SlotRow
-          index={0}
-          total={typeof total === "bigint" ? total : BigInt(0)}
-        />
-        <SlotRow
-          index={1}
-          total={typeof total === "bigint" ? total : BigInt(0)}
-        />
+        {gate.ready && Array.from({ length: count }, (_, index) => (
+          <SlotRow key={index} index={index} total={typeof total === "bigint" ? total : BigInt(0)} onReadable={markSlotReadable} />
+        ))}
+        {!gate.ready && <p className="text-sm text-amber-200">{gate.message}</p>}
       </div>
       <div className="mt-5 grid grid-cols-2 gap-4 border-t border-white/10 pt-5 font-mono tabular-nums">
         <div>
@@ -1094,7 +1162,7 @@ export function RouterPanel({ address }: { address: Address }) {
         <div>
           <p className="font-sans text-[13px] text-white/45">Routed TVL</p>
           <p className="mt-1 text-xl">
-            ${formatUsdc(typeof total === "bigint" ? total : undefined)}
+            ${formatUsdc(metricsAvailable ? total : undefined)}
           </p>
         </div>
       </div>
@@ -1109,9 +1177,9 @@ export function RouterPanel({ address }: { address: Address }) {
         />
         <div className="flex gap-2.5">
           <Button
-            disabled={raw === null || approveTx.busy || depositTx.busy}
+            disabled={!gate.ready || raw === null || previewShares === undefined || approveTx.busy || depositTx.busy}
             onClick={() => {
-              if (raw === null) return
+              if (raw === null || previewShares === undefined) return
               if (needsApprove) {
                 approveTx.write({
                   address: CONTRACTS.usdc,
@@ -1124,7 +1192,8 @@ export function RouterPanel({ address }: { address: Address }) {
                   address: CONTRACTS.router,
                   abi: routerAbi,
                   functionName: "deposit",
-                  args: [raw],
+                  args: [raw, (previewShares * BigInt(9950)) / BigInt(10000)],
+                  chainId: FUJI_CHAIN_ID,
                 })
               }
               refresh()
@@ -1140,7 +1209,7 @@ export function RouterPanel({ address }: { address: Address }) {
                   : "Deposit"}
           </Button>
           <Button
-            disabled={!myShares || withdrawTx.busy}
+            disabled={!gate.ready || !myShares || withdrawTx.busy}
             onClick={() => {
               if (myShares)
                 withdrawTx.write({
@@ -1148,6 +1217,7 @@ export function RouterPanel({ address }: { address: Address }) {
                   abi: routerAbi,
                   functionName: "withdraw",
                   args: [myShares],
+                  chainId: FUJI_CHAIN_ID,
                 })
               refresh()
             }}
@@ -1165,8 +1235,10 @@ export function RouterPanel({ address }: { address: Address }) {
         />
       </div>
       <p className="mt-3 text-[13px] leading-relaxed text-white/45">
-        Splits deposits across live markets by target weight and rebalances past
-        the drift band. Same UX as the vaults below — one balance, one APY.
+        Displayed annualized rates come from simulated Fuji mock markets, not
+        live Benqi or Trader Joe lending markets. Deposits follow owner-set
+        targets; rebalancing restores those targets rather than selecting the
+        highest rate.
       </p>
     </div>
   )
@@ -1370,226 +1442,151 @@ export function RequestTab({
 
 /* ---------------------------------- earn ---------------------------------- */
 
-/* -------------------------------- auto-earn -------------------------------- */
+/* ------------------------------ quick deposit ----------------------------- */
 
-function AutoEarn({ address }: { address: Address }) {
-  const [autoOn, setAutoOn] = useState<boolean>(() => {
-    try {
-      return window.localStorage.getItem("aero_auto_earn") !== "0"
-    } catch {
-      return true
-    }
-  })
+function QuickDeposit({ address }: { address: Address }) {
   const approveTx = useTx()
   const depositTx = useTx()
-
-  const { data: usdc, refetch: refetchUsdc } = useReadContract({
+  const gate = useRouterDeploymentGate()
+  const destination = routerConfigured ? CONTRACTS.router : CONTRACTS.vault
+  const destinationAbi = routerConfigured ? routerAbi : vaultAbi
+  const { data: available, refetch: refetchUsdc } = useReadContract({
     address: CONTRACTS.usdc,
     abi: usdcAbi,
     functionName: "balanceOf",
     args: [address],
+    chainId: FUJI_CHAIN_ID,
   })
-  const { data: rate } = useReadContract({
+  const { data: allowance, refetch: refetchAllowance } = useReadContract({
+    address: CONTRACTS.usdc,
+    abi: usdcAbi,
+    functionName: "allowance",
+    args: [address, destination],
+    chainId: FUJI_CHAIN_ID,
+  })
+  const amount = available ?? BigInt(0)
+  const { data: routerApy } = useReadContract({
+    address: CONTRACTS.router,
+    abi: routerAbi,
+    functionName: "liveApyBps",
+    chainId: FUJI_CHAIN_ID,
+    query: { enabled: gate.ready },
+  })
+  const { data: previewShares } = useReadContract({
+    address: CONTRACTS.router,
+    abi: routerAbi,
+    functionName: "previewDeposit",
+    args: [amount],
+    chainId: FUJI_CHAIN_ID,
+    query: { enabled: gate.ready && amount > BigInt(0) },
+  })
+  const { data: vaultRate } = useReadContract({
     address: CONTRACTS.vault,
     abi: vaultAbi,
     functionName: "ratePerSecond",
-  })
-  const { data: bps } = useReadContract({
-    address: CONTRACTS.adapter,
-    abi: adapterAbi,
-    functionName: "liveApyBps",
-    query: { enabled: adapterConfigured },
-  })
-  const { data: vaultShares, refetch: refetchVault } = useReadContract({
-    address: CONTRACTS.vault,
-    abi: vaultAbi,
-    functionName: "balanceOf",
-    args: [address],
-  })
-  const { data: adapterShares, refetch: refetchAdapter } = useReadContract({
-    address: CONTRACTS.adapter,
-    abi: adapterAbi,
-    functionName: "balanceOf",
-    args: [address],
-    query: { enabled: adapterConfigured },
+    query: { enabled: !routerConfigured },
   })
 
   useEffect(() => {
+    if (approveTx.done) {
+      refetchAllowance()
+      approveTx.reset()
+    }
     if (depositTx.done) {
       refetchUsdc()
-      refetchVault()
-      refetchAdapter()
       depositTx.reset()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [depositTx.done])
+  }, [approveTx.done, depositTx.done])
 
-  const toggle = (v: boolean) => {
-    setAutoOn(v)
-    try {
-      window.localStorage.setItem("aero_auto_earn", v ? "1" : "0")
-    } catch {
-      /* ignore */
-    }
-  }
+  const needsApproval = (allowance ?? BigInt(0)) < amount
+  const rate = routerConfigured
+    ? routerApy === undefined
+      ? "—"
+      : `${(Number(routerApy) / 100).toFixed(2)}%`
+    : vaultRate === undefined
+      ? "—"
+      : `${(((Number(vaultRate) * 31_557_600) / 1e18) * 100).toFixed(2)}%`
 
-  const vaultApr =
-    rate !== undefined ? ((Number(rate) * 31_557_600) / 1e18) * 100 : null
-  const adapterApr = bps !== undefined ? Number(bps) / 100 : null
-  const best: "vault" | "adapter" | null =
-    vaultApr === null
-      ? null
-      : adapterApr === null || !adapterConfigured
-        ? "vault"
-        : adapterApr >= vaultApr
-          ? "adapter"
-          : "vault"
-  const bestApy = best === "adapter" ? adapterApr : vaultApr
-  const venue = best === "adapter" ? CONTRACTS.adapter : CONTRACTS.vault
-  const venueAbi = best === "adapter" ? adapterAbi : vaultAbi
-
-  const { data: venueAllowance, refetch: refetchVenueAllowance } =
-    useReadContract({
-      address: CONTRACTS.usdc,
-      abi: usdcAbi,
-      functionName: "allowance",
-      args: [address, venue],
-    })
-  useEffect(() => {
-    if (approveTx.done) {
-      refetchVenueAllowance()
-      approveTx.reset()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [approveTx.done])
-
-  const available = usdc ?? BigInt(0)
-  const idle = available > BigInt(10_000_000)
-  const working =
-    (vaultShares ?? BigInt(0)) > BigInt(0) ||
-    (adapterShares ?? BigInt(0)) > BigInt(0)
-
-  const addAll = () => {
-    if (available <= BigInt(0) || approveTx.busy || depositTx.busy) return
-    if ((venueAllowance ?? BigInt(0)) < available) {
+  const depositAll = () => {
+    if (amount <= BigInt(0) || approveTx.busy || depositTx.busy) return
+    if (routerConfigured && (!gate.ready || previewShares === undefined)) return
+    if (needsApproval) {
       approveTx.write({
         address: CONTRACTS.usdc,
         abi: usdcAbi,
         functionName: "approve",
-        args: [venue, maxUint256],
+        args: [destination, maxUint256],
       })
     } else {
       depositTx.write({
-        address: venue,
-        abi: venueAbi,
+        address: destination,
+        abi: destinationAbi,
         functionName: "deposit",
-        args: [available],
+        args: routerConfigured
+          ? [amount, (previewShares! * BigInt(9950)) / BigInt(10000)]
+          : [amount],
+        chainId: FUJI_CHAIN_ID,
       } as never)
     }
   }
 
   return (
     <div className="rounded-2xl border border-neutral-200/80 bg-white p-5 sm:p-6">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-[15px] font-semibold text-neutral-900">
-            Auto-earn
-          </p>
-          <p className="mt-0.5 text-[13px] text-neutral-500">
-            {best !== null ? (
-              <>
-                Best rate right now ·{" "}
-                <span className="font-medium text-emerald-600">
-                  {best === "adapter" ? "Benqi adapter" : "Mock vault"}{" "}
-                  {bestApy!.toFixed(2)}%
-                </span>
-              </>
+          <p className="text-[15px] font-semibold text-neutral-900">Quick deposit</p>
+          <p className="mt-1 text-[13px] text-neutral-500">
+            {routerConfigured ? (
+              <>Yield router · mock-market rate {rate}</>
             ) : (
-              "Comparing live rates…"
+              <>Mock vault · simulated rate {rate}</>
             )}
           </p>
         </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={autoOn}
-          aria-label="Auto-earn"
-          onClick={() => toggle(!autoOn)}
-          className={cn(
-            "relative h-7 w-12 shrink-0 rounded-full transition",
-            autoOn ? "bg-emerald-500" : "bg-neutral-200"
-          )}
+        <Button
+          disabled={amount <= BigInt(0) || approveTx.busy || depositTx.busy || (routerConfigured && (!gate.ready || previewShares === undefined))}
+          onClick={depositAll}
+          className="h-11 shrink-0 rounded-full bg-aero-800 px-6 font-medium text-white hover:bg-aero-900 disabled:bg-neutral-100 disabled:text-neutral-400"
         >
-          <motion.span
-            layout
-            animate={{ x: autoOn ? 20 : 0 }}
-            transition={{ type: "spring", stiffness: 500, damping: 32 }}
-            className="absolute top-1 left-1 size-5 rounded-full bg-white shadow"
-          />
-        </button>
+          {approveTx.busy
+            ? "Approving…"
+            : depositTx.busy
+              ? "Depositing…"
+              : `${needsApproval ? "Approve and add" : "Add"} $${formatUsdc(amount)}`}
+        </Button>
       </div>
-
-      {autoOn && (
-        <div className="mt-4">
-          {idle ? (
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-[15px] leading-relaxed text-neutral-700">
-                Your{" "}
-                <span className="font-semibold tabular-nums">
-                  ${formatUsdc(available)}
-                </span>{" "}
-                is sitting idle. Auto-earn{" "}
-                {best === "adapter" ? "is routing it" : "would route it"} to the
-                best rate.
-              </p>
-              <Button
-                disabled={approveTx.busy || depositTx.busy}
-                onClick={addAll}
-                className="h-11 shrink-0 rounded-full bg-aero-800 px-6 font-medium text-white hover:bg-aero-900 disabled:bg-neutral-100 disabled:text-neutral-400"
-              >
-                {approveTx.busy
-                  ? "Approving…"
-                  : depositTx.busy
-                    ? "Depositing…"
-                    : `Add $${formatUsdc(available)}`}
-              </Button>
-            </div>
-          ) : (
-            <p className="text-[15px] leading-relaxed text-neutral-700">
-              <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700">
-                <span className="relative flex size-1.5">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
-                  <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />
-                </span>
-                {working ? "Your balance is working." : "Auto-earn is on."}
-              </span>{" "}
-              {working
-                ? "Every idle dollar is routed to the best live rate."
-                : "Fund your balance and it will be routed automatically."}
-            </p>
-          )}
-          <div className="mt-2">
-            <TxStatus
-              hash={approveTx.hash ?? depositTx.hash}
-              error={approveTx.error ?? depositTx.error}
-            />
-          </div>
-        </div>
-      )}
+      <p className="mt-3 text-[13px] leading-relaxed text-neutral-500">
+        {routerConfigured && !gate.ready
+          ? gate.message
+          : routerConfigured
+          ? "This sends an explicit deposit to the router. Fuji adapter slots use mock markets; target weights are fixed by configuration."
+          : "This sends an explicit deposit to AeroVault. Its yield rate is simulated by the contract and does not come from a lending market."}
+      </p>
+      <div className="mt-2">
+        <TxStatus
+          hash={approveTx.hash ?? depositTx.hash}
+          error={approveTx.error ?? depositTx.error}
+        />
+      </div>
     </div>
   )
 }
-
 export function EarnTab({ address }: { address: Address }) {
+  const routerGate = useRouterDeploymentGate()
   const [depositAmt, setDepositAmt] = useState("")
   const [withdrawAmt, setWithdrawAmt] = useState("")
-  const [venue, setVenue] = useState<"router" | "vault" | "market">(
+  const [venue, setVenue] = useState<"router" | "vault">(
     routerConfigured ? "router" : "vault"
   )
   const approveTx = useTx()
   const depositTx = useTx()
   const withdrawTx = useTx()
   const notifyOnce = useOncePerHash()
+
+  useEffect(() => {
+    if (!routerGate.ready && venue === "router") setVenue("vault")
+  }, [routerGate.ready, venue])
 
   const { data: rate, refetch: refetchRate } = useReadContract({
     address: CONTRACTS.vault,
@@ -1619,43 +1616,27 @@ export function EarnTab({ address }: { address: Address }) {
     functionName: "balanceOf",
     args: [CONTRACTS.vault],
   })
-  const { data: adapterBps } = useReadContract({
-    address: CONTRACTS.adapter,
-    abi: adapterAbi,
-    functionName: "liveApyBps",
-    query: { enabled: adapterConfigured },
-  })
-  const { data: adapterShares } = useReadContract({
-    address: CONTRACTS.adapter,
-    abi: adapterAbi,
-    functionName: "balanceOf",
-    args: [address],
-    query: { enabled: adapterConfigured },
-  })
-  const { data: adapterPrice } = useReadContract({
-    address: CONTRACTS.adapter,
-    abi: adapterAbi,
-    functionName: "sharePrice",
-    query: { enabled: adapterConfigured },
-  })
   const { data: routerApy } = useReadContract({
     address: CONTRACTS.router,
     abi: routerAbi,
     functionName: "liveApyBps",
-    query: { enabled: routerConfigured },
+    chainId: FUJI_CHAIN_ID,
+    query: { enabled: routerGate.ready },
   })
   const { data: routerShares } = useReadContract({
     address: CONTRACTS.router,
     abi: routerAbi,
     functionName: "balanceOf",
     args: [address],
-    query: { enabled: routerConfigured },
+    chainId: FUJI_CHAIN_ID,
+    query: { enabled: routerGate.ready },
   })
   const { data: routerPrice } = useReadContract({
     address: CONTRACTS.router,
     abi: routerAbi,
     functionName: "sharePrice",
-    query: { enabled: routerConfigured },
+    chainId: FUJI_CHAIN_ID,
+    query: { enabled: routerGate.ready },
   })
 
   const refresh = () => {
@@ -1684,19 +1665,14 @@ export function EarnTab({ address }: { address: Address }) {
   const myAssets = shares && index ? (shares * index) / BigInt(1e18) : undefined
 
   const vaultAssets = myAssets ?? BigInt(0)
-  const adapterAssets =
-    adapterShares && adapterPrice
-      ? (adapterShares * adapterPrice) / BigInt(1e18)
-      : BigInt(0)
   const routerAssets =
-    routerShares && routerPrice
+    routerGate.ready && routerShares && routerPrice
       ? (routerShares * routerPrice) / BigInt(1e18)
       : BigInt(0)
-  const earning = vaultAssets + adapterAssets + routerAssets
+  const earning = vaultAssets + routerAssets
 
   const vaultApr =
     rate !== undefined ? ((Number(rate) * 31_557_600) / 1e18) * 100 : null
-  const adapterApr = adapterBps !== undefined ? Number(adapterBps) / 100 : null
   const routerApr = routerApy !== undefined ? Number(routerApy) / 100 : null
   const venueRows = [
     {
@@ -1704,7 +1680,7 @@ export function EarnTab({ address }: { address: Address }) {
       label: "Auto-router",
       apr: routerApr,
       assets: routerAssets,
-      show: routerConfigured,
+      show: routerGate.ready,
     },
     {
       id: "vault" as const,
@@ -1712,13 +1688,6 @@ export function EarnTab({ address }: { address: Address }) {
       apr: vaultApr,
       assets: vaultAssets,
       show: true,
-    },
-    {
-      id: "market" as const,
-      label: "Benqi market",
-      apr: adapterApr,
-      assets: adapterAssets,
-      show: adapterConfigured,
     },
   ].filter((v) => v.show)
   const bestRow = venueRows.reduce<(typeof venueRows)[number] | null>(
@@ -1989,11 +1958,6 @@ export function EarnTab({ address }: { address: Address }) {
                       </div>
                     </div>
                   )}
-                  {v.id === "market" && adapterConfigured && (
-                    <div className="pb-8">
-                      <AdapterPanel address={address} />
-                    </div>
-                  )}
                 </motion.div>
               )}
             </div>
@@ -2002,193 +1966,7 @@ export function EarnTab({ address }: { address: Address }) {
       </div>
 
       <div className="mt-8">
-        <AutoEarn address={address} />
-      </div>
-    </div>
-  )
-}
-
-/* ------------------------- live market (adapter) -------------------------- */
-
-export function AdapterPanel({ address }: { address: Address }) {
-  const [depositAmt, setDepositAmt] = useState("")
-  const [withdrawAmt, setWithdrawAmt] = useState("")
-  const approveTx = useTx()
-  const depositTx = useTx()
-  const withdrawTx = useTx()
-  const notifyOnce = useOncePerHash()
-
-  const { data: bps, refetch: refetchApy } = useReadContract({
-    address: CONTRACTS.adapter,
-    abi: adapterAbi,
-    functionName: "liveApyBps",
-  })
-  const { data: tvl, refetch: refetchTvl } = useReadContract({
-    address: CONTRACTS.adapter,
-    abi: adapterAbi,
-    functionName: "balance",
-  })
-  const { data: myShares, refetch: refetchShares } = useReadContract({
-    address: CONTRACTS.adapter,
-    abi: adapterAbi,
-    functionName: "balanceOf",
-    args: [address],
-  })
-  const { data: price } = useReadContract({
-    address: CONTRACTS.adapter,
-    abi: adapterAbi,
-    functionName: "sharePrice",
-  })
-  const { data: allowance, refetch: refetchAllowance } = useReadContract({
-    address: CONTRACTS.usdc,
-    abi: usdcAbi,
-    functionName: "allowance",
-    args: [address, CONTRACTS.adapter],
-  })
-
-  const refresh = () => {
-    refetchApy()
-    refetchTvl()
-    refetchShares()
-    refetchAllowance()
-  }
-  const depositRaw = parseUsdc(depositAmt)
-  const needsApprove =
-    depositRaw !== null && (allowance ?? BigInt(0)) < depositRaw
-  const myAssets =
-    myShares && price ? (myShares * price) / BigInt(1e18) : undefined
-  const apy = bps !== undefined ? (Number(bps) / 100).toFixed(2) : "—"
-
-  useEffect(() => {
-    if (depositTx.done) {
-      refresh()
-      notifyOnce(depositTx.hash, () =>
-        pushNotice(
-          `Auto-earn deposited $${depositAmt || "0"} into the Benqi market`,
-          `Now earning around ${apy}% APR.`
-        )
-      )
-      depositTx.reset()
-    }
-    if (withdrawTx.done) {
-      refresh()
-      withdrawTx.reset()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [depositTx.done, withdrawTx.done])
-
-  const doDeposit = () => {
-    if (depositRaw === null) return
-    if (needsApprove) {
-      approveTx.write({
-        address: CONTRACTS.usdc,
-        abi: usdcAbi,
-        functionName: "approve",
-        args: [CONTRACTS.adapter, maxUint256],
-      })
-    } else {
-      depositTx.write({
-        address: CONTRACTS.adapter,
-        abi: adapterAbi,
-        functionName: "deposit",
-        args: [depositRaw],
-      })
-    }
-  }
-
-  const withdrawRaw = parseUsdc(withdrawAmt)
-  const doWithdraw = (all: boolean) => {
-    if (all && myShares) {
-      withdrawTx.write({
-        address: CONTRACTS.adapter,
-        abi: adapterAbi,
-        functionName: "withdraw",
-        args: [myShares],
-      })
-    } else if (withdrawRaw !== null && price) {
-      withdrawTx.write({
-        address: CONTRACTS.adapter,
-        abi: adapterAbi,
-        functionName: "withdraw",
-        args: [(withdrawRaw * BigInt(1e18)) / price],
-      })
-    }
-  }
-
-  if (!adapterConfigured) return null
-
-  return (
-    <div className="pb-2">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="text-[13px] font-semibold tracking-[0.14em] text-aero-800 uppercase">
-          Live market · Benqi adapter
-        </p>
-        <p className="font-mono text-3xl font-medium text-aero-800 tabular-nums">
-          {apy}%
-        </p>
-      </div>
-      <p className="mt-1 max-w-xl text-sm leading-relaxed text-neutral-600">
-        Real on-chain rate from a Compound-style market via our adapter — the
-        same code proven against Benqi&apos;s mainnet qiUSDCn. Your position:{" "}
-        <span className="font-semibold text-neutral-900 tabular-nums">
-          ${formatUsdc(myAssets)}
-        </span>
-        {" · "}market TVL:{" "}
-        <span className="tabular-nums">${formatUsdc(tvl)}</span>.
-      </p>
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <div className="flex items-end gap-2.5">
-          <input
-            value={depositAmt}
-            onChange={(e) => setDepositAmt(e.target.value)}
-            inputMode="decimal"
-            placeholder="Deposit tUSDC"
-            aria-label="Deposit amount"
-            className="h-11 min-w-0 flex-1 border-b border-neutral-200 bg-transparent text-[15px] tabular-nums outline-none placeholder:text-neutral-300 focus:border-aero-800"
-          />
-          <Button
-            disabled={depositRaw === null || approveTx.busy || depositTx.busy}
-            onClick={() => {
-              doDeposit()
-              refresh()
-            }}
-            className="h-11 shrink-0 rounded-full bg-aero-800 px-5 text-sm font-medium text-white hover:bg-aero-900 disabled:bg-neutral-100 disabled:text-neutral-400"
-          >
-            {approveTx.busy
-              ? "…"
-              : depositTx.busy
-                ? "…"
-                : needsApprove
-                  ? "Approve"
-                  : "Supply"}
-          </Button>
-        </div>
-        <div className="flex items-end gap-2.5">
-          <input
-            value={withdrawAmt}
-            onChange={(e) => setWithdrawAmt(e.target.value)}
-            inputMode="decimal"
-            placeholder="Withdraw tUSDC"
-            aria-label="Withdraw amount"
-            className="h-11 min-w-0 flex-1 border-b border-neutral-200 bg-transparent text-[15px] tabular-nums outline-none placeholder:text-neutral-300 focus:border-aero-800"
-          />
-          <Button
-            disabled={(!withdrawRaw && !myShares) || withdrawTx.busy}
-            onClick={() => {
-              doWithdraw(!withdrawAmt)
-              refresh()
-            }}
-            className="h-11 shrink-0 rounded-full border border-neutral-300 px-5 text-sm font-medium text-neutral-900 hover:bg-neutral-50 disabled:border-neutral-200 disabled:text-neutral-300"
-          >
-            {withdrawTx.busy ? "…" : withdrawAmt ? "Withdraw" : "All"}
-          </Button>
-        </div>
-      </div>
-      <div className="mt-2">
-        <TxStatus
-          hash={approveTx.hash ?? depositTx.hash ?? withdrawTx.hash}
-          error={approveTx.error ?? depositTx.error ?? withdrawTx.error}
-        />
+        <QuickDeposit address={address} />
       </div>
     </div>
   )

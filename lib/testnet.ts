@@ -18,7 +18,6 @@ export const CONTRACTS = {
   names: envAddress(process.env.NEXT_PUBLIC_AERO_NAMES),
   usdc: envAddress(process.env.NEXT_PUBLIC_TEST_USDC),
   vault: envAddress(process.env.NEXT_PUBLIC_AERO_VAULT),
-  adapter: envAddress(process.env.NEXT_PUBLIC_BENQI_ADAPTER),
   router: envAddress(process.env.NEXT_PUBLIC_ROUTER),
   pay: envAddress(process.env.NEXT_PUBLIC_AEROPAY),
   bank: envAddress(process.env.NEXT_PUBLIC_BANK),
@@ -27,7 +26,6 @@ export const CONTRACTS = {
 export const contractsConfigured =
   CONTRACTS.names !== zeroAddress && CONTRACTS.usdc !== zeroAddress && CONTRACTS.vault !== zeroAddress
 
-export const adapterConfigured = CONTRACTS.adapter !== zeroAddress
 export const routerConfigured = CONTRACTS.router !== zeroAddress
 export const payConfigured = CONTRACTS.pay !== zeroAddress
 export const bankConfigured = CONTRACTS.bank !== zeroAddress
