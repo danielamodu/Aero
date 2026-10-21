@@ -55,7 +55,7 @@ contract AeroRouter is ERC20, Ownable, ReentrancyGuard {
         require(address(_asset).code.length > 0, "ASSET_NOT_CONTRACT");
         asset = _asset;
         uint8 assetDecimals = IERC20Metadata(address(_asset)).decimals();
-        require(assetDecimals <= 18, "ASSET_DECIMALS_TOO_HIGH");
+        require(assetDecimals == 6, "ASSET_MUST_HAVE_6_DECIMALS");
         virtualShares = 10 ** (18 - uint256(assetDecimals));
         _validateTargets(_targets, _adapters.length);
         require(_adapters.length > 0, "NO_ADAPTERS");

@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import {Script, console} from "forge-std/Script.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {TestUSDC} from "../src/TestUSDC.sol";
 import {MockQiToken} from "../src/MockQiToken.sol";
 import {BenqiAdapter} from "../src/BenqiAdapter.sol";
@@ -18,6 +19,8 @@ contract DeployBenqi is Script {
     function run() external {
         uint256 key = vm.envUint("DEPLOYER_KEY");
         address usdcAddr = vm.envAddress("TEST_USDC_ADDR");
+        require(usdcAddr.code.length > 0, "USDC_NOT_CONTRACT");
+        require(IERC20Metadata(usdcAddr).decimals() == 6, "USDC_MUST_HAVE_6_DECIMALS");
         vm.startBroadcast(key);
         MockQiToken market = new MockQiToken(IERC20(usdcAddr), RATE_5PCT, "Mock Benqi USDC", "mqiUSDC");
         BenqiAdapter adapter = new BenqiAdapter(market, "benqi-usdc-fuji-mock");

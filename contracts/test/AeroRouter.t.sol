@@ -2,9 +2,22 @@
 pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {TestUSDC} from "../src/TestUSDC.sol";
 import {AeroRouter} from "../src/AeroRouter.sol";
 import {MockYieldAdapter} from "./mocks/MockYieldAdapter.sol";
+
+contract MockDecimalsERC20 is ERC20 {
+    uint8 private immutable _mockDecimals;
+
+    constructor(uint8 decimals_) ERC20("Mock Decimal Asset", "MDA") {
+        _mockDecimals = decimals_;
+    }
+
+    function decimals() public view override returns (uint8) {
+        return _mockDecimals;
+    }
+}
 
 contract AeroRouterTest is Test {
     TestUSDC usdc;
@@ -161,6 +174,15 @@ contract AeroRouterTest is Test {
         vm.prank(alice);
         uint256 victimOut = router.withdraw(victimShareBalance);
         assertGe(victimOut + 1, victimAssets);
+
+        // Model the attacker also controlling the router owner key and sweeping
+        // any value left after the last shareholder fully exits.
+        uint256 attackerBeforeRecovery = usdc.balanceOf(attacker);
+        router.recoverOrphanedAssets(attacker);
+        uint256 orphanRecovery = usdc.balanceOf(attacker) - attackerBeforeRecovery;
+        assertEq(router.totalSupply(), 0);
+        assertLe(attackerOut + orphanRecovery, 1_000_002);
+        assertLe(victimAssets - victimOut, 1);
     }
 
     function testFuzz_virtualOffsetBoundsRepeatedDonationAttack(
@@ -197,6 +219,29 @@ contract AeroRouterTest is Test {
         uint256 victimShareBalance = router.balanceOf(alice);
         vm.prank(alice);
         assertGe(router.withdraw(victimShareBalance) + 1, victimAssets);
+        uint256 orphanRecovery;
+        if (router.totalAssets() > 0) {
+            uint256 attackerBeforeRecovery = usdc.balanceOf(attacker);
+            router.recoverOrphanedAssets(attacker);
+            orphanRecovery = usdc.balanceOf(attacker) - attackerBeforeRecovery;
+        }
+        assertLe(attackerOut + orphanRecovery, seed + donation + 1);
+    }
+
+    function test_constructorAcceptsOnlySixDecimalAsset() public {
+        assertEq(router.virtualShares(), 1e12);
+
+        MockDecimalsERC20 zeroDecimals = new MockDecimalsERC20(0);
+        vm.expectRevert("ASSET_MUST_HAVE_6_DECIMALS");
+        new AeroRouter(zeroDecimals, new address[](0), new uint256[](0));
+
+        MockDecimalsERC20 eightDecimals = new MockDecimalsERC20(8);
+        vm.expectRevert("ASSET_MUST_HAVE_6_DECIMALS");
+        new AeroRouter(eightDecimals, new address[](0), new uint256[](0));
+
+        MockDecimalsERC20 eighteenDecimals = new MockDecimalsERC20(18);
+        vm.expectRevert("ASSET_MUST_HAVE_6_DECIMALS");
+        new AeroRouter(eighteenDecimals, new address[](0), new uint256[](0));
     }
 
     function test_minSharesRejectsPriceMovementAfterPreview() public {
