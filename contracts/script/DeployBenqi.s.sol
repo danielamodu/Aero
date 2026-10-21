@@ -7,8 +7,9 @@ import {TestUSDC} from "../src/TestUSDC.sol";
 import {MockQiToken} from "../src/MockQiToken.sol";
 import {BenqiAdapter} from "../src/BenqiAdapter.sol";
 
-/// @notice Deploy the Benqi-compat market + adapter on Fuji (leaves the
-///         existing tUSDC / vault / registry untouched).
+/// @notice Deploys a standalone mock Benqi market and unbound adapter on Fuji.
+///         This diagnostic stack is not accepted by the integrated deployment;
+///         DeployMore creates and binds a fresh adapter pair atomically instead.
 /// @dev Usage: TEST_USDC_ADDR=0x… forge script script/DeployBenqi.s.sol --rpc-url fuji --broadcast
 ///      Needs DEPLOYER_KEY in env (Fuji-funded test key only).
 contract DeployBenqi is Script {
@@ -23,11 +24,11 @@ contract DeployBenqi is Script {
         // Seed market liquidity if the deployer holds anything (faucet may be cooling down).
         uint256 bal = TestUSDC(usdcAddr).balanceOf(msg.sender);
         if (bal > 100 * 1e6) {
-            TestUSDC(usdcAddr).transfer(address(market), bal / 2);
+            require(TestUSDC(usdcAddr).transfer(address(market), bal / 2), "SEED_TRANSFER_FAILED");
         }
         vm.stopBroadcast();
         console.log("MockQiToken:", address(market));
         console.log("BenqiAdapter:", address(adapter));
-        console.log("Set NEXT_PUBLIC_MOCK_QITOKEN / NEXT_PUBLIC_BENQI_ADAPTER to the above.");
+        console.log("Standalone adapter is unbound and is not a DeployMore input.");
     }
 }
