@@ -16,7 +16,9 @@ import {
 import { EarnTab, PayScreen } from "@/components/testnet/views"
 import { TerminalView } from "@/components/testnet/terminal"
 import { CommandPalette } from "@/components/testnet/command-palette"
+import { IdentityControl } from "@/components/testnet/identity-control"
 import { reownConfigured } from "@/components/testnet/providers"
+import { isTestnetProductEnabled } from "@/lib/release-gates.mjs"
 import {
   contractsConfigured,
   FUJI_CHAIN_ID,
@@ -71,6 +73,22 @@ function WrongNetwork() {
 }
 
 export default function TestnetPage() {
+  if (!isTestnetProductEnabled({
+    nodeEnv: process.env.NODE_ENV,
+    environment: process.env.NEXT_PUBLIC_AERO_RELEASE_ENVIRONMENT,
+    chainId: process.env.NEXT_PUBLIC_AERO_RELEASE_CHAIN_ID,
+  })) {
+    return (
+      <SetupNotice title="Aero's financial product is not released here">
+        <p>
+          This deployment has not passed the release gates for a controlled beta or
+          production financial product. Use an explicitly configured Fuji testnet
+          environment for the sandbox.
+        </p>
+      </SetupNotice>
+    )
+  }
+
   // Payment-link prefill (?to=@x&amount=1.5) — read once, land on Pay.
   const [prefill] = useState(() => {
     try {
@@ -191,6 +209,9 @@ function TestnetConnected({
         }
       >
         <MobileTop address={address} />
+        <div className="px-5 pt-4 lg:px-8">
+          <IdentityControl />
+        </div>
         <main
           className={
             isTerm

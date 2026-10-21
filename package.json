@@ -5,6 +5,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "release:check": "node scripts/validate-aero-release.mjs",
+    "test:release-gate": "node --test scripts/validate-aero-release.test.mjs",
+    "test:identity": "node --test tests/identity/*.test.mjs",
+    "migrate:identity": "node scripts/migrate-identity.mjs",
+    "prebuild": "npm run release:check",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -38,13 +43,15 @@
     "shadcn": "^4.21.4",
     "tw-animate-css": "^1.4.0",
     "viem": "^2.57.7",
-    "wagmi": "^3.7.7"
+    "wagmi": "^3.7.7",
+    "ws": "^8.22.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/ws": "^8.18.2",
     "eslint": "^9",
     "eslint-config-next": "16.4.0",
     "prettier": "^3.9.9",
