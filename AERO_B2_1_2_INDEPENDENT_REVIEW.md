@@ -1,0 +1,110 @@
+# AERO B2.1.2 — Independent Yield Router Security Re-review
+
+**Review date:** 2026-10-21  
+**Reviewed revision:** `cdd609b` on `main` (same commit as `origin/main`)  
+**Scope:** Current B2.1.1 router, adapter, frontend, deployment scripts, ABIs and tests. This is a local source review; no contracts were deployed and no transactions were sent.
+
+## Executive verdict
+
+**CONDITIONAL PASS —** the original donation-inflation scenario is bounded to one raw unit for the six-decimal USDC configuration enforced by `DeployMore.s.sol`, and the core router/adapter accounting changes are materially effective. However, the router constructor accepts assets with up to 18 decimals and scales virtual shares down to one unit at 18 decimals. For an allowed 18-decimal asset, the same inflation sequence can leave a victim with a 10% loss and let an attacker who owns the router recover the residual as orphaned assets. Restrict the supported asset decimals or redesign the offset before treating the router as general-purpose. Controlled Fuji preparation is supportable only with the script’s six-decimal USDC check and the reviewed mock-market stack.
+
+The frontend blocks the genuine prior router version, but the deployment gate is a compatibility check rather than an identity/authenticity check. A contract at the configured address can spoof its read selectors and pass the gate. One Earn-tab summary also displays unavailable router position reads as zero. These are operational/frontend findings; they do not bypass on-chain router authorization.
+
+## Finding-by-finding closure assessment
+
+| Prior finding | Assessment | Evidence / remaining condition |
+|---|---|---|
+| H-1 — Share inflation and rounding | **Partially closed** | Closed for six-decimal USDC under the reproduced sequence and the test’s bounded fuzz domain. Open for higher-decimal assets the router constructor permits; see R-1. |
+| H-2 — Frontend could interact with old Fuji router | **Partially closed** | A genuine prior router without version `2111`, with the wrong asset, or with incomplete configuration is rejected. The gate does not authenticate bytecode or a trusted router/adapter identity; see R-2. |
+| M-1 — Router did not verify adapter shares minted | **Closed for tested adapter contract** | Router checks exact underlying consumption, positive router-owned share delta, equality with adapter-reported shares, and minimum position-value increase. Reverting checks roll back the whole transaction. Adversarial mock cases cover no mint, wrong report and 10% value shortfall. |
+| M-2 — Deployment could reuse incompatible adapters / owner mismatch | **Mostly closed** | `DeployMore.run` deploys fresh markets and adapters, checks six-decimal underlying, checks router/adapter/bank ownership, binds both adapters, then checks router version/configuration. Separate broadcasts remain non-atomic; see R-3. |
+| L-1 — Router share decimals | **Closed for six-decimal USDC integration** | Router ERC-20 decimals are 18; virtual shares normalize six-decimal underlying units; adapter shares retain raw underlying-unit semantics. Higher-decimal asset support exposes the R-1 mismatch in security margin. |
+| L-2 — Frontend showed only two slots | **Closed** | Router panel reads `slotCount()` and renders every configured slot up to the contract limit of 16. It withholds routed TVL until all current slot rows are readable. |
+
+## R-1 — Virtual offset is not adequate for the full accepted decimal range
+
+- **Severity:** Medium for the current six-decimal deployment path; High if the router is deployed with a higher-decimal asset and router owner can recover orphaned assets.
+- **Status:** Open for the contract’s declared `decimals <= 18` support; closed for the reviewed six-decimal deployment configuration.
+- **File/functions:** `contracts/src/AeroRouter.sol`, constructor, `convertToShares`, `convertToAssets`, `deposit`, `withdraw`, `_requireDepositState`, `recoverOrphanedAssets`.
+- **Relevant behavior:** `VIRTUAL_ASSETS` is always 1 raw asset unit. `virtualShares = 10 ** (18 - assetDecimals)`. The constructor permits any asset decimals from 0 through 18. Both router conversions use floor rounding (`Math.mulDiv`); assets-to-shares is `assets * (supply + virtualShares) / (totalAssets + 1)`, and shares-to-assets is `shares * (totalAssets + 1) / (supply + virtualShares)`. Deposits are blocked if supply is zero while assets exist; donations while shares exist count in total assets; total loss blocks further deposits and withdrawals.
+- **Reproduction, six-decimal USDC:** `virtualShares = 10^12`. Seed 1 raw unit mints `10^12` shares. Donation 1,000,000 raw units; victim deposits 2,000,000. Victim receives 3,999,992,000,015 shares. Attacker withdraws 500,001 raw units, less than its 1,000,001 raw-unit seed plus donation. Victim then withdraws 1,999,999 raw units: exactly one raw USDC base unit of loss. After the victim exits, 500,001 raw units remain; if the attacker is also router owner and calls orphan recovery, total recovered is 1,000,002 raw units, one raw unit above cost. `test_virtualOffsetPreventsClassicDonationInflationAttack` asserts the attacker’s first withdrawal and victim’s one-unit loss bound, but does not test owner recovery. The `uint32` fuzz test checks the same victim bound only for seed 1..1,000,000, donation 1..2,000,000 and victim 2,000,000..6,999,999.
+- **Reproduction, allowed 18-decimal asset:** `virtualShares = 1`. Seed 1 raw unit mints 1 share; donate `10^18` raw units (1 token); victim deposits `2 * 10^18` raw units (2 tokens). Victim receives 3 shares. Attacker withdraws `6 * 10^17` raw units (0.6 token). Victim withdraws `1,800,000,000,000,000,001` raw units (about 1.8 tokens), losing `199,999,999,999,999,999` raw units (about 0.2 token). `600,000,000,000,000,000` raw units remain after the victim exits. If the attacker deployed/owns the router, `recoverOrphanedAssets` can recover that residue; combined with the 0.6-token withdrawal, the attacker recovers about 1.2 tokens after contributing about 1 token plus one wei. This scenario follows the same conversion equations; current tests only use six-decimal `TestUSDC` and do not cover it.
+- **Impact:** The advertised “at most one raw USDC base unit” bound depends on the six-decimal asset and cannot be generalized to all assets accepted by the constructor. At 18 decimals, the allowed offset can transfer meaningful value from a victim to the virtual-share residual; owner recovery makes that residual recoverable after supply reaches zero.
+- **Recommended correction:** If this is a USDC-only router, require exactly six decimals in the router constructor as well as the deployment script and test rejection of other decimals. If broader assets are intended, choose and validate an offset policy against economically meaningful attacks at every supported decimal count, including recovery after full exit. Add 0/6/18-decimal boundary and multi-user withdrawal tests.
+
+### Other share-math observations
+
+- Deposits mint against pre-deposit `totalAssets`; preview and execution call the same conversion and state guard. `minShares` is checked on-chain before taking funds into adapters.
+- The frontend submits `floor(previewShares * 9950 / 10000)`. This permits up to a 50-bps decrease in quoted shares, plus less than one raw router-share unit from flooring. For six-decimal USDC, the share quote is normalized to 18 decimals, so the extra unit is immaterial. It is a bound on shares minted relative to the preview, not on later asset losses, adapter liquidity, or underlying-token behavior.
+- A stale preview with a lower resulting share amount than `minShares` reverts; the test `test_minSharesRejectsPriceMovementAfterPreview` changes the price using a donation and observes the revert. The frontend disables the deposit when preview data is unavailable.
+- Small inputs that convert to zero shares revert. Direct donations before first mint block deposits until owner recovery. Donations after shares exist accrue to holders. Full loss blocks deposits and withdrawals; it is not recoverable by new depositors through this path.
+- At the expected six-decimal asset, the one-unit virtual asset and `10^12` virtual shares provide a substantial share-precision offset. The range check alone is not sufficient to make the same claim at 18 decimals.
+
+## R-2 — Frontend deployment gate does not authenticate deployed code
+
+- **Severity:** Medium (configuration/operational trust boundary).
+- **Status:** Partially closed.
+- **File/functions:** `components/testnet/views.tsx`, `useRouterDeploymentGate`; `components/testnet/shell.tsx`, router read gate; `components/testnet/terminal.tsx`, router APY read.
+- **Relevant behavior:** The UI checks Fuji chain ID, configured address, readable nonempty bytecode, `deploymentVersion == 2111`, configured USDC address, 1–16 slots, and `configurationValid()`. The router’s configuration view checks its adapters’ reported asset/router and required conversion/APY/market-ID calls. Router panel reads and writes are disabled until the gate passes; QuickDeposit does not fall back to the vault when a router address is configured but invalid. With no configured router, QuickDeposit explicitly uses the simulated AeroVault. RouterPanel enumerates all slots and withholds routed TVL if any current slot read fails.
+- **Confirmed closure:** The previous genuine router, if it lacks the B2.1.1 deployment version or does not meet the current config checks, is not accepted by these code paths. All router write handlers in RouterPanel and QuickDeposit require gate readiness; approval is gated too.
+- **Remaining limitation / reproduction:** The checks do not compare runtime bytecode hash or router/adapter addresses against a trusted deployment manifest. A malicious or incompatible contract at the configured address can implement the queried getters (`deploymentVersion`, `asset`, `slotCount`, `configurationValid`) and return the expected values. `configurationValid` is a behavior supplied by that same contract; adapters can similarly spoof the expected interface. Such a contract passes the gate and receives approvals/deposit/withdraw calls. This is an operational misconfiguration or compromised-artifact scenario, not a permissionless bypass of the Solidity router.
+- **Impact:** The gate prevents accidental use of ordinary stale/incomplete deployments but cannot establish that code at the configured address is the reviewed implementation. A bad address or malicious compatible-looking deployment can expose wallet approvals and transaction calls to arbitrary code.
+- **Recommended correction:** For production-facing use, pin a reviewed router runtime hash and expected adapter addresses/code hashes (or verify a signed deployment manifest in the release process). Keep environment configuration under controlled deployment review. Add frontend gate tests for old version, wrong asset, failed reads, no code and a spoofed implementation.
+
+## R-3 — Deployment transactions are sequential, not atomic
+
+- **Severity:** Low / operational.
+- **Status:** Partially closed.
+- **File/functions:** `contracts/script/DeployMore.s.sol`, `run`; `contracts/script/DeployBenqi.s.sol`, `run`.
+- **Evidence:** `DeployMore` checks the provided token has code and six decimals, starts broadcast, then deploys two markets, two adapters and the router; checks owners, binds both adapters, checks `configurationValid`/version, and deploys AeroPay/AeroBank before printing addresses. This uses fresh compatible adapters and removes reuse of an arbitrary prior adapter. `DeployBenqi` is clearly labeled standalone/unbound and is not accepted as a `DeployMore` input.
+- **Failure behavior:** Foundry script execution/simulation can catch a failing `require` before the operator broadcasts, which is useful preflight. On-chain broadcast transactions are still separate transactions. A network/provider failure, nonce/fee issue, or transaction revert partway through broadcast can leave earlier markets/adapters/router deployed without all later bindings or companion contracts. The script does not deploy atomically through a factory and cannot roll back already-mined transactions. The operator must inspect the broadcast result and not configure the frontend until all required addresses and router configuration have been verified.
+- **Unverified assumption:** `DeployBenqi` reads `TestUSDC(usdcAddr).balanceOf(msg.sender)` after `startBroadcast` when deciding whether to seed the diagnostic market. This review did not execute the script, so whether `msg.sender` is the intended deployer in script simulation/broadcast is unverified. The seed is optional and not used by integrated `DeployMore`.
+- **Recommended correction:** Retain simulation before broadcast, publish an explicit partial-deployment recovery checklist, verify each mined transaction and final router state before publishing addresses, and avoid representing script simulation as atomic deployment.
+
+## Adapter accounting and ownership assessment
+
+`BenqiAdapter` binds once through owner-only `setRouter`, requires router code, and gates deposit/withdraw to that router. Direct user deposits and withdrawals are rejected. The router constructor and `addAdapter` validate the asset, binding state and required conversion interface; duplicate adapter addresses are rejected. The six-decimal adapter test confirms adapter decimals match underlying raw-unit semantics. The adapter converts its router-owned share balance against its aggregate market balance/supply, so other-account shares are excluded by the router’s call to `convertToAssets(sharesOf(router))`.
+
+`AeroRouter._depositIntoSlot` snapshots router USDC, router-owned adapter shares and pre-value, approves exactly the allocation, deposits, clears approval, and checks exact USDC consumption, positive share delta, reported/minted delta equality and post-value increase. A revert at any point rolls back the enclosing transaction. The mock tests genuinely trigger no-mint, incorrect-report and 10% position-value shortfall paths; they assert rollback effects. Existing tests do not explicitly exercise a deposit adapter that consumes only part of the requested USDC, reverts in `convertToAssets` after mint, or has a pathological conversion at extreme share price. Exact consumption and atomic EVM rollback cover these code paths by inspection, but those adapter variants remain untested.
+
+The tolerance is `max(1, adapter.convertToAssets(1))` raw underlying units at the post-deposit rate. That is a valid one-smallest-share rounding allowance for ordinary floor-based share minting, not a fixed dollar bound. A successful call can lose up to that value; repeated calls can accumulate that amount linearly. At the expected six-decimal mock exchange rate it is about one raw USDC unit per slot deposit and is not meaningful in ordinary use. Since adapter exchange rates can change and no maximum is enforced, tests do not establish a global upper bound over time or for unusual adapters. This is a bounded rounding limitation, not a demonstrated standalone exploit in the reviewed adapter.
+
+## Withdrawals and administration
+
+- Withdrawals price the requested router shares using the same floor-rounded router conversion, use idle USDC first, and request the remaining amount across invested slot values proportionally. Adapter `convertToShares` in `BenqiAdapter` rounds up to avoid under-pulling. Router receipts and recipient balance delta are measured; adapter return values are not trusted. On any adapter failure/shortfall, revert rolls back prior redemptions and shares remain intact.
+- Tests cover idle-first behavior, full withdrawal, market loss, total loss, illiquid and reverting adapters, partial payout, and rollback after one adapter has already redeemed. No withdrawal queue or partial-success behavior is promised; liquidity failure means the whole withdrawal reverts.
+- Targets must sum to 10,000 BPS. Constructor validation, duplicate checks, zero-target addition, zero-target/empty-position removal, and invariant assertions prevent the reviewed management operations from leaving an invalid target sum. Ownership controls target changes, adapter changes and orphan recovery. A malicious or compromised owner remains trusted and can choose strategies/targets or recover orphaned balances once no shares/positions remain.
+- `totalAssets` counts router idle USDC plus the value of only router-owned adapter shares. Idle rounding residue and direct donations are included. Post-exit residue can be recovered by the owner only when supply and all adapter positions are zero; R-1 explains how this interacts with a higher-decimal offset.
+
+## Frontend and share-unit integration
+
+- RouterPanel deposit and withdrawal, including token approval, are gated by `useRouterDeploymentGate`; QuickDeposit routes to the router if configured and remains disabled if that router is invalid. It uses the router preview and passes 99.5% of the preview as `minShares`. No stale standalone Benqi adapter deposit path was found in the reviewed testnet views.
+- `EarnTab` shows a separate `Mock vault` venue and its own controls write only to AeroVault. The router row is shown only when router gate checks pass; invalid router state switches selection to the vault. The vault’s rate is identified as simulated. Router UI copy identifies mock-market rates; these are not live Benqi/Trader Joe yields.
+- **Low frontend display defect:** `EarnTab` computes `routerAssets` as zero when router position shares or share price are unavailable, then includes that zero in `earning` and the “Auto-router” row while the deployment gate can still be ready. A transient/error result for either position read can therefore understate aggregate earning and show `$0.00` as if it were an actual router position. This is distinct from failed slot reads: RouterPanel correctly withholds routed TVL until all slot rows are readable. Recommended correction is to represent router position as unavailable until both reads succeed and avoid computing the aggregate total in that state.
+- `components/testnet/shell.tsx` gates portfolio reads on code/version/asset/configuration, but its digest maps failed individual position calls to zero. The shell does not authenticate runtime code (R-2), and the zero substitution can understate a digest if the calls fail after the gate.
+- Router shares use 18 decimals; `sharePrice()` reports raw underlying base units for one whole 18-decimal router share. Frontend valuation multiplies raw router shares by this price then divides by `1e18`, consistent with six-decimal USDC. Adapter shares remain in raw underlying units. The ABI includes the two-argument `deposit`, `previewDeposit`, `withdraw`, deployment version and configuration checks used by the UI. No automated frontend tests for this gate or the read-failure display paths were found.
+- APY values are adapter-reported mock rates and are disclosed as simulated in QuickDeposit and RouterPanel. The collapsed EarnTab row labels the venue “Auto-router” and shows a percentage without the mock qualifier, so disclosure is clearer after expansion than in that summary row; no live-market yield is established by these contracts or tests.
+
+## Test coverage and exact execution
+
+Ran from `C:\Users\USER\Desktop\Aero\contracts`:
+
+```powershell
+$auditTemp = Join-Path $env:TEMP 'aero-b2-1-2-review-20261021'
+forge test --out (Join-Path $auditTemp 'out') --cache-path (Join-Path $auditTemp 'cache')
+```
+
+**Result:** 66 passed, 0 failed, 0 skipped across 8 suites; compiler Solc 0.8.24. The router suite had 32 tests, including a 256-run donation fuzz test. Build output had one existing mutability warning in `AeroNames.t.sol`.
+
+**Fork classification:** The two `BenqiMainnetForkTest` cases appeared as passing in the plain test run but return immediately unless `block.chainid == 43114`. The run did not fork or verify the live market. No fork URL was provided, no live Fuji calls were made, and deployment scripts were not run. These are local unit tests, not live-network verification. There are no frontend gate tests or deployment-script preflight tests in the repository.
+
+The fuzz test checks the attacker’s direct withdrawal is no more than seed plus donation and checks the victim’s loss bound for its limited six-decimal ranges. It does not include subsequent owner orphan recovery, other decimals, very large values, severe adapter exchange-rate changes, or multiple independent victim withdrawals. The explicit attack test uses the requested six-decimal USDC example and asserts victim loss no more than one raw unit, but likewise omits orphan recovery.
+
+## Remaining risks and recommended next milestone
+
+1. **Resolve R-1 before general reuse:** enforce six-decimal USDC at the router contract boundary (not only in one script), or design a decimal-aware offset and extend tests to 0/6/18 decimals, donation scale, full exit and orphan recovery. Ensure the stated victim-loss bound matches the implemented supported-asset set.
+2. **Before using frontend with real value:** pin the reviewed router/adapter deployment identity and report missing position reads as unavailable rather than zero.
+3. **Controlled Fuji preparation:** use only the known six-decimal Fuji test USDC and fresh mock markets/adapters from `DeployMore`; do not characterize rates as live yield. Simulate before broadcast, treat every broadcast as a separate transaction, and verify binding/configuration and the final deployed addresses before frontend configuration.
+4. **Live integration remains unverified:** the suite’s guarded fork tests did not call mainnet; no live Fuji deployment, market interaction, frontend integration test or independent external audit was performed.
+
+**Conclusion: CONDITIONAL PASS —** suitable for controlled Fuji deployment preparation only when constrained to the known six-decimal test USDC and mock markets. The router is not ready to be represented as supporting the full decimal range accepted by its constructor until R-1 is resolved.
