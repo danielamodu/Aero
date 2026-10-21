@@ -9,7 +9,7 @@ const DEFAULT_SUBJECT = "Aero testnet is live — come break it"
 const DEFAULT_HEADING = "Testnet is live."
 const DEFAULT_BODY = `You joined the waitlist for real dollars. Today you get play dollars.
 
-testnet.useaero.org is live on Avalanche Fuji: claim 10,000 test USDC, grab a @username, and run the full loop — send, pay bills, earn mock yield.
+testnet.useaero.org is a sandbox on Avalanche Fuji: claim 10,000 tUSDC with no cash value, register a @username, try test transfers and bill presets, and inspect mock yield interfaces.
 
 Everything is worthless by design. Break things and tell us what snapped: reply to this email.`
 

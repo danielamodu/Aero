@@ -13,95 +13,100 @@ export default function DocsPage() {
         <DocsHero
           eyebrow="Documentation"
           title="Aero, explained plainly"
-          body="Everything you need to send money, pay bills, and earn yield — no crypto background required."
+          body="Aero is building digital-dollar payments, everyday payment experiences, and yield on eligible stablecoins. Today’s interactive app is a Fuji testnet sandbox using worthless test tokens and simulated services."
         />
 
         <div className="mt-12">
           <DocSection id="getting-started" eyebrow="Start here" title="Getting started">
             <p>
-              <strong className="font-semibold text-neutral-900">1. Claim your @username.</strong>{" "}
-              Usernames are free and first-come, first-served. It becomes your address, your
-              payment link, and your identity in one.
+              <strong className="font-semibold text-neutral-900">1. Connect a wallet.</strong>{" "}
+              The sandbox connects your browser wallet to Avalanche Fuji. This is not an Aero
+              account or account-recovery system.
             </p>
             <p>
-              <strong className="font-semibold text-neutral-900">2. Add dollars.</strong>{" "}
-              Fund your balance with USDC on Avalanche. What you deposit is what you can spend —
-              a dollar in is a dollar out.
+              <strong className="font-semibold text-neutral-900">2. Claim test tokens.</strong>{" "}
+              The faucet provides tUSDC, a test token with no cash value. Fuji AVAX is needed
+              from your wallet for network fees.
             </p>
             <p>
-              <strong className="font-semibold text-neutral-900">3. Send your first payment.</strong>{" "}
-              Type any @username and an amount. It settles in under a second, and the other
-              person gets a notification — not a transaction hash to decode.
+              <strong className="font-semibold text-neutral-900">3. Try a test transfer.</strong>{" "}
+              Register a handle in the on-chain Fuji registry, then send tUSDC to a registered
+              handle or wallet address. Your wallet prompts you to authorize the transaction.
             </p>
           </DocSection>
 
           <DocSection id="send" eyebrow="Send" title="Pay people, not addresses">
             <p>
-              Every Aero user has a @username. Sending to one is like tagging someone in a
-              message: type the name, confirm the amount, done. Settlement on Avalanche
-              finalizes in under a second.
+              The Fuji demo includes an on-chain username registry and a wallet-signed tUSDC
+              payment flow. A handle resolves to its current registered wallet address when
+              the payment contract executes. Transactions require Fuji AVAX for gas and are
+              visible on the public testnet.
             </p>
             <p>
-              The recipient doesn&apos;t need Aero. If they&apos;re not on it yet, they get a
-              claim link to collect the funds with a username of their own. Nothing is ever
-              lost to a mistyped address, because there are no addresses to mistype.
-            </p>
-          </DocSection>
-
-          <DocSection id="pay" eyebrow="Pay" title="One balance for real life">
-            <p>
-              Your Aero balance pays rent, utilities, merchants, and freelancers directly. Add
-              a bill once and it&apos;s tracked with due dates; pay it in a tap when
-              you&apos;re ready.
-            </p>
-            <p>
-              Payees don&apos;t need Aero or any crypto knowledge — on their end it arrives
-              like any normal payment. And because earning never pauses, your money keeps
-              working right up until the moment it&apos;s spent.
+              This demo does not hold funds for unregistered recipients or provide a claim
+              escrow. Check the displayed handle or address before signing; blockchain
+              transfers may be irreversible.
             </p>
           </DocSection>
 
-          <DocSection id="earn" eyebrow="Earn" title="Savings that run themselves">
+          <DocSection id="pay" eyebrow="Pay" title="Bill payment is a product direction">
             <p>
-              Any USDC sitting in your balance is automatically supplied to established
-              Avalanche lending markets such as Benqi and Trader Joe. An agent watches the
-              rates around the clock and routes funds to wherever pays best.
+              The current interface has a few bill-like presets. Selecting one fills in a
+              recipient, amount, and memo, then uses the same ordinary tUSDC transfer flow.
+              There is no connected utility, landlord, merchant, or biller service.
             </p>
             <p>
-              Rates are variable and change with the markets — the number you see in the app
-              is always the live best available rate, not a promise. A liquid reserve is kept
-              back so spending and withdrawals are always instant, even while the rest earns.
-            </p>
-            <p>
-              Like all DeFi, lending carries smart-contract risk. Aero only routes to large,
-              audited, battle-tested markets — never experimental vaults — but you should
-              understand the tradeoff. See the Terms for the full risk disclosure.
+              Bill tracking, due dates, biller confirmation, reversals, and disputes are not
+              implemented. Connecting everyday bill-payment providers remains part of the
+              intended Pay experience.
             </p>
           </DocSection>
 
-          <DocSection id="network" eyebrow="Network" title="What happens under the hood">
+          <DocSection id="earn" eyebrow="Earn" title="Yield is simulated in the sandbox">
             <p>
-              Aero runs on Avalanche, a network of 80+ interconnected blockchains (L1s).
-              A routing layer built on Avalanche Warp Messaging moves funds between them to
-              find the fastest execution and the best yield.
+              The standalone AeroVault increases a share index using a configured mock rate.
+              The AeroRouter source routes assets across adapters, but the supplied integrated
+              deployment script uses mock QiToken markets. Idle wallet balances are not
+              automatically supplied, and no live Benqi or Trader Joe market integration is
+              established by this repository.
             </p>
             <p>
-              You never pick a chain, hold gas tokens, or approve network switches. There is
-              no gas to understand and no &quot;wrong network&quot; to send on — Aero absorbs
-              all of that complexity.
+              Displayed mock rates are not live market quotes or expected returns. Router
+              withdrawals are synchronous and may revert when an adapter cannot return the
+              requested liquidity; there is no reserved liquid balance or withdrawal queue.
+            </p>
+            <p>
+              Real yield on eligible stablecoins is an intended product pillar. It must remain
+              disabled for real assets until supported markets, liquidity behavior, ownership
+              controls, independent security review, and deployments are approved.
+            </p>
+          </DocSection>
+
+          <DocSection id="network" eyebrow="Network" title="The current app runs on Fuji">
+            <p>
+              The current consumer sandbox is configured for Avalanche Fuji (chain ID
+              43113). This repository contains no implemented Aero cross-chain messaging or
+              ICM/Warp payment flow. The Aero L1 initiative is separate from the working
+              consumer sandbox integration.
+            </p>
+            <p>
+              Wallet connection and network switching are visible parts of the sandbox. Users
+              need Fuji AVAX for testnet transaction fees. Mainnet networks and production
+              assets are not enabled here.
             </p>
           </DocSection>
 
           <DocSection id="security" eyebrow="Security" title="Your keys, your dollars">
             <p>
-              Aero is self-custodied: you hold the keys, which means nobody — not even Aero —
-              can move your money without you. Back up your recovery details somewhere safe
-              and offline; if you lose them, there is no password reset that can recover
-              funds.
+              The sandbox connects to a wallet whose keys are managed by the wallet provider.
+              Payment transactions are authorized by that wallet. Deposits move test tokens
+              into contracts, so those tokens are subject to contract code and owner
+              configuration. The repository contains no Aero key recovery or account recovery
+              mechanism.
             </p>
             <p>
-              Never share recovery details with anyone, including people claiming to be Aero
-              support. Support will never ask for them.
+              Never share wallet recovery material or sign a transaction you do not
+              understand. Only use worthless test tokens in the sandbox.
             </p>
           </DocSection>
 
@@ -124,25 +129,26 @@ export default function DocsPage() {
             </p>
             <p>
               <strong className="font-semibold text-neutral-900">3. Claim a handle, then play.</strong>{" "}
-              Register a @username on-chain, send to friends (add a note — it travels
-              on-chain with the payment), pay the demo bills, and park funds in the
-              auto-router or the mock vault. Contracts are unverified experiments —
-              expect resets between testnet phases.
+              Register a @username on-chain, send test tokens, try the bill presets, and
+              inspect the mock router or vault. These are testnet contracts and mock markets,
+              not production financial services. Check the current deployment and contract
+              status before using the sandbox; testnet deployments may change.
             </p>
             <p>
               <strong className="font-semibold text-neutral-900">Need test dollars two ways.</strong>{" "}
-              Claim 10,000 tUSDC daily from the in-app faucet, or “buy” a pack with the
-              sandbox card checkout — no real charge, settled from the on-chain till.
+              Claim 10,000 tUSDC from the in-app faucet, or “buy” a pack with the sandbox
+              card screen — no card processor or charge is involved; the contract transfers
+              pre-funded tUSDC from a testnet inventory.
               Owe someone off-app? Send them your link:{" "}
               <span className="font-mono text-[15px] text-neutral-900">useaero.org/pay/@you/25</span>
             </p>
           </DocSection>
 
-          <DocSection id="support" eyebrow="Support" title="Talk to a human">
+          <DocSection id="support" eyebrow="Contact" title="Email contact">
             <p>
               Stuck on something? Write to <span className="font-medium text-neutral-900">support@useaero.org</span> with
-              your @username and what you were trying to do. Real people reply — usually
-              within a day.
+              The repository does not provide a support ticket, dispute case, or response-time
+              service level.
             </p>
           </DocSection>
         </div>

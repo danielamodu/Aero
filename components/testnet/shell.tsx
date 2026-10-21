@@ -577,7 +577,7 @@ export function Checklist({
             Testnet complete — you ran the whole loop.
           </p>
           <p className="mt-0.5 text-sm text-white/65">
-            Connected, funded, named, and sending. Mainnet will feel familiar.
+            Connected to Fuji and sending test tokens. This sandbox uses tUSDC with no cash value.
           </p>
         </div>
         <button

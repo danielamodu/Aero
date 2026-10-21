@@ -19,10 +19,11 @@ export default function TermsPage() {
         <div className="mt-12">
           <DocSection id="service" eyebrow="The basics" title="What Aero is">
             <p>
-              Aero provides a self-custodied payments app on Avalanche: sending USDC to
-              @usernames, paying bills and people from your balance, and automatically
-              routing idle funds to third-party lending markets to earn yield. Using the
-              app means you accept these terms.
+              The currently available interactive Aero app is an Avalanche Fuji testnet
+              sandbox. It supports wallet-authorized transfers of tUSDC, an on-chain handle
+              registry, test bill presets, and mock yield interfaces. tUSDC has no cash value.
+              Real biller payments, production stablecoin payments, and live third-party yield
+              are not established by this application. These terms apply to the sandbox only.
             </p>
           </DocSection>
 
@@ -37,24 +38,24 @@ export default function TermsPage() {
 
           <DocSection id="custody" eyebrow="Custody" title="Your keys, your responsibility">
             <p>
-              Your funds are self-custodied: you control the keys. Aero cannot move your
-              money, freeze it, or recover it if you lose your recovery details. Back them
-              up offline, never share them, and double-check every recipient — settled
-              blockchain transactions can&apos;t be reversed by anyone, including us.
+              Your connected wallet provider controls access to its keys; the repository does
+              not establish an Aero account recovery path. Payment transactions are authorized
+              by your wallet. Yield deposits transfer test tokens to contracts and are subject
+              to their code and owner configuration. Check recipients and transaction details
+              before signing; blockchain transactions may be irreversible.
             </p>
           </DocSection>
 
           <DocSection id="yield" eyebrow="Yield & risk" title="Read this part twice">
             <p>
-              Yield comes from independent third-party lending markets (such as Benqi and
-              Trader Joe), not from Aero. Rates are variable, set by markets, and can fall —
-              including to zero. Lending involves smart-contract risk: bugs, exploits, and
-              market events can lose funds despite audits and track records.
+              Yield shown in the current sandbox is simulated by test contracts or mock
+              markets. The repository does not establish a live Benqi or Trader Joe
+              integration. Any future lending integration would carry contract, liquidity,
+              market, and operational risks; no rate or return is guaranteed.
             </p>
             <p>
-              Aero is not a bank. Balances aren&apos;t deposits, aren&apos;t insured, and
-              nothing here is investment advice or a guaranteed return. Only keep funds in
-              Aero that you can afford to have exposed to these risks.
+              Aero is not a bank. Test tokens are not deposits, are not insured, and have no
+              cash value. Do not send real assets to sandbox contracts.
             </p>
           </DocSection>
 
@@ -87,8 +88,8 @@ export default function TermsPage() {
 
           <DocSection id="contact" eyebrow="Contact" title="Questions about these terms">
             <p>
-              Write to <span className="font-medium text-neutral-900">support@useaero.org</span> and
-              a human will answer. If any part of these terms is found unenforceable, the
+              For general contact, write to <span className="font-medium text-neutral-900">support@useaero.org</span>.
+              The app does not provide a support ticket or response-time commitment. If any part of these terms is found unenforceable, the
               rest still stands.
             </p>
           </DocSection>

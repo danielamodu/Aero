@@ -5,8 +5,8 @@ import { ArrowRight } from "lucide-react"
 import { BrandLockup } from "@/components/aero/brand-logo"
 
 export const metadata: Metadata = {
-  title: "Pay with Aero",
-  description: "Someone requested money via Aero. Pay any @username in seconds.",
+  title: "Aero Fuji test transfer",
+  description: "A payment-link preview that prefills a tUSDC transfer on Avalanche Fuji.",
 }
 
 function validHandle(h: string): boolean {
@@ -56,8 +56,8 @@ export default async function PayHandlePage({
           </h1>
           <p className="mx-auto mt-3 max-w-sm leading-relaxed text-neutral-600">
             {amount
-              ? "One tap and it's settled in under a second — no addresses, no gas confusion."
-              : "Pick an amount and settle up in under a second — no addresses, no gas confusion."}
+              ? "This link prefills a tUSDC transfer on Avalanche Fuji. Review the recipient and amount, then approve the transaction in your wallet. Fuji AVAX is required for gas."
+              : "This link opens the Fuji sandbox with a recipient prefilled. Choose an amount, review the transfer, and approve it in your wallet. Fuji AVAX is required for gas."}
           </p>
           <a
             href={appUrl}
@@ -66,7 +66,7 @@ export default async function PayHandlePage({
             Pay with Aero <ArrowRight className="size-4" />
           </a>
           <p className="mt-4 text-[13px] text-neutral-400">
-            Testnet · Fuji play money ·{" "}
+            Fuji testnet · tUSDC has no cash value · no escrow or biller settlement ·{" "}
             <Link href="/" className="underline underline-offset-4 hover:text-neutral-600">
               What is Aero?
             </Link>

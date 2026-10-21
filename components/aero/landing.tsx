@@ -212,16 +212,16 @@ function PhoneHome() {
       <p className="mt-0.5 font-mono text-[26px] leading-none font-medium tracking-tight text-neutral-900 tabular-nums">
         $2,480.42
       </p>
-      <p className="mt-1 text-[10px] font-medium text-emerald-600">+$3.41 this week · automatic</p>
+      <p className="mt-1 text-[10px] font-medium text-neutral-500">Illustrative balance · not live</p>
       <div className="mt-3 grid grid-cols-2 gap-1.5">
         <span className="rounded-full bg-aero-800 py-2 text-center text-[11px] font-semibold text-white">Send</span>
-        <span className="rounded-full border border-neutral-200 py-2 text-center text-[11px] font-semibold text-neutral-900">Pay bill</span>
+        <span className="rounded-full border border-neutral-200 py-2 text-center text-[11px] font-semibold text-neutral-900">Pay</span>
       </div>
       <div className="mt-3 space-y-1.5 border-t border-neutral-100 pt-2.5 text-[10px]">
         {[
           ["You → @maya", "$45.00"],
           ["@leo → You", "$120.00"],
-          ["Yield routed", "+$0.14"],
+          ["Example activity", "Preview"],
         ].map(([a, b]) => (
           <div key={a} className="flex items-center justify-between">
             <span className="font-medium text-neutral-700">{a}</span>
@@ -237,7 +237,7 @@ function PhoneEarn() {
   return (
     <PhoneShell>
       <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-        <span className="size-1 rounded-full bg-emerald-500" /> Earning 5.24%
+        <span className="size-1 rounded-full bg-emerald-500" /> Mock rate preview
       </span>
       <p className="mt-2 font-mono text-[26px] leading-none font-medium tracking-tight text-neutral-900 tabular-nums">
         $184.27
@@ -254,8 +254,8 @@ function PhoneEarn() {
       </div>
       <div className="mt-3 space-y-1.5 border-t border-neutral-100 pt-2.5 text-[10px]">
         {[
-          ["Trader Joe", "5.31%"],
-          ["Benqi", "4.92%"],
+            ["Mock market A", "4.10%"],
+            ["Mock market B", "3.80%"],
         ].map(([a, b]) => (
           <div key={a} className="flex items-center justify-between">
             <span className="font-medium text-neutral-700">{a}</span>
@@ -299,8 +299,9 @@ function Hero() {
           transition={{ duration: 0.6, delay: 0.18 }}
           className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-neutral-600"
         >
-          Send dollars to any @username in under a second, pay real bills from the same
-          balance, and let the rest earn while you sleep.
+          Aero is building username payments, everyday payment experiences, and yield on
+          eligible stablecoins. Try the current Fuji sandbox with worthless test tokens and
+          simulated services.
         </motion.p>
         <motion.div
           initial={{ opacity: 0, y: 26 }}
@@ -321,8 +322,8 @@ function Hero() {
           transition={{ duration: 0.6, delay: 0.42 }}
           className="mt-5 flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 font-mono text-xs text-neutral-600 tabular-nums"
         >
-          <span>&lt;1s finality</span>
-          <span>$0 gas confusion</span>
+          <span>Avalanche Fuji sandbox</span>
+          <span>tUSDC · no cash value</span>
         </motion.div>
 
         <div className="mt-14 flex items-end justify-center gap-5 sm:gap-8">
@@ -344,6 +345,9 @@ function Hero() {
             <PhoneEarn />
           </motion.div>
         </div>
+        <p className="mt-5 text-center text-xs text-neutral-500">
+          Illustrative product screens. Balances, activity, and rates shown are placeholders, not live account data.
+        </p>
       </div>
     </section>
   )
@@ -361,10 +365,10 @@ function Intro() {
         <div>
           <RevealWords
             className="text-2xl leading-[1.25] font-medium tracking-[-0.015em] text-neutral-900 text-balance sm:text-[2rem]"
-            text="No wallet addresses. No gas fees to decode. No chains to switch. Just money that arrives in under a second — and quietly grows while you sleep."
+            text="Aero’s intended product brings username payments, everyday payment experiences, and eligible stablecoin yield together. Today’s consumer demo runs on Avalanche Fuji with test tokens."
           />
           <motion.p {...fadeUp} className="mt-6 font-mono text-[13px] text-neutral-400">
-            {"// 80+ Avalanche networks hum underneath. You'll never see them."}
+            {"// Current integration: one Fuji testnet environment. Cross-chain routing is not implemented."}
           </motion.p>
         </div>
       </div>
@@ -378,20 +382,20 @@ const STEPS = [
   {
     n: "01",
     title: "Claim your @username",
-    body: "Free, first-come, first-served. It becomes your address, your payment link, and your identity in one.",
+    body: "The Fuji demo lets a wallet register one handle in the on-chain AeroNames registry.",
     chip: "@you",
   },
   {
     n: "02",
-    title: "Move money in a tap",
-    body: "Send to any handle or pay any bill. Settlement finalizes on Avalanche in under a second.",
-    chip: "$45.00 → @maya · 0.8s",
+    title: "Try a test transfer",
+    body: "Send tUSDC from a connected Fuji wallet to a registered handle or wallet address. Test tokens have no cash value.",
+    chip: "tUSDC → @maya · Fuji",
   },
   {
     n: "03",
-    title: "Let the rest earn",
-    body: "Idle USDC routes across Benqi and Trader Joe for the best live rate. Withdraw anytime.",
-    chip: "+5.31% APY · auto",
+    title: "Explore mock yield",
+    body: "The demo includes synthetic vault accrual and a router configured by the supplied script with mock markets. No live lending integration is established.",
+    chip: "Simulated rates · no live yield",
   },
 ]
 
@@ -511,10 +515,10 @@ function Integrations() {
           ))}
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center px-8 text-center">
             <h2 className="max-w-sm font-semibold text-[clamp(1.9rem,4vw,3rem)] leading-[1.08] text-neutral-900 text-balance">
-              Riding rails you already trust.
+              Built on Avalanche. Still a testnet demo.
             </h2>
             <p className="mx-auto mt-3 max-w-sm text-[15px] leading-relaxed text-neutral-500">
-              Settlement, yield, and messaging — plugged into the best of Avalanche, so you never think about chains.
+              This diagram shows possible product directions, not active provider partnerships. The consumer sandbox runs on Fuji; no live Benqi, Trader Joe, or Warp integration is established here.
             </p>
             <Button
               onClick={(e) => goTo(e, "waitlist")}
@@ -527,8 +531,11 @@ function Integrations() {
         <div className="md:hidden">
           <div className="mx-auto max-w-xl text-center">
             <h2 className="font-semibold text-4xl leading-[1.08] text-neutral-900 text-balance">
-              Riding rails you already trust.
+              An Avalanche Fuji testnet demo.
             </h2>
+            <p className="mt-3 text-sm leading-relaxed text-neutral-500">
+              Marks below are conceptual and do not indicate active integrations or partnerships.
+            </p>
           </div>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             {INTEGRATIONS.map((b) => (
@@ -579,26 +586,26 @@ const BENTO_SMALL = [
   {
     icon: ReceiptText,
     label: "Pay",
-    title: "Bills pay themselves-ish",
-    body: "Rent, power, freelancers — straight from your balance. The payee never touches crypto.",
+    title: "Bill-pay direction",
+    body: "Current bill presets fill a standard tUSDC transfer. No biller or payment provider is connected.",
   },
   {
     icon: Route,
     label: "Routing",
-    title: "Always the best rate",
-    body: "An agent watches Benqi and Trader Joe around the clock and moves funds when it matters.",
+    title: "Mock yield routing",
+    body: "Router source exists, but the supplied deployment uses mock markets. No live rate optimizer or keeper is running.",
   },
   {
     icon: AtSign,
     label: "Usernames",
-    title: "Your money's @handle",
-    body: "Claim it free, keep it forever. No addresses to copy, ever.",
+    title: "On-chain handles",
+    body: "The Fuji demo registry lets a wallet claim one handle. Handles can be changed or released.",
   },
   {
     icon: FlaskConical,
     label: "Testnet",
     title: "Try it on Fuji first",
-    body: "Play money, real rails. Claim 10,000 test dollars and run the whole loop today.",
+    body: "Claim tUSDC with no cash value and try wallet-signed Fuji transactions and mock interfaces.",
     href: "https://testnet.useaero.org",
   },
 ]
@@ -611,17 +618,17 @@ function Bento() {
           <motion.div {...fadeUp}>
             <Eyebrow>Features</Eyebrow>
             <h2 className="mt-4 max-w-xl font-semibold text-[clamp(1.9rem,4vw,3.1rem)] leading-[1.08] tracking-[-0.01em] text-neutral-900 text-balance">
-              Everything money should do, in one balance.
+              Product direction: Send, Pay, and Earn.
             </h2>
           </motion.div>
           <motion.div {...fadeUp} transition={{ duration: 0.5, delay: 0.1 }} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
             <div className="rounded-2xl border border-neutral-200 bg-white p-5">
-              <p className="font-mono text-2xl font-medium tabular-nums">&lt;1s</p>
-              <p className="mt-1 text-sm text-neutral-500">Avalanche finality on every send</p>
+              <p className="font-mono text-2xl font-medium tabular-nums">Fuji</p>
+              <p className="mt-1 text-sm text-neutral-500">Current sandbox network · chain ID 43113</p>
             </div>
             <div className="rounded-2xl border border-neutral-200 bg-white p-5">
-              <p className="font-mono text-2xl font-medium text-emerald-600 tabular-nums">5.31%</p>
-              <p className="mt-1 text-sm text-neutral-500">Best live APY, auto-routed</p>
+              <p className="font-mono text-2xl font-medium text-emerald-600 tabular-nums">tUSDC</p>
+              <p className="mt-1 text-sm text-neutral-500">Test token · no cash value</p>
             </div>
           </motion.div>
         </div>
@@ -633,7 +640,8 @@ function Bento() {
             </span>
             <p className="mt-5 text-[11px] font-semibold tracking-[0.14em] text-aero-700 uppercase">Send</p>
             <h3 className="mt-2 text-2xl font-medium tracking-tight text-neutral-900">If you can tag someone, you can pay them.</h3>
-            <p className="mt-2 max-w-md leading-relaxed text-neutral-600">Type @maya, hit send. No 0x strings, no waiting, no “did it go through?”</p>
+            <p className="mt-2 max-w-md leading-relaxed text-neutral-600">In the Fuji demo, register a handle, review the recipient, then authorize a test-token transfer in your wallet.</p>
+            <p className="mt-2 text-xs text-neutral-400">Illustrative UI preview; not a live transaction.</p>
             <div className="mt-6 max-w-md"><MiniSend /></div>
           </motion.div>
 
@@ -642,11 +650,11 @@ function Bento() {
               <Sprout className="size-5" />
             </span>
             <p className="mt-5 text-[11px] font-semibold tracking-[0.14em] text-white/50 uppercase">Earn</p>
-            <h3 className="mt-2 text-2xl font-medium tracking-tight">Your balance works nights.</h3>
-            <p className="mt-2 font-mono text-5xl font-medium tracking-tight text-emerald-300 tabular-nums">5.31%</p>
+            <h3 className="mt-2 text-2xl font-medium tracking-tight">Mock yield only</h3>
+            <p className="mt-2 font-mono text-3xl font-medium tracking-tight text-emerald-300 tabular-nums">SIMULATED</p>
             <div className="mt-5"><MiniEarnBars /></div>
             <p className="mt-5 text-[15px] leading-relaxed text-white/60">
-              2:41 AM — the agent moved $1,200 to Trader Joe for +0.39%. You were asleep. That&apos;s the point.
+              The charts and values here are illustrative. No agent or live lending market is connected in this demo.
             </p>
           </motion.div>
 
@@ -674,7 +682,7 @@ function Bento() {
               </span>
             </div>
           </motion.a>
-          <BentoCard icon={AtSign} label="Usernames" title="Your money's @handle" body="Claim it free, keep it forever. No addresses to copy, ever." delay={0.1} />
+          <BentoCard icon={AtSign} label="Usernames" title="On-chain handles" body="A wallet can register one handle in the Fuji demo registry. Handles can be changed or released; this is not an Aero account." delay={0.1} />
         </div>
       </div>
     </section>
@@ -773,7 +781,7 @@ function CTA() {
       window.plausible?.("waitlist-signup")
       setMessage(
         data.emailed
-          ? `Confirmation link sent to ${email.trim()} — tap it to lock in your handle.`
+          ? `Confirmation link sent to ${email.trim()} — confirm to join the waitlist. This does not reserve a handle.`
           : "You're on the list — email confirmations switch on soon."
       )
     } catch {
@@ -793,10 +801,10 @@ function CTA() {
             <BrandWordmark tone="light" height={64} />
           </div>
           <h2 className="mt-8 font-semibold text-[clamp(2.2rem,5vw,3.8rem)] leading-[1.05] text-balance">
-            Claim your @username
+            Request early access
           </h2>
           <p className="mx-auto mt-4 max-w-md text-lg text-white/65">
-            One handle for sending, getting paid, and growing. Free to reserve, yours to keep.
+            Join the waitlist for updates about Aero’s product direction. Your requested username is a preference only; it does not reserve a handle or guarantee access.
           </p>
           {status === "done" ? (
             <motion.div
@@ -876,9 +884,9 @@ function CTA() {
             </form>
           )}
           <div className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 border-t border-white/15 pt-8 text-sm text-white/60">
-            <span className="inline-flex items-center gap-2"><Check className="size-4" strokeWidth={3} /> Self-custodied</span>
-            <span className="inline-flex items-center gap-2"><Check className="size-4" strokeWidth={3} /> Sub-second settlement</span>
-            <span className="inline-flex items-center gap-2"><Check className="size-4" strokeWidth={3} /> Withdraw anytime</span>
+            <span className="inline-flex items-center gap-2"><Check className="size-4" strokeWidth={3} /> Wallet-signed test transfers</span>
+            <span className="inline-flex items-center gap-2"><Check className="size-4" strokeWidth={3} /> Fuji tUSDC · no cash value</span>
+            <span className="inline-flex items-center gap-2"><Check className="size-4" strokeWidth={3} /> Mock yield interfaces</span>
           </div>
         </div>
       </motion.div>
@@ -891,19 +899,19 @@ function CTA() {
 const FAQS = [
   {
     q: "Do my friends need Aero to receive money?",
-    a: "No. Send to anyone — they'll get a link to claim it with a username, or straight to their own wallet. If they're already on Aero, it just lands in under a second.",
+    a: "In the Fuji demo, send tUSDC to a registered handle or wallet address. It does not escrow funds for someone to claim later.",
   },
   {
     q: "Where does the yield actually come from?",
-    a: "Your idle USDC is supplied to established Avalanche lending markets like Benqi and Trader Joe. Aero's agent watches the rates and moves funds to wherever pays best. You never touch any of it.",
+    a: "No live lending integration is established here. The testnet vault uses a synthetic rate, and the supplied router deployment script creates mock markets. The product direction is yield on eligible stablecoins after review and approval.",
   },
   {
     q: "Is my money safe?",
-    a: "You stay self-custodied — your keys, your dollars — and funds sit in audited, battle-tested lending markets, never in experimental vaults. Withdraw anytime; liquidity for spending is always reserved first.",
+    a: "Only use test tokens with no cash value in the sandbox. Wallet transactions are signed by your connected wallet; deposited test tokens are held by contracts and subject to their code and configuration. No reserve or guaranteed withdrawal liquidity is provided.",
   },
   {
     q: "What can I pay with Aero?",
-    a: "Rent, utilities, merchants, and freelancers — anyone with a bill or an invoice. If they don't use Aero, they still get paid in dollars like any normal transfer.",
+    a: "The current bill-like presets only prefill an ordinary tUSDC transfer. No utility, merchant, landlord, or biller provider is connected.",
   },
 ]
 
@@ -918,7 +926,7 @@ function FAQ() {
               Asked often, answered plainly.
             </h2>
             <p className="mt-4 max-w-sm leading-relaxed text-neutral-600">
-              Anything else on your mind? A human replies — usually within a day.
+              The current app has an email contact, but no ticketing system or published response-time commitment.
             </p>
             <a
               href="mailto:support@useaero.org"
@@ -1012,7 +1020,7 @@ export function Footer() {
         <div className="-mt-[0.24em] border-t border-neutral-200 bg-[#f7f7f7]">
           <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 px-5 py-4 text-[13px] text-neutral-400 lg:px-10">
             <span>© 2026 Aero</span>
-            <span>Built on Avalanche · USDC</span>
+            <span>Avalanche Fuji sandbox · tUSDC</span>
           </div>
         </div>
       </div>

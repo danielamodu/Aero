@@ -20,9 +20,9 @@ import { useTx, TxStatus } from "./views"
 const PACKS = [25, 100, 500]
 
 /**
- * Sandbox card purchase: the card step is simulated, settlement is a real
- * on-chain transfer from the pre-funded bank till. Mainnet swaps this
- * sheet's settler for a provider (Transak/MoonPay) without touching the UI.
+ * Sandbox card-shaped demo: the card step is simulated, then a user-signed
+ * Fuji transaction transfers pre-funded test tokens from the AeroBank contract.
+ * No card processor or fiat settlement is connected.
  */
 export function BuySheet({
   open,

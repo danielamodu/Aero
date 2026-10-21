@@ -889,8 +889,9 @@ export function PayScreen({
         <>
           <div>
             <p className="text-[13px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
-              Bills
+              Bill presets · test transfers only
             </p>
+            <p className="mt-1 text-xs text-neutral-500">These shortcuts prefill a normal tUSDC transfer; no biller is connected.</p>
             <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
               {BILLS.map((b) => (
                 <button
@@ -947,7 +948,7 @@ function prettyMarket(id: string): string {
   return first ? first.charAt(0).toUpperCase() + first.slice(1) : "Market"
 }
 
-function useRouterDeploymentGate() {
+export function useRouterDeploymentGate() {
   const { chainId } = useAccount()
   const { data: bytecode, isPending: checkingCode, isError: codeError } = useBytecode({
     address: CONTRACTS.router,

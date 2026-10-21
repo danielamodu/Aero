@@ -2,22 +2,22 @@ import type { Metadata } from "next"
 import AeroLanding from "@/components/aero/landing"
 
 export const metadata: Metadata = {
-  title: "Aero — Digital dollars that move and work",
+  title: "Aero — Digital dollar payments, built for everyday use",
   description:
-    "Send USDC to @usernames instantly, pay bills from your balance, and earn yield automatically. Built on Avalanche.",
+    "Aero is building username payments, everyday payment experiences, and yield on eligible stablecoins. Try the Fuji testnet sandbox with worthless test tokens.",
   openGraph: {
-    title: "Aero — Digital dollars that move and work",
+    title: "Aero — Digital dollar payments, built for everyday use",
     description:
-      "Send USDC to @usernames instantly, pay bills from your balance, and earn yield automatically. Built on Avalanche.",
+      "Aero is building username payments, everyday payment experiences, and yield on eligible stablecoins. Try the Fuji testnet sandbox with worthless test tokens.",
     url: "https://useaero.org",
     siteName: "Aero",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Aero — Digital dollars that move and work",
+    title: "Aero — Digital dollar payments, built for everyday use",
     description:
-      "Send USDC to @usernames instantly, pay bills from your balance, and earn yield automatically. Built on Avalanche.",
+      "Aero is building username payments, everyday payment experiences, and yield on eligible stablecoins. Try the Fuji testnet sandbox with worthless test tokens.",
   },
 }
 
