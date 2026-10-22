@@ -1,13 +1,14 @@
-import { NextResponse } from "next/server"
 import { getAddress, verifyMessage, type Address, type Hex } from "viem"
 import { matchesStoredChallenge, sha256 } from "@/lib/identity/primitives.mjs"
 import {
   clearSessionCookies,
   identityError,
+  identityJson,
   readIdentityJson,
   setSessionCookies,
 } from "@/lib/identity/http"
 import { assertTrustedOrigin, resolveSession } from "@/lib/identity/security"
+import { enforceVerifyLimits } from "@/lib/identity/rate-limit"
 import {
   consumeChallenge,
   fujiAddressIsEoa,
@@ -21,6 +22,7 @@ export const runtime = "nodejs"
 export async function POST(request: Request) {
   try {
     assertTrustedOrigin(request)
+    await enforceVerifyLimits(request)
     const body = await readIdentityJson(request)
     const id = typeof body.challengeId === "string" ? body.challengeId : ""
     const message = typeof body.message === "string" ? body.message : ""
@@ -72,7 +74,7 @@ export async function POST(request: Request) {
     }
 
     const outcome = await consumeChallenge(id, sha256(message))
-    const response = NextResponse.json({ ok: true })
+    const response = identityJson({ ok: true })
     if (
       outcome.authenticated &&
       "token" in outcome &&

@@ -1,11 +1,15 @@
-import { NextResponse } from "next/server"
-import { assertTrustedOrigin, resolveSession } from "@/lib/identity/security"
-import { assertCsrf } from "@/lib/identity/security"
+import { assertTrustedOrigin } from "@/lib/identity/security"
+import { enforceChallengeLimits } from "@/lib/identity/rate-limit"
 import {
   createWalletChallenge,
   type ChallengePurpose,
 } from "@/lib/identity/service"
-import { identityError, readIdentityJson } from "@/lib/identity/http"
+import {
+  identityError,
+  identityJson,
+  readIdentityJson,
+  requireSession,
+} from "@/lib/identity/http"
 
 export const runtime = "nodejs"
 
@@ -20,8 +24,12 @@ export async function POST(request: Request) {
   try {
     assertTrustedOrigin(request)
     const body = await readIdentityJson(request)
-    if (body.purpose === "create_account")
+    if (body.purpose === "create_account") {
+      // Closed signup still consumes the public challenge budget so probing
+      // this endpoint cannot bypass the unauthenticated abuse controls.
+      await enforceChallengeLimits(request)
       throw new Error("IDENTITY_SIGNUP_CLOSED")
+    }
     if (typeof body.purpose !== "string" || !purposes.has(body.purpose))
       throw new Error("IDENTITY_REQUEST_INVALID")
     const purpose = body.purpose as ChallengePurpose
@@ -45,10 +53,9 @@ export async function POST(request: Request) {
 
     let session = null
     if (purpose !== "login") {
-      session = await resolveSession(request)
-      if (!session) throw new Error("IDENTITY_SESSION_REQUIRED")
-      assertCsrf(request, session)
+      session = await requireSession(request)
     }
+    await enforceChallengeLimits(request, session?.userId)
 
     const result = await createWalletChallenge({
       purpose,
@@ -64,7 +71,7 @@ export async function POST(request: Request) {
       operation:
         body.operation === "switch_primary" ? "switch_primary" : "none",
     })
-    return NextResponse.json({
+    return identityJson({
       ok: true,
       challengeId: result.id,
       message: result.message,

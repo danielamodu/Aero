@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server"
 import {
   identityError,
+  identityJson,
   requireSession,
   setSessionCookies,
 } from "@/lib/identity/http"
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
       session.userId,
       session.tokenHash
     )
-    const response = NextResponse.json({ ok: true })
+    const response = identityJson({ ok: true })
     setSessionCookies(
       response,
       rotated.token,

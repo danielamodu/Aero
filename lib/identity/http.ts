@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { cookieOptions } from "./primitives.mjs"
+import { enforceSessionRequestLimit } from "./rate-limit"
 import {
   CSRF_COOKIE,
   SESSION_COOKIE,
@@ -37,6 +38,12 @@ export async function readIdentityJson(
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw new Error("IDENTITY_REQUEST_INVALID")
   return value as Record<string, unknown>
+}
+
+export function identityJson(body: unknown, init?: ResponseInit) {
+  const response = NextResponse.json(body, init)
+  response.headers.set("cache-control", "no-store")
+  return response
 }
 
 export function identityError(error: unknown) {
@@ -93,7 +100,7 @@ export function identityError(error: unknown) {
                 : code === "IDENTITY_WALLET_NOT_LINKED"
                   ? "That wallet is not available for this account action."
                   : "Identity request could not be completed."
-  return NextResponse.json({ ok: false, error: publicMessage }, { status })
+  return identityJson({ ok: false, error: publicMessage }, { status })
 }
 
 export async function requireSession(
@@ -101,6 +108,7 @@ export async function requireSession(
   csrf = true
 ): Promise<IdentitySession> {
   assertTrustedOrigin(request)
+  await enforceSessionRequestLimit(request)
   const session = await resolveSession(request)
   if (!session) throw new Error("IDENTITY_SESSION_REQUIRED")
   if (csrf) assertCsrf(request, session)

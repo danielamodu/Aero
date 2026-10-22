@@ -1,6 +1,7 @@
 import { createHmac } from "node:crypto"
 import { equalSecret, sha256 } from "./primitives.mjs"
 import { withIdentityRead } from "./db"
+import { isIdentityDatabaseUnavailableCode } from "./error-codes.mjs"
 
 export const SESSION_COOKIE = "__Host-aero_session"
 export const CSRF_COOKIE = "__Host-aero_csrf"
@@ -140,6 +141,10 @@ export function securityFailureStatus(code: string): number {
       "IDENTITY_SESSION_SECRET_INVALID",
       "IDENTITY_SESSION_POLICY_INVALID",
       "IDENTITY_FUJI_RPC_UNCONFIGURED",
+      "IDENTITY_FUJI_RPC_UNAVAILABLE",
+      "IDENTITY_FUJI_RPC_CHAIN_MISMATCH",
+      "IDENTITY_FUJI_RPC_RESPONSE_INVALID",
+      "IDENTITY_RATE_LIMIT_UNAVAILABLE",
     ].includes(code)
   )
     return 503
@@ -159,12 +164,15 @@ export function securityFailureStatus(code: string): number {
 export function errorCode(error: unknown): string {
   if (error instanceof Error && /^[A-Z0-9_]+$/.test(error.message))
     return error.message
-  if (
-    error &&
-    typeof error === "object" &&
-    "code" in error &&
-    ["23505", "23503", "23514"].includes(String(error.code))
-  )
-    return "IDENTITY_CONFLICT"
+  if (error && typeof error === "object" && "code" in error) {
+    const code = String((error as { code: unknown }).code)
+    // Connection failures, shutdown and missing schema/table mean the identity
+    // store is not usable. Report unavailable rather than a generic 400 so
+    // operators can distinguish drift from a malformed request.
+    if (isIdentityDatabaseUnavailableCode(code))
+      return "IDENTITY_DATABASE_UNAVAILABLE"
+    if (["23505", "23503", "23514"].includes(code))
+      return "IDENTITY_CONFLICT"
+  }
   return "IDENTITY_REQUEST_FAILED"
 }
