@@ -9,6 +9,7 @@
     "test:release-gate": "node --test scripts/validate-aero-release.test.mjs",
     "test:identity": "node --test tests/identity/*.test.mjs",
     "migrate:identity": "node scripts/migrate-identity.mjs",
+    "identity:provision-roles": "node scripts/provision-identity-roles.mjs",
     "prebuild": "npm run release:check",
     "build": "next build",
     "start": "next start",

@@ -9,14 +9,18 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const migrationDir = join(root, "migrations", "identity")
 const lockKey = 72843113001n
 
-if (!process.env.DATABASE_URL) {
+const connectionString =
+  process.env.AERO_IDENTITY_MIGRATION_DATABASE_URL ??
+  process.env.DATABASE_URL
+
+if (!connectionString) {
   throw new Error(
-    "DATABASE_URL is required; identity migrations never use a local-file fallback."
+    "AERO_IDENTITY_MIGRATION_DATABASE_URL or DATABASE_URL is required; identity migrations never use a local-file fallback or the runtime URL."
   )
 }
 
 neonConfig.webSocketConstructor = WebSocket
-const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 1 })
+const pool = new Pool({ connectionString, max: 1 })
 let client
 
 try {

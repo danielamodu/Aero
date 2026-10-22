@@ -14,6 +14,14 @@ const sql = await readFile(
   join(root, "migrations", "identity", "001_identity_schema.sql"),
   "utf8"
 )
+const truncateGuardSql = await readFile(
+  join(root, "migrations", "identity", "002_identity_audit_truncate_guard.sql"),
+  "utf8"
+)
+const rateLimitSql = await readFile(
+  join(root, "migrations", "identity", "003_identity_rate_limits.sql"),
+  "utf8"
+)
 
 test("identity migration is additive and leaves waitlist schema/data alone", () => {
   assert.match(sql, /CREATE SCHEMA IF NOT EXISTS identity/i)
@@ -53,6 +61,29 @@ test("audit history is append-only and migration does not enable a purge", () =>
     sql,
     /CREATE\s+(EVENT\s+TRIGGER|TRIGGER)[^;]*(purge|retention)/i
   )
+})
+
+test("audit history rejects TRUNCATE in addition to row mutations", () => {
+  assert.match(
+    truncateGuardSql,
+    /BEFORE TRUNCATE ON identity\.identity_audit_events/i
+  )
+  assert.match(truncateGuardSql, /FOR EACH STATEMENT/i)
+  assert.match(truncateGuardSql, /reject_audit_mutation/i)
+})
+
+test("rate limiting is distributed, bounded, and not directly writable by the runtime", () => {
+  assert.match(rateLimitSql, /CREATE TABLE identity\.rate_limits/i)
+  assert.match(rateLimitSql, /PRIMARY KEY/i)
+  assert.match(rateLimitSql, /octet_length\(key_hash\) = 32/i)
+  assert.match(rateLimitSql, /CREATE FUNCTION identity\.consume_rate_limit/i)
+  assert.match(rateLimitSql, /SECURITY DEFINER/i)
+  assert.match(rateLimitSql, /SET search_path = pg_catalog, identity/i)
+  assert.match(rateLimitSql, /REVOKE ALL ON FUNCTION identity\.consume_rate_limit/i)
+  assert.match(rateLimitSql, /FROM PUBLIC/i)
+  assert.doesNotMatch(rateLimitSql, /GRANT\s+(SELECT|INSERT|UPDATE|DELETE)\s+ON\s+identity\.rate_limits/i)
+  assert.doesNotMatch(rateLimitSql, /CREATE\s+EVENT\s+TRIGGER/i)
+  assert.doesNotMatch(rateLimitSql, /\b(DROP|TRUNCATE)\s+(TABLE|SCHEMA)\b/i)
 })
 
 const integrationUrl = process.env.AERO_TEST_DATABASE_URL
@@ -100,7 +131,9 @@ test(
              to_regclass('identity.wallets') AS wallets,
              to_regclass('identity.wallet_challenges') AS challenges,
              to_regclass('identity.sessions') AS sessions,
-             to_regclass('identity.identity_audit_events') AS audit
+             to_regclass('identity.identity_audit_events') AS audit,
+             to_regclass('identity.rate_limits') AS rate_limits,
+             to_regprocedure('identity.consume_rate_limit(bytea,integer,integer,timestamp with time zone)') AS rate_limit_function
     `)
       assert.ok(Object.values(objects.rows[0]).every(Boolean))
 
@@ -110,53 +143,61 @@ test(
       const walletB = randomUUID()
       const auditId = randomUUID()
       const address = `0x${"a".repeat(40)}`
-      await pool.query("BEGIN")
+      // A transaction must stay on one pooled connection; pool.query() may
+      // hand each statement a different connection and silently break
+      // BEGIN/SAVEPOINT/ROLLBACK semantics.
+      const tx = await pool.connect()
       try {
-        await pool.query("INSERT INTO identity.users (id) VALUES ($1), ($2)", [
-          userA,
-          userB,
-        ])
-        await pool.query(
-          `INSERT INTO identity.wallets
-        (id,user_id,namespace,wallet_kind,address_normalized,verification_status,is_primary)
-        VALUES ($1,$2,'eip155','eoa',$3,'verified',true)`,
-          [walletA, userA, address]
-        )
-        await pool.query("SAVEPOINT duplicate_wallet")
-        await assert.rejects(
-          pool.query(
+        await tx.query("BEGIN")
+        try {
+          await tx.query("INSERT INTO identity.users (id) VALUES ($1), ($2)", [
+            userA,
+            userB,
+          ])
+          await tx.query(
             `INSERT INTO identity.wallets
-        (id,user_id,namespace,wallet_kind,address_normalized,verification_status,is_primary)
-        VALUES ($1,$2,'eip155','eoa',$3,'verified',false)`,
-            [walletB, userB, address]
+          (id,user_id,namespace,wallet_kind,address_normalized,verification_status,is_primary)
+          VALUES ($1,$2,'eip155','eoa',$3,'verified',true)`,
+            [walletA, userA, address]
           )
-        )
-        await pool.query("ROLLBACK TO SAVEPOINT duplicate_wallet")
-        await pool.query("SAVEPOINT duplicate_primary")
-        await assert.rejects(
-          pool.query(
-            `INSERT INTO identity.wallets
-        (id,user_id,namespace,wallet_kind,address_normalized,verification_status,is_primary)
-        VALUES ($1,$2,'eip155','eoa',$3,'verified',true)`,
-            [walletB, userA, `0x${"b".repeat(40)}`]
+          await tx.query("SAVEPOINT duplicate_wallet")
+          await assert.rejects(
+            tx.query(
+              `INSERT INTO identity.wallets
+          (id,user_id,namespace,wallet_kind,address_normalized,verification_status,is_primary)
+          VALUES ($1,$2,'eip155','eoa',$3,'verified',false)`,
+              [walletB, userB, address]
+            )
           )
-        )
-        await pool.query("ROLLBACK TO SAVEPOINT duplicate_primary")
-        await pool.query(
-          `INSERT INTO identity.identity_audit_events
-        (id,actor_kind,action_code) VALUES ($1,'system','test.integration')`,
-          [auditId]
-        )
-        await pool.query("SAVEPOINT audit_mutation")
-        await assert.rejects(
-          pool.query(
-            "UPDATE identity.identity_audit_events SET action_code='changed' WHERE id=$1",
+          await tx.query("ROLLBACK TO SAVEPOINT duplicate_wallet")
+          await tx.query("SAVEPOINT duplicate_primary")
+          await assert.rejects(
+            tx.query(
+              `INSERT INTO identity.wallets
+          (id,user_id,namespace,wallet_kind,address_normalized,verification_status,is_primary)
+          VALUES ($1,$2,'eip155','eoa',$3,'verified',true)`,
+              [walletB, userA, `0x${"b".repeat(40)}`]
+            )
+          )
+          await tx.query("ROLLBACK TO SAVEPOINT duplicate_primary")
+          await tx.query(
+            `INSERT INTO identity.identity_audit_events
+          (id,actor_kind,action_code) VALUES ($1,'system','test.integration')`,
             [auditId]
           )
-        )
-        await pool.query("ROLLBACK TO SAVEPOINT audit_mutation")
+          await tx.query("SAVEPOINT audit_mutation")
+          await assert.rejects(
+            tx.query(
+              "UPDATE identity.identity_audit_events SET action_code='changed' WHERE id=$1",
+              [auditId]
+            )
+          )
+          await tx.query("ROLLBACK TO SAVEPOINT audit_mutation")
+        } finally {
+          await tx.query("ROLLBACK")
+        }
       } finally {
-        await pool.query("ROLLBACK")
+        tx.release()
       }
 
       if (beforeRows !== null) {
