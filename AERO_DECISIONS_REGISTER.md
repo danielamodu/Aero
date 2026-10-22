@@ -32,6 +32,10 @@
 
 ## Milestone 1A status and gates
 
-The M1A completion report accurately records that no decision had been approved at that milestone. The 2026-10-22 M1B product-owner response approves D-01–D-04 and D-21–D-24 for the Fuji-only, closed-signup implementation. D-12 remains **unresolved**: no retention period is approved, so scheduled purge and hard deletion are disabled/gated. D-05, D-13 and all production, beta, chain, asset, legal and staff-access decisions remain outside this approval.
+The M1A completion report accurately records that no decision had been approved at that milestone. The 2026-10-22 M1B product-owner response approves D-01–D-04 and D-21–D-24 for the Fuji-only, closed-signup implementation. D-12 remains **unresolved**: no retention period is approved, so scheduled purge and hard deletion are disabled/gated.
+
+**2026-10-22 closure note:** M1B closed as **CONDITIONAL PASS** with D-12 still unresolved. No retention interval, purge, hard delete, or account-closure enablement was added. The layered rate limits and least-privilege runtime role are operational/security controls, not a retention policy decision, and do not resolve D-12.
+
+D-05, D-13 and all production, beta, chain, asset, legal and staff-access decisions remain outside this approval.
 
 Before any real-value release, resolve D-06–D-15 and D-18–D-20, plus legal/security review as listed. M0's production allowlist remains empty; this register does not change release configuration.
