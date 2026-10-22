@@ -1,44 +1,35 @@
-import { Pool, neonConfig, type PoolClient } from "@neondatabase/serverless"
-import WebSocket from "ws"
+import type { PoolClient } from "@neondatabase/serverless"
+import { getIdentityPool } from "./pool.mjs"
 
-type IdentityClient = PoolClient
+export type IdentityClient = PoolClient
 
-neonConfig.webSocketConstructor = WebSocket
-
-function createPool() {
-  const connectionString = process.env.DATABASE_URL
-  if (!connectionString) throw new Error("IDENTITY_DATABASE_UNAVAILABLE")
-  return new Pool({
-    connectionString,
-    max: 1,
-    connectionTimeoutMillis: 5000,
-    idleTimeoutMillis: 1000,
-  })
-}
-
+/**
+ * The pool is module-scoped and reused across requests. A request only checks
+ * out one client for the duration of its transaction and always releases it.
+ * The pool is never ended from a request path; scripts and tests call
+ * closeIdentityPool() explicitly.
+ */
 export async function withIdentityTransaction<T>(
   work: (client: IdentityClient) => Promise<T>
 ): Promise<T> {
-  const pool = createPool()
+  const pool = getIdentityPool()
+  const client = await pool.connect()
+  let destroy = false
   try {
-    const client = await pool.connect()
+    await client.query("BEGIN")
+    const result = await work(client)
+    await client.query("COMMIT")
+    return result
+  } catch (error) {
     try {
-      await client.query("BEGIN")
-      const result = await work(client)
-      await client.query("COMMIT")
-      return result
-    } catch (error) {
-      try {
-        await client.query("ROLLBACK")
-      } catch {
-        /* connection is already unusable */
-      }
-      throw error
-    } finally {
-      client.release()
+      await client.query("ROLLBACK")
+    } catch {
+      // A broken connection must not return to the pool.
+      destroy = true
     }
+    throw error
   } finally {
-    await pool.end()
+    client.release(destroy)
   }
 }
 
@@ -50,5 +41,3 @@ export async function withIdentityRead<T>(
     return work(client)
   })
 }
-
-export type { IdentityClient }
