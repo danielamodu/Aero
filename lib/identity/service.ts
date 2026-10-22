@@ -1,8 +1,7 @@
 import { randomUUID, randomBytes } from "node:crypto"
 import { getAddress, isAddress, type Address } from "viem"
-import { avalancheFuji } from "viem/chains"
-import { createPublicClient, http } from "viem"
 import { buildSiweMessage, createOpaqueToken, sha256 } from "./primitives.mjs"
+import { checkFujiAddressIsEoa } from "./fuji-eoa.mjs"
 import {
   withIdentityRead,
   withIdentityTransaction,
@@ -288,14 +287,7 @@ export async function incrementChallengeFailure(id: string) {
 }
 
 export async function fujiAddressIsEoa(address: Address): Promise<boolean> {
-  const rpc = process.env.AERO_FUJI_RPC_URL
-  if (!rpc) throw new Error("IDENTITY_FUJI_RPC_UNCONFIGURED")
-  const client = createPublicClient({
-    chain: avalancheFuji,
-    transport: http(rpc, { timeout: 5000 }),
-  })
-  const code = await client.getBytecode({ address })
-  return !code || code === "0x"
+  return checkFujiAddressIsEoa(address)
 }
 
 export async function consumeChallenge(id: string, exactMessageHash: Buffer) {
