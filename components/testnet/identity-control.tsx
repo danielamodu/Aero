@@ -17,6 +17,7 @@ type IdentityState = {
   account?: { id: string; status: string; wallets: LinkedWallet[] }
   absoluteExpiresAt?: string
   reauthenticatedAt?: string | null
+  reauthenticatedWalletId?: string | null
 }
 
 const EMPTY_WALLETS: LinkedWallet[] = []
@@ -141,7 +142,19 @@ export function IdentityControl() {
   }, [refresh, state?.authenticated])
 
   const wallets = state?.account?.wallets ?? EMPTY_WALLETS
-  const selectedProof = wallets.find((wallet) => wallet.id === proofWalletId)
+  const connectedLinkedWallet = address
+    ? wallets.find(
+        (wallet) => wallet.address.toLowerCase() === address.toLowerCase()
+      )
+    : undefined
+  // Sensitive actions must be signed by the connected wallet. When the
+  // connected wallet is linked, it is the only valid proof wallet; otherwise
+  // the dropdown selects the existing wallet used to authorize a link.
+  const selectedProof =
+    connectedLinkedWallet ??
+    wallets.find((wallet) => wallet.id === proofWalletId) ??
+    wallets.find((wallet) => wallet.is_primary) ??
+    wallets[0]
 
   const prove = async (input: {
     purpose: "login" | "link_wallet" | "reauthenticate" | "revoke_wallet"
@@ -155,6 +168,18 @@ export function IdentityControl() {
     if (chainId !== FUJI_CHAIN_ID) {
       setError("Switch your connected wallet to Avalanche Fuji before signing.")
       return false
+    }
+    if (input.signerAddress.toLowerCase() !== address?.toLowerCase()) {
+      setError(
+        "This step must be signed by the connected wallet. Connect that wallet, then try again."
+      )
+      return false
+    }
+    if (input.proofWalletId && input.proofWalletId !== proofWalletId) {
+      // Remember which wallet proved control so the link step still knows the
+      // authorization wallet after the user switches the connected account.
+      proofWalletIdRef.current = input.proofWalletId
+      setProofWalletId(input.proofWalletId)
     }
     setPending(input.label)
     setError("")
@@ -201,13 +226,13 @@ export function IdentityControl() {
       })
       if (!verifyResponse.ok)
         throw new Error(await responseError(verifyResponse))
-      await refresh()
-      return true
       setNotice(
         input.purpose === "login"
           ? "Sign-in checked. If no Aero account is available, this session stays unauthenticated; account creation is closed."
           : "Wallet proof completed. This signed message did not submit a transaction or authorize token transfers."
       )
+      await refresh()
+      return true
     } catch (cause) {
       setError(
         cause instanceof Error
@@ -263,11 +288,11 @@ export function IdentityControl() {
   }
 
   const authenticated = Boolean(state?.authenticated && state.account)
-  const connectedLinked = Boolean(
-    address &&
-    wallets.some(
-      (wallet) => wallet.address.toLowerCase() === address.toLowerCase()
-    )
+  const connectedLinked = Boolean(connectedLinkedWallet)
+  const proofFresh = Boolean(
+    selectedProof &&
+    state?.reauthenticatedAt &&
+    state.reauthenticatedWalletId === selectedProof.id
   )
 
   return (
@@ -373,9 +398,10 @@ export function IdentityControl() {
           </label>
           <select
             id="identity-proof-wallet"
-            value={proofWalletId}
+            value={selectedProof?.id ?? ""}
             onChange={(event) => setProofWalletId(event.target.value)}
-            className="h-8 max-w-[260px] rounded-lg border border-neutral-200 bg-white px-2 font-mono text-xs text-neutral-700"
+            disabled={Boolean(connectedLinkedWallet)}
+            className="h-8 max-w-[260px] rounded-lg border border-neutral-200 bg-white px-2 font-mono text-xs text-neutral-700 disabled:opacity-60"
           >
             {wallets.map((wallet) => (
               <option key={wallet.id} value={wallet.id}>
@@ -384,35 +410,60 @@ export function IdentityControl() {
               </option>
             ))}
           </select>
-          {address && !connectedLinked && (
+          {selectedProof && (
             <Button
               variant="outline"
               disabled={
-                Boolean(pending) || !selectedProof || chainId !== FUJI_CHAIN_ID
+                Boolean(pending) ||
+                chainId !== FUJI_CHAIN_ID ||
+                address?.toLowerCase() !== selectedProof.address.toLowerCase()
               }
-              onClick={async () => {
-                if (!selectedProof) return
-                const reauthenticated = await prove({
+              onClick={() =>
+                void prove({
                   purpose: "reauthenticate",
                   proofWalletId: selectedProof.id,
                   signerAddress: selectedProof.address,
                   label: "reauthenticate",
                 })
-                if (reauthenticated)
-                  await prove({
-                    purpose: "link_wallet",
-                    address,
-                    proofWalletId: selectedProof.id,
-                    signerAddress: address,
-                    label: "link wallet",
-                  })
-              }}
+              }
               className="h-8 rounded-full px-3 text-xs"
             >
-              {pending === "reauthenticate" || pending === "link wallet"
+              {pending === "reauthenticate"
                 ? "Wallet proof pending…"
-                : "Reauthenticate and link connected wallet"}
+                : "Reauthenticate selected wallet"}
             </Button>
+          )}
+          {address && !connectedLinked && (
+            <Button
+              variant="outline"
+              disabled={
+                Boolean(pending) ||
+                !selectedProof ||
+                !proofFresh ||
+                chainId !== FUJI_CHAIN_ID
+              }
+              onClick={() =>
+                selectedProof &&
+                void prove({
+                  purpose: "link_wallet",
+                  address,
+                  proofWalletId: selectedProof.id,
+                  signerAddress: address,
+                  label: "link wallet",
+                })
+              }
+              className="h-8 rounded-full px-3 text-xs"
+            >
+              {pending === "link wallet"
+                ? "Linking wallet…"
+                : "Link connected wallet"}
+            </Button>
+          )}
+          {address && !connectedLinked && !proofFresh && (
+            <span className="text-[11px] text-neutral-500">
+              To link this wallet: connect an existing wallet, reauthenticate,
+              then switch back within 5 minutes.
+            </span>
           )}
           {wallets.map((wallet) => (
             <span key={wallet.id} className="flex flex-wrap items-center gap-1">
