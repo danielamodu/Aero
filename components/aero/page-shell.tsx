@@ -33,7 +33,14 @@ export function DocsShell({ children }: { children: ReactNode }) {
             <BrandLockup tone="dark" height={28} />
           </a>
           <nav className="flex items-center gap-6 text-[15px] font-medium text-neutral-600">
-            <a href="/docs" className="transition hover:text-neutral-950">Docs</a>
+            <a
+              href="https://docs.useaero.org"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition hover:text-neutral-950"
+            >
+              Docs
+            </a>
             <a href="/#top" className="transition hover:text-neutral-950">Early access</a>
           </nav>
         </div>

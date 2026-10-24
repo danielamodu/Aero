@@ -998,7 +998,14 @@ export function Footer() {
               <a href="#how" onClick={(e) => goTo(e, "how")} className="block text-neutral-600 hover:text-neutral-950">How it works</a>
               <a href="#features" onClick={(e) => goTo(e, "features")} className="block text-neutral-600 hover:text-neutral-950">Features</a>
               <a href="#faq" onClick={(e) => goTo(e, "faq")} className="block text-neutral-600 hover:text-neutral-950">FAQ</a>
-              <a href="/docs" className="block text-neutral-600 hover:text-neutral-950">Docs</a>
+              <a
+                href="https://docs.useaero.org"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block text-neutral-600 hover:text-neutral-950"
+              >
+                Docs
+              </a>
             </div>
             <div className="space-y-3">
               <p className="text-[13px] font-medium text-neutral-400">Company</p>
