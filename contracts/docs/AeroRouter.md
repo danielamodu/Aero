@@ -1,93 +1,150 @@
-# AeroRouter — mainnet yield-routing design
+# AeroRouter — sandbox implementation and mainnet design notes
 
-Status: design (testnet runs the mock `AeroVault`; this doc is the mainnet target).
-Audience: whoever implements or audits the mainnet router.
+Status: **implemented sandbox contract, Fuji/testnet only**. No verified mainnet
+deployment, no independent audit, no live Benqi or Trader Joe integration.
+Audience: engineers working on the router, adapters and the frontend portfolio
+view.
 
-## 1. Goal
+This document separates what `contracts/src/AeroRouter.sol` actually does from
+the mainnet design direction. The design notes are not a description of current
+behavior.
 
-One USDC pool whose idle balance is continuously allocated across Avalanche
-lending markets (starting: Benqi, Trader Joe) to maximize net APY after gas,
-with the user seeing a single balance, one APY number, and instant withdrawals.
+## 1. What the contract does today
 
-Non-goals for v1: leverage, cross-chain movement (see §6), custom strategies
-per user. One global allocation, same for everyone.
+`AeroRouter` is an ERC-20 share contract over an exclusive adapter set. It is
+deployed with:
 
-## 2. Architecture
+- one six-decimal ERC-20 asset (tUSDC on Fuji),
+- one or more adapters that implement `IYieldAdapter`,
+- a target allocation in basis points that must sum to `10_000`.
 
+The router accounts for assets as:
+
+```text
+totalAssets = idle asset balance
+            + Σ adapter.convertToAssets(adapter.sharesOf(router))
 ```
-User ──deposit/withdraw──▶ AeroRouter ──adapter──▶ Benqi market
-                                      └─adapter──▶ Trader Joe market
-```
 
-- `AeroRouter` holds accounting (shares, per-user balances) and the target
-  allocation. It never holds idle USDC longer than one rebalance window —
-  funds live in the adapters' markets.
-- `IYieldAdapter` wraps one protocol market: `deposit`, `withdraw`,
-  `balance` (assets, in USDC units), `liveApyBps` (on-chain view, no oracles
-  beyond what the protocol itself exposes: supply rate per block/second).
-- Rebalancing is **keeper-triggered**, not automatic per block: anyone (initially
-  an Aero bot, later permissionless with a small caller incentive) calls
-  `rebalance()` when drift from target exceeds a threshold. This keeps gas
-  predictable and prevents MEV games around user deposits.
+It uses a virtual asset/share offset (`VIRTUAL_ASSETS = 1`,
+`virtualShares = 10^(18 - assetDecimals)`) for first-deposit and inflation
+protection. Router shares are 18-decimal ERC-20 tokens and are transferable.
 
-## 3. Allocation policy (v1, deliberately dumb)
+### Deposits
 
-- Every rebalance reads each adapter's `liveApyBps`, subtracts a gas-cost
-  haircut proportional to the amount being moved, and shifts funds toward the
-  highest net rate until marginal rates equalize or a per-market cap is hit.
-- Caps: max 70% in any single market; min 10% stays in the most liquid market
-  so withdrawals rarely queue.
-- Hysteresis band of 25 bps: no rebalance unless the gain clears it. Churn is
-  the enemy — moving money costs gas and resets nothing.
-- All parameters are owner-settable with a 24h timelock in production
-  (testnet: direct, for iteration speed).
+`deposit(assets, minShares)`:
 
-## 4. Shares and accounting
+1. Converts assets to shares and enforces `minShares`.
+2. Pulls the asset and verifies the exact balance delta.
+3. Splits the deposit across every slot by `targetBps`.
+4. Deposits each allocation into its adapter and checks the adapter's reported
+   shares and measured asset delta.
+5. Mints router shares and asserts that targets still sum to `10_000`.
 
-- ERC-4626-style vault shares (`AeroVault` on testnet already follows this
-  shape: `deposit`/`withdraw`/`preview*`, 1e18 index). Mainnet keeps the same
-  external interface so the frontend doesn't change.
-- Yield accrues to the index only when `accrue()` observes higher total
-  assets across adapters — never on time passing alone. No phantom yield.
-- Withdrawals pull from the most-liquid adapter first; if a market is
-  illiquid, the withdrawal waits in a FIFO queue rather than reverting
-  (bounded: queue older than N hours is serviceable by keeper with penalty).
+If any adapter deposit is short, the entire transaction reverts.
 
-## 5. Trust and safety
+### Withdrawals
 
-- Adapters are append-only whitelisted by governance; a malicious adapter
-  can't be hot-swapped in.
-- Per-market caps bound the blast radius of any single protocol exploit.
-- `pause()` freezes deposits/rebalances (withdrawals stay open) — break-glass
-  only, emits an event the frontend surfaces.
-- Upgradeability: UUPS proxy for the router, immutable adapters. Audit the
-  proxy admin flow, not just the logic.
-- Explicitly out of scope for audit evasion: no admin key can redirect user
-  funds anywhere except whitelisted adapters.
+`withdraw(shares)` is **all-or-nothing**, not instant-by-design:
 
-## 6. Phase 2: cross-L1 (the actual differentiator)
+1. Idle router asset is consumed first.
+2. The remainder is redeemed pro-rata from invested slots.
+3. Each adapter withdrawal must return at least the requested amount, measured
+   by the router's token balance delta.
+4. If any adapter redemption fails or is short, the whole transaction reverts
+   and the caller keeps their shares.
 
-Aero runs on 80+ Avalanche L1s. The v2 router adds:
+There is no withdrawal queue, no partial-fill mode and no guarantee that an
+adapter has liquidity at withdrawal time. A fully invested router can revert
+with `ADAPTER_WITHDRAW_FAILED`, `ADAPTER_SHORTFALL` or
+`INSUFFICIENT_LIQUIDITY`.
 
-- `WarpMessenger` (Avalanche ICM) messages carrying deposit/withdraw intents
-  between the home router and spoke adapters on other L1s.
-- Each spoke reports `balance` + `liveApyBps` inbound; the home router's
-  allocation policy extends across chains with an added bridge-cost term.
-- Same UX: one balance, one APY. The user never picks a chain — v1 already
-  trains them to expect that.
+### Rebalancing
 
-## 7. Testnet → mainnet path
+`rebalance()` is permissionless and moves router-owned funds toward the static
+targets. It does **not** compare APYs, optimize yield or call a keeper
+incentive. It only runs when total absolute drift is at or above
+`minDriftBps` (default 25 bps, owner-settable up to 1,000).
 
-1. `AeroVault` (mock rate) proves the UX: deposit/withdraw/index/emit events.
-2. Swap mock for `AeroRouter` + one real adapter (Benqi first — simplest
-   supply/borrow interface) behind the same ABI the frontend already speaks.
-3. Add the second adapter, then the keeper bot, then timelock + audit.
-4. Warp spokes only after single-chain mainnet is boring.
+### Ownership and recovery
 
-## 8. Open questions
+The contract uses OpenZeppelin `Ownable` directly. There is no proxy, no
+timelock, no multisig requirement in code and no pause function.
 
-- Caller incentive size for permissionless `rebalance()` (needs mainnet gas data).
-- Withdrawal-queue bounds under a real bank-run simulation (fork test).
-- Whether caps should be governance-set or algorithmic (start governance-set).
-- Fee model: none on testnet; mainnet takes a performance fee. Percentage TBD —
-  decided by unit economics, not this doc.
+The owner can:
+
+- set target allocations (`setTargets`),
+- set the drift threshold (`setMinDriftBps`),
+- add an adapter at zero weight (`addAdapter`),
+- remove an adapter only when its target is zero and the router holds none of
+  its shares (`removeAdapter`),
+- recover direct donations only when the router has no shares and no adapter
+  positions (`recoverOrphanedAssets`).
+
+`recoverOrphanedAssets` exists because a donation before the first deposit would
+otherwise block deposits with `ORPHANED_ASSETS`.
+
+### Adapter binding
+
+Adapters are validated at registration and by `configurationValid()`:
+
+- adapter and asset addresses are contracts,
+- the adapter asset matches the router asset,
+- the adapter's `router()` is this router (or zero at construction time),
+- `convertToAssets`, `convertToShares`, `sharesOf`, `liveApyBps` and
+  `marketId` are callable,
+- the stored targets still sum to `10_000`.
+
+`BenqiAdapter` is bound once with `setRouter` and rejects deposits and
+withdrawals from anyone else. The adapter's market is an `IQiToken`; in the
+sandbox this is exercised against `MockQiToken`, not a live Benqi market.
+
+## 2. What is not implemented
+
+The following items appear in the mainnet design, not in the current contracts:
+
+- live Benqi or Trader Joe markets on Avalanche mainnet,
+- APY-aware allocation or any yield optimizer,
+- keeper bots, caller incentives or automatic rebalancing per block,
+- per-market caps beyond the owner-set target weights,
+- a withdrawal queue or a liquidity backstop,
+- `pause()`, UUPS upgradeability, a timelock or an on-chain governance module,
+- cross-chain messaging, Avalanche ICM/Warp spokes or an Aero L1 integration,
+- performance fees or a production fee model,
+- an independent audit or a verified production deployment.
+
+`AeroVault` is a separate mock: a fixed per-second rate set by the owner,
+accrued into an index. It does not route funds to any lending market and its
+rate is not market-derived yield.
+
+## 3. Deployment and trust status
+
+The B2.2 deployment exercise is simulation-only. It did not broadcast a
+transaction, and `lib/fuji-router-manifest.ts` is intentionally empty. Any
+address in a report, screenshot or local environment file is not a trusted
+deployment identity until chain, bytecode, constructor configuration and
+ownership are verified.
+
+The frontend reads addresses from `NEXT_PUBLIC_*` environment variables. A
+configured address is not proof that the contract is the intended deployment.
+
+## 4. Mainnet direction (not implemented, non-binding)
+
+The long-term goal is one USDC portfolio that allocates across Avalanche lending
+markets while showing a single balance and a single rate. A credible mainnet
+design would still need:
+
+- one adapter per market, with explicit accounting and failure handling,
+- an allocation policy that accounts for gas and protocol risk, not just APY,
+- bounded withdrawal behavior and an operational plan for illiquid markets,
+- caps, monitoring, incident response and an independent audit,
+- a governance and upgrade model that does not rely on an unconstrained owner
+  key.
+
+Cross-chain allocation and Aero L1 messaging remain a separate workstream. The
+consumer sandbox does not depend on it.
+
+## 5. Testing
+
+Router, adapter and vault tests live under `contracts/test/` and run with
+Foundry. A passing test suite is not an audit and does not establish that a
+deployment is correct or that adapter liquidity exists on a live market.
