@@ -390,7 +390,9 @@ export function Sidebar({
           compact
         />
         <a
-          href="https://useaero.org/docs#testnet"
+          href="https://docs.useaero.org/developers/"
+          target="_blank"
+          rel="noopener noreferrer"
           className="flex h-11 items-center gap-3 rounded-2xl px-3.5 text-[15px] font-medium text-neutral-500 transition hover:bg-neutral-50 hover:text-neutral-900"
         >
           <ArrowUpRight className="size-[18px]" />
