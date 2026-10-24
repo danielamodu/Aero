@@ -74,7 +74,7 @@ async function main() {
     "robots.txt",
     "assets/styles.css",
     "assets/app.js",
-    "assets/favicon.svg",
+    "assets/favicon.png",
     "build-manifest.json",
   ]
   for (const file of requiredFiles) {
@@ -131,10 +131,13 @@ async function main() {
     if (allText.includes(phrase)) fail(`Unsupported claim found: “${phrase}”`)
   }
 
-  const brandSvg = await readFile(path.join(dist, "assets/favicon.svg"), "utf8")
-  if (!brandSvg.trimStart().startsWith("<svg")) fail("favicon.svg is not an SVG document.")
-  if (!brandSvg.includes("viewBox=")) fail("favicon.svg has no viewBox.")
-  if (/<script/i.test(brandSvg)) fail("favicon.svg contains a script.")
+  const favicon = await readFile(path.join(dist, "assets/favicon.png"))
+  const pngSignature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+  if (!favicon.subarray(0, 8).equals(pngSignature)) fail("favicon.png is not a PNG image.")
+  const faviconWidth = favicon.readUInt32BE(16)
+  const faviconHeight = favicon.readUInt32BE(20)
+  if (faviconWidth !== faviconHeight) fail("favicon.png must be square.")
+  if (faviconWidth < 180) fail("favicon.png must be at least 180px.")
 
   console.log(
     `Validated ${htmlFiles.length} HTML files, ${internalLinks} internal links, ${diagrams} diagrams, ${search.length} search entries.`

@@ -27,7 +27,7 @@ docs/dist/
   index.html
   assets/
     app.js
-    favicon.svg
+    favicon.png
     styles.css
   architecture/index.html
   product/index.html

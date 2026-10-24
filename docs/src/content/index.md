@@ -1,6 +1,6 @@
 ## What Aero is
 
-Aero is a wallet-native product for **sending, paying and earning** on Avalanche. The long-term direction is simple: money should move with the ease of a message. Today, the consumer product is an **Avalanche Fuji testnet sandbox** for testing that direction with test tokens that have no cash value.
+Aero is building username payments, everyday payment experiences, and yield on eligible stablecoins. Try the current **Avalanche Fuji testnet sandbox** with worthless test tokens and simulated services. The long-term direction is simple: money should move with the ease of a message.
 
 The current app is real software, not a slide deck. A connected wallet can claim test dollars, register a Fuji handle, send tokens, open a payment request, use bill-shaped presets, try a card-shaped checkout, and inspect a mock yield portfolio. Some of those paths settle a real Fuji transaction. Others are deliberately simulated. This documentation keeps those categories separate.
 

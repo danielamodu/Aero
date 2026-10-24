@@ -249,25 +249,15 @@ function layout({ page, item, content, headings, index }) {
         <div class="hero-copy">
           <div class="hero-eyebrow"><span class="live-dot"></span> Fuji sandbox · Documentation</div>
           <h1>Money that moves<br><span>like a message.</span></h1>
-          <p class="hero-lede">Aero is building a wallet-native way to send, pay and earn on Avalanche. This site documents what is implemented, what is simulated, and what is deliberately still out of scope.</p>
+          <p class="hero-lede">Aero is building username payments, everyday payment experiences, and yield on eligible stablecoins. Try the current Fuji sandbox with worthless test tokens and simulated services.</p>
           <div class="hero-actions">
-            <a class="button button-primary" href="/product/">Explore the product <span aria-hidden="true">→</span></a>
+            <a class="button button-primary" href="${site.testnet}" target="_blank" rel="noopener noreferrer">Try the testnet <span aria-hidden="true">→</span></a>
             <a class="button button-ghost" href="/status/">Read current status</a>
           </div>
           <div class="hero-meta">
-            <span>${escapeHtml(site.lastReviewed)} review</span>
-            <span>Avalanche Fuji · 43113</span>
-            <span>No real funds</span>
+            <span>Avalanche Fuji sandbox</span>
+            <span>tUSDC · no cash value</span>
           </div>
-        </div>
-        <div class="hero-console" aria-label="Aero product boundaries summary">
-          <div class="console-bar"><span class="console-dot"></span><span class="console-dot"></span><span class="console-dot"></span><span class="console-title">aero / status</span></div>
-          <div class="console-row"><span class="console-key">Network</span><span class="console-value is-blue">Avalanche Fuji</span></div>
-          <div class="console-row"><span class="console-key">Send</span><span class="console-value">Wallet-signed test transfer</span></div>
-          <div class="console-row"><span class="console-key">Pay</span><span class="console-value is-amber">Presets + simulated card</span></div>
-          <div class="console-row"><span class="console-key">Earn</span><span class="console-value is-amber">Mock markets</span></div>
-          <div class="console-row"><span class="console-key">Value at risk</span><span class="console-value is-green">None · test tokens</span></div>
-          <div class="console-foot">This is not a production financial service.</div>
         </div>
       </section>`
     : `<header class="page-header">
@@ -292,7 +282,8 @@ function layout({ page, item, content, headings, index }) {
   <meta property="og:title" content="${escapeHtml(title)}">
   <meta property="og:description" content="${escapeHtml(description)}">
   <meta property="og:url" content="${canonical}">
-  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/assets/favicon.png">
   <link rel="stylesheet" href="/assets/styles.css">
   <script defer src="/assets/app.js"></script>
 </head>
