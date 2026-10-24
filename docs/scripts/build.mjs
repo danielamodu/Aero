@@ -243,12 +243,9 @@ function layout({ page, item, content, headings, index }) {
   const canonical = `${baseUrl}${routeFor(page.file)}`
   const hero = isHome
     ? `<section class="home-hero">
-        <div class="hero-grid" aria-hidden="true"></div>
-        <div class="hero-orb hero-orb-one" aria-hidden="true"></div>
-        <div class="hero-orb hero-orb-two" aria-hidden="true"></div>
         <div class="hero-copy">
           <div class="hero-eyebrow"><span class="live-dot"></span> Fuji sandbox · Documentation</div>
-          <h1>Money that moves<br><span>like a message.</span></h1>
+          <h1>Money that moves<br>like a message.</h1>
           <p class="hero-lede">Aero is building username payments, everyday payment experiences, and yield on eligible stablecoins. Try the current Fuji sandbox with worthless test tokens and simulated services.</p>
           <div class="hero-actions">
             <a class="button button-primary" href="${site.testnet}" target="_blank" rel="noopener noreferrer">Try the testnet <span aria-hidden="true">→</span></a>
