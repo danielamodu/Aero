@@ -67,19 +67,19 @@ Created under `assets/readme/`:
 |---|---|
 | `aero-logo-light.svg` | Traced vector light lockup; valid XML |
 | `aero-logo-dark.svg` | Traced vector dark lockup; valid XML |
-| `hero.svg` | 1280×460 brand banner: “Send. Pay. Earn.”, Fuji status panel, test-token disclaimer |
+| `hero.svg` | 1280×460 brand banner: “Send. Pay. Earn.”, one-line Fuji descriptor, test-token status and site URLs |
 | `product-landing.png` | Genuine capture of the running marketing site |
 | `product-testnet.png` | Genuine capture of the Fuji sandbox entry gate |
-| `product-docs.png` | Genuine capture of the built documentation site |
-| `product-showcase.png` | 2200×1000 composition of the three genuine captures, preserving aspect ratios |
+| `product-docs.png` | Genuine capture of the blue standalone documentation site |
+| `product-showcase.png` | 2200×1000 composition of the three genuine captures, including the blue docs site |
 
 No demo GIF was produced. The sandbox requires a connected wallet, and a genuine walkthrough could not be recorded without one. Fabricating a demo was explicitly avoided.
 
 ## 2. Design decisions
 
-- **Brand continuity.** Reused the existing Aero identity: primary blue `#1800AD`, near-black navy, white and muted lavender accents. No new palette was invented.
+- **Brand continuity.** Reused the existing Aero identity: primary blue `#1800AD`, white and blue-tinted neutrals. No lavender or purple accents remain.
 - **Hero hierarchy.** The SVG banner carries the product verbs and status; the README headline carries the tagline as selectable text. This avoids duplicating the tagline in both places.
-- **Theme-aware logos.** Light and dark lockups are provided as `<picture>`-ready SVGs. The hero uses a white lockup on the dark gradient so it works in both GitHub themes.
+- **Theme-aware logos.** Light and dark lockups are provided as `<picture>`-ready SVGs. The hero uses a white lockup on flat Aero blue so it works in both GitHub themes.
 - **Status language over marketing language.** Every surface uses one of the required labels: Implemented, Tested, Fuji testnet, Mock/demo, Partially implemented, Planned, Blocked, Not supported.
 - **Boundary first.** The README states the sandbox boundary before the feature matrix, and the docs repeat it on the Product and Status pages.
 - **Evidence over adjectives.** Test counts, build results and blockers are stated as recorded evidence, not as guarantees.
@@ -92,7 +92,7 @@ All product captures are real screenshots of the running application or the buil
 
 - `product-landing.png`: `http://localhost:3000/` at 1440×1000.
 - `product-testnet.png`: `http://localhost:3000/testnet` at 1440×1100.
-- `product-docs.png`: the locally built docs site at 1440×1000.
+- `product-docs.png`: the locally built blue docs site at 1440×1000.
 - `product-showcase.png`: composed from those three captures at 2200×1000.
 
 The screenshots show the public surfaces only. The authenticated Send/Pay/Earn dashboard requires a wallet connection and was not captured. The README labels the in-page product illustration as illustrative and does not present it as a live dashboard.

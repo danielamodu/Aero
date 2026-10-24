@@ -1,79 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 460" width="1280" height="460" role="img" aria-labelledby="heroTitle heroDesc">
-  <title id="heroTitle">Aero — Send, pay and earn on Avalanche. Fuji testnet sandbox.</title>
-  <desc id="heroDesc">Aero is a wallet-native Fuji testnet sandbox for payments and simulated stablecoin yield. Test tokens have no cash value.</desc>
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#06071a"/>
-      <stop offset="0.55" stop-color="#0c092e"/>
-      <stop offset="1" stop-color="#1b0c66"/>
-    </linearGradient>
-    <radialGradient id="glowA" cx="0.82" cy="0.18" r="0.55">
-      <stop offset="0" stop-color="#6a55ff" stop-opacity="0.5"/>
-      <stop offset="1" stop-color="#6a55ff" stop-opacity="0"/>
-    </radialGradient>
-    <radialGradient id="glowB" cx="0.12" cy="1" r="0.6">
-      <stop offset="0" stop-color="#3b23c9" stop-opacity="0.35"/>
-      <stop offset="1" stop-color="#3b23c9" stop-opacity="0"/>
-    </radialGradient>
-    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-      <path d="M40 0H0V40" fill="none" stroke="#ffffff" stroke-opacity="0.05" stroke-width="1"/>
-    </pattern>
-  </defs>
-  <g>
-    <rect width="1280" height="460" fill="url(#bg)"/>
-    <rect width="1280" height="460" fill="url(#grid)"/>
-    <rect width="1280" height="460" fill="url(#glowA)"/>
-    <rect width="1280" height="460" fill="url(#glowB)"/>
-    <circle cx="1112" cy="34" r="230" fill="none" stroke="#a99dff" stroke-opacity="0.18"/>
-    <circle cx="1112" cy="34" r="290" fill="none" stroke="#a99dff" stroke-opacity="0.08"/>
-    <circle cx="1188" cy="74" r="4" fill="#a99dff"/>
+  <title id="heroTitle">Aero — Send, pay and earn on Avalanche Fuji.</title>
+  <desc id="heroDesc">Aero is a wallet-native Fuji testnet sandbox. Test tokens have no cash value.</desc>
 
-    <g transform="translate(72 56) scale(0.208)" fill="#ffffff">
-      <path fill-rule="evenodd" d="M29.75 239.25 L0.00 209.51 L62.75 146.75 L125.49 84.00 L62.74 84.00 L-0.02 84.00 L0.24 42.25 L0.50 0.50 L134.75 0.25 L269.00 -0.01 L269.00 134.50 L269.00 269.00 L227.00 269.00 L185.00 269.00 L185.00 206.25 L185.00 143.51 L122.25 206.25 L59.49 269.00 L29.75 239.25 Z M304.00 172.40 C304.00 171.15 346.29 62.51 347.15 61.55 C347.68 60.95 348.38 60.98 349.02 61.62 C350.10 62.70 390.92 166.96 391.74 170.75 C392.23 172.98 392.12 173.00 381.17 173.00 L370.11 173.00 L367.91 166.98 L365.72 160.96 L348.16 161.23 L330.60 161.50 L328.50 167.00 L326.40 172.50 L315.20 172.78 C309.04 172.94 304.00 172.77 304.00 172.40 Z M393.68 172.35 C392.84 171.50 392.77 67.77 393.61 65.58 C394.14 64.18 398.30 64.00 430.14 64.00 L466.07 64.00 L465.78 74.25 L465.50 84.50 L440.25 84.77 L415.00 85.03 L415.00 96.52 L415.00 108.00 L435.42 108.00 C446.65 108.00 456.55 108.27 457.42 108.61 C458.70 109.10 459.00 110.95 459.00 118.50 C459.00 126.05 458.70 127.90 457.42 128.39 C456.55 128.73 446.65 129.00 435.42 129.00 L415.00 129.00 L415.00 140.50 L415.00 152.00 L440.25 152.02 C454.14 152.02 466.08 152.40 466.79 152.85 C467.73 153.44 468.00 156.22 467.79 163.08 L467.50 172.50 L430.93 172.76 C410.81 172.91 394.05 172.72 393.68 172.35 Z M475.67 172.33 C475.30 171.97 475.00 157.61 475.00 140.44 C475.00 105.03 474.17 108.00 484.08 108.00 C487.34 108.00 490.00 107.76 490.00 107.47 C490.00 107.18 486.61 101.60 482.46 95.07 L474.92 83.19 L475.21 73.85 L475.50 64.50 L494.00 64.21 C504.35 64.05 515.36 64.40 519.00 65.02 C531.55 67.14 541.61 73.59 546.26 82.50 C549.16 88.06 549.84 100.96 547.59 107.74 C544.81 116.11 540.00 120.56 527.18 126.65 C527.01 126.73 533.20 136.92 540.93 149.29 C548.67 161.65 555.00 172.05 555.00 172.39 C555.00 172.72 549.63 173.00 543.06 173.00 L531.13 173.00 L517.39 151.00 L503.65 129.00 L499.82 129.00 L496.00 129.00 L496.00 151.00 L496.00 173.00 L486.17 173.00 C480.76 173.00 476.03 172.70 475.67 172.33 Z M561.00 163.00 L561.00 152.98 L597.75 153.24 L634.50 153.50 L634.50 163.00 L634.50 172.50 L597.75 172.76 L561.00 173.02 L561.00 163.00 Z M592.58 143.79 C570.38 140.93 554.01 119.11 557.74 97.34 C558.35 93.75 560.08 88.39 561.59 85.40 C565.09 78.49 573.80 70.19 581.50 66.44 C586.97 63.77 588.43 63.51 598.05 63.51 C608.23 63.50 608.85 63.63 616.23 67.27 C625.25 71.73 630.83 77.47 635.39 87.00 C638.26 93.00 638.50 94.31 638.50 104.00 C638.50 113.40 638.22 115.08 635.78 120.03 C627.42 137.06 610.90 146.15 592.58 143.79 Z M358.00 141.22 C358.00 140.80 355.80 133.93 353.11 125.97 C350.36 117.82 347.97 112.16 347.63 113.00 C346.54 115.75 338.00 141.02 338.00 141.51 C338.00 141.78 342.50 142.00 348.00 142.00 C353.50 142.00 358.00 141.65 358.00 141.22 Z M605.11 122.46 C613.90 119.36 618.63 111.58 617.80 101.59 C616.45 85.37 597.55 77.55 585.44 88.19 C581.25 91.87 579.28 95.37 578.43 100.69 C577.09 109.10 582.34 118.43 590.49 122.14 C595.42 124.38 599.43 124.47 605.11 122.46 Z M523.65 105.49 C528.28 102.46 529.49 94.16 525.95 89.66 C523.16 86.11 518.05 84.81 508.33 85.19 L500.15 85.50 L507.26 96.85 L514.36 108.20 L517.78 107.65 C519.67 107.34 522.31 106.37 523.65 105.49 Z"/>
-    </g>
+  <rect width="1280" height="460" fill="#1800AD"/>
 
-    <text x="72" y="238" fill="#ffffff" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="66" font-weight="800" letter-spacing="-2.6">Send. Pay. Earn.</text>
-    <text x="74" y="292" fill="#b9b6d4" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="23">A wallet-native sandbox on Avalanche Fuji.</text>
-    <text x="74" y="330" fill="#7f7b9c" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16.5">Real Fuji transactions, clearly labeled simulations, test tokens only.</text>
+  <path fill="#FFFFFF" fill-opacity="0.08" d="M29.75 239.25 L0.00 209.51 L62.75 146.75 L125.49 84.00 L62.74 84.00 L-0.02 84.00 L0.24 42.25 L0.50 0.50 L134.75 0.25 L269.00 -0.01 L269.00 134.50 L269.00 269.00 L227.00 269.00 L185.00 269.00 L185.00 206.25 L185.00 143.51 L122.25 206.25 L59.49 269.00 L29.75 239.25 Z" transform="translate(868 92) scale(1.18)"/>
 
-    <g transform="translate(72 370)">
-      <rect width="362" height="34" rx="17" fill="#ffffff" fill-opacity="0.07" stroke="#a99dff" stroke-opacity="0.28"/>
-      <circle cx="18" cy="17" r="4" fill="#48e0a4"/>
-      <text x="32" y="22" fill="#d8d3f5" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" letter-spacing="1.5">FUJI TESTNET &#183; tUSDC HAS NO CASH VALUE</text>
-    </g>
-
-    <g transform="translate(824 118)">
-      <rect width="384" height="238" rx="16" fill="#050514" fill-opacity="0.66" stroke="#ffffff" stroke-opacity="0.14"/>
-      <rect x="1" y="1" width="382" height="36" rx="15" fill="#ffffff" fill-opacity="0.035"/>
-      <circle cx="20" cy="19" r="4" fill="#4e4a6d"/>
-      <circle cx="34" cy="19" r="4" fill="#4e4a6d"/>
-      <circle cx="48" cy="19" r="4" fill="#6d668f"/>
-      <text x="64" y="23" fill="#8b87a8" font-family="ui-monospace, 'Cascadia Code', Consolas, monospace" font-size="11">aero / status</text>
-
-      <g font-family="ui-monospace, 'Cascadia Code', Consolas, monospace" font-size="11.5">
-        <line x1="16" y1="72" x2="368" y2="72" stroke="#ffffff" stroke-opacity="0.07"/>
-        <text x="18" y="62" fill="#777391">Network</text>
-        <text x="366" y="62" fill="#d8d3f5" text-anchor="end">Avalanche Fuji &#183; 43113</text>
-
-        <line x1="16" y1="102" x2="368" y2="102" stroke="#ffffff" stroke-opacity="0.07"/>
-        <text x="18" y="92" fill="#777391">Send</text>
-        <text x="366" y="92" fill="#d8d3f5" text-anchor="end">Wallet-signed test transfer</text>
-
-        <line x1="16" y1="132" x2="368" y2="132" stroke="#ffffff" stroke-opacity="0.07"/>
-        <text x="18" y="122" fill="#777391">Pay</text>
-        <text x="366" y="122" fill="#e6bf86" text-anchor="end">Presets + simulated card</text>
-
-        <line x1="16" y1="162" x2="368" y2="162" stroke="#ffffff" stroke-opacity="0.07"/>
-        <text x="18" y="152" fill="#777391">Earn</text>
-        <text x="366" y="152" fill="#e6bf86" text-anchor="end">Mock markets</text>
-
-        <line x1="16" y1="192" x2="368" y2="192" stroke="#ffffff" stroke-opacity="0.07"/>
-        <text x="18" y="182" fill="#777391">Value at risk</text>
-        <text x="366" y="182" fill="#67d7ad" text-anchor="end">None &#183; test tokens</text>
-      </g>
-      <text x="18" y="220" fill="#625d7c" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5">This is not a production financial service.</text>
-    </g>
-
-    <text x="1208" y="428" fill="#6f6a8c" text-anchor="end" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" letter-spacing="1.2">USEAERO.ORG &#183; DOCS.USEAERO.ORG</text>
+  <g transform="translate(72 56) scale(0.208)" fill="#FFFFFF">
+    <path fill-rule="evenodd" d="M29.75 239.25 L0.00 209.51 L62.75 146.75 L125.49 84.00 L62.74 84.00 L-0.02 84.00 L0.24 42.25 L0.50 0.50 L134.75 0.25 L269.00 -0.01 L269.00 134.50 L269.00 269.00 L227.00 269.00 L185.00 269.00 L185.00 206.25 L185.00 143.51 L122.25 206.25 L59.49 269.00 L29.75 239.25 Z M304.00 172.40 C304.00 171.15 346.29 62.51 347.15 61.55 C347.68 60.95 348.38 60.98 349.02 61.62 C350.10 62.70 390.92 166.96 391.74 170.75 C392.23 172.98 392.12 173.00 381.17 173.00 L370.11 173.00 L367.91 166.98 L365.72 160.96 L348.16 161.23 L330.60 161.50 L328.50 167.00 L326.40 172.50 L315.20 172.78 C309.04 172.94 304.00 172.77 304.00 172.40 Z M393.68 172.35 C392.84 171.50 392.77 67.77 393.61 65.58 C394.14 64.18 398.30 64.00 430.14 64.00 L466.07 64.00 L465.78 74.25 L465.50 84.50 L440.25 84.77 L415.00 85.03 L415.00 96.52 L415.00 108.00 L435.42 108.00 C446.65 108.00 456.55 108.27 457.42 108.61 C458.70 109.10 459.00 110.95 459.00 118.50 C459.00 126.05 458.70 127.90 457.42 128.39 C456.55 128.73 446.65 129.00 435.42 129.00 L415.00 129.00 L415.00 140.50 L415.00 152.00 L440.25 152.02 C454.14 152.02 466.08 152.40 466.79 152.85 C467.73 153.44 468.00 156.22 467.79 163.08 L467.50 172.50 L430.93 172.76 C410.81 172.91 394.05 172.72 393.68 172.35 Z M475.67 172.33 C475.30 171.97 475.00 157.61 475.00 140.44 C475.00 105.03 474.17 108.00 484.08 108.00 C487.34 108.00 490.00 107.76 490.00 107.47 C490.00 107.18 486.61 101.60 482.46 95.07 L474.92 83.19 L475.21 73.85 L475.50 64.50 L494.00 64.21 C504.35 64.05 515.36 64.40 519.00 65.02 C531.55 67.14 541.61 73.59 546.26 82.50 C549.16 88.06 549.84 100.96 547.59 107.74 C544.81 116.11 540.00 120.56 527.18 126.65 C527.01 126.73 533.20 136.92 540.93 149.29 C548.67 161.65 555.00 172.05 555.00 172.39 C555.00 172.72 549.63 173.00 543.06 173.00 L531.13 173.00 L517.39 151.00 L503.65 129.00 L499.82 129.00 L496.00 129.00 L496.00 151.00 L496.00 173.00 L486.17 173.00 C480.76 173.00 476.03 172.70 475.67 172.33 Z M561.00 163.00 L561.00 152.98 L597.75 153.24 L634.50 153.50 L634.50 163.00 L634.50 172.50 L597.75 172.76 L561.00 173.02 L561.00 163.00 Z M592.58 143.79 C570.38 140.93 554.01 119.11 557.74 97.34 C558.35 93.75 560.08 88.39 561.59 85.40 C565.09 78.49 573.80 70.19 581.50 66.44 C586.97 63.77 588.43 63.51 598.05 63.51 C608.23 63.50 608.85 63.63 616.23 67.27 C625.25 71.73 630.83 77.47 635.39 87.00 C638.26 93.00 638.50 94.31 638.50 104.00 C638.50 113.40 638.22 115.08 635.78 120.03 C627.42 137.06 610.90 146.15 592.58 143.79 Z M358.00 141.22 C358.00 140.80 355.80 133.93 353.11 125.97 C350.36 117.82 347.97 112.16 347.63 113.00 C346.54 115.75 338.00 141.02 338.00 141.51 C338.00 141.78 342.50 142.00 348.00 142.00 C353.50 142.00 358.00 141.65 358.00 141.22 Z M605.11 122.46 C613.90 119.36 618.63 111.58 617.80 101.59 C616.45 85.37 597.55 77.55 585.44 88.19 C581.25 91.87 579.28 95.37 578.43 100.69 C577.09 109.10 582.34 118.43 590.49 122.14 C595.42 124.38 599.43 124.47 605.11 122.46 Z M523.65 105.49 C528.28 102.46 529.49 94.16 525.95 89.66 C523.16 86.11 518.05 84.81 508.33 85.19 L500.15 85.50 L507.26 96.85 L514.36 108.20 L517.78 107.65 C519.67 107.34 522.31 106.37 523.65 105.49 Z"/>
   </g>
+
+  <text x="72" y="238" fill="#FFFFFF" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="66" font-weight="800" letter-spacing="-2.6">Send. Pay. Earn.</text>
+  <text x="74" y="292" fill="#FFFFFF" fill-opacity="0.84" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22">A wallet-native sandbox on Avalanche Fuji.</text>
+
+  <g transform="translate(72 330)">
+    <rect width="304" height="34" rx="17" fill="#FFFFFF" fill-opacity="0.10" stroke="#FFFFFF" stroke-opacity="0.45"/>
+    <circle cx="18" cy="17" r="4" fill="#FFFFFF"/>
+    <text x="32" y="22" fill="#FFFFFF" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="1.4">FUJI TESTNET · TEST TOKENS ONLY</text>
+  </g>
+
+  <text x="1208" y="428" fill="#FFFFFF" fill-opacity="0.62" text-anchor="end" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" letter-spacing="0.8">useaero.org · docs.useaero.org</text>
 </svg>
