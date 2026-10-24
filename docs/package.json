@@ -1,0 +1,23 @@
+{
+  "name": "aero-docs",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Standalone documentation site for Aero, deployed at docs.useaero.org",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/serve.mjs",
+    "validate": "node scripts/validate.mjs"
+  },
+  "dependencies": {
+    "highlight.js": "^11.11.1",
+    "highlightjs-solidity": "^2.0.6",
+    "marked": "^18.1.1"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "mermaid": "^11.12.0"
+  }
+}
