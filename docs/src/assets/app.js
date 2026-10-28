@@ -370,5 +370,261 @@
       else closeNav()
     }
   })
+
+  /* ------------------------------- micro toast ------------------------------- */
+  let toastTimeout
+  function showToast(message, icon = "⚡") {
+    let toast = document.querySelector(".aero-toast")
+    if (!toast) {
+      toast = document.createElement("div")
+      toast.className = "aero-toast"
+      document.body.appendChild(toast)
+    }
+    toast.innerHTML = `<span class="toast-icon" aria-hidden="true">${icon}</span><span class="toast-text">${message}</span>`
+    toast.classList.add("is-visible")
+    window.clearTimeout(toastTimeout)
+    toastTimeout = window.setTimeout(() => {
+      toast.classList.remove("is-visible")
+    }, 3200)
+  }
+
+  /* ----------------------- environment surface switch ------------------------ */
+  const envSwitchButtons = [...document.querySelectorAll("[data-env-switch]")]
+  const envNote = document.querySelector("[data-env-note]")
+  envSwitchButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const targetEnv = btn.getAttribute("data-env-switch")
+      envSwitchButtons.forEach((b) => {
+        const active = b === btn
+        b.classList.toggle("is-active", active)
+        b.setAttribute("aria-checked", String(active))
+      })
+      if (targetEnv === "prod") {
+        if (envNote) {
+          envNote.textContent = "Production contracts are not deployed. Aero operates exclusively in the Avalanche Fuji sandbox."
+        }
+        showToast("Production surface is gated: Fuji testnet is currently active.", "🔒")
+      } else {
+        if (envNote) {
+          envNote.textContent = "Sandbox mode: tUSDC has no cash value. Live contracts require Fuji AVAX gas."
+        }
+        showToast("Switched to Avalanche Fuji Sandbox (Chain 43113).", "❄️")
+      }
+    })
+  })
+
+  /* ---------------------- widget: handle validator --------------------------- */
+  const handleWidget = document.querySelector('[data-widget="handle-validator"]')
+  if (handleWidget) {
+    const input = handleWidget.querySelector("[data-handle-input]")
+    const statusPill = handleWidget.querySelector("[data-handle-status]")
+    const ruleLength = handleWidget.querySelector('[data-rule="length"]')
+    const ruleChars = handleWidget.querySelector('[data-rule="chars"]')
+    const hashEl = handleWidget.querySelector("[data-handle-hash]")
+    const addrEl = handleWidget.querySelector("[data-handle-address]")
+
+    function pseudoHash(str) {
+      let h1 = 0xdeadbeef ^ str.length, h2 = 0x41c6ce57 ^ str.length
+      for (let i = 0; i < str.length; i++) {
+        const ch = str.charCodeAt(i)
+        h1 = Math.imul(h1 ^ ch, 2654435761)
+        h2 = Math.imul(h2 ^ ch, 1597334677)
+      }
+      h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909)
+      h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909)
+      const part1 = (h1 >>> 0).toString(16).padStart(8, "0")
+      const part2 = (h2 >>> 0).toString(16).padStart(8, "0")
+      const part3 = ((h1 ^ 0xa5a5a5a5) >>> 0).toString(16).padStart(8, "0")
+      const part4 = ((h2 ^ 0x5a5a5a5a) >>> 0).toString(16).padStart(8, "0")
+      return `0x${part1}${part2}${part3}${part4}...`
+    }
+
+    function pseudoAddress(str) {
+      let h = 0x811c9dc5
+      for (let i = 0; i < str.length; i++) {
+        h ^= str.charCodeAt(i)
+        h = Math.imul(h, 0x01000193)
+      }
+      const hex = (h >>> 0).toString(16).padStart(8, "0")
+      return `0x80a0${hex}e8d2${hex.slice(0, 4)}...43113`
+    }
+
+    function updateHandleValidation() {
+      let val = input.value.trim().toLowerCase()
+      if (val.startsWith("@")) val = val.slice(1)
+      const isLenValid = val.length >= 3 && val.length <= 20
+      const isCharValid = /^[a-z0-9_]+$/.test(val)
+      const isValid = isLenValid && isCharValid
+
+      if (ruleLength) {
+        ruleLength.classList.toggle("is-valid", isLenValid)
+        ruleLength.classList.toggle("is-invalid", !isLenValid)
+        ruleLength.querySelector(".rule-icon").textContent = isLenValid ? "✓" : "✕"
+      }
+      if (ruleChars) {
+        ruleChars.classList.toggle("is-valid", isCharValid)
+        ruleChars.classList.toggle("is-invalid", !isCharValid)
+        ruleChars.querySelector(".rule-icon").textContent = isCharValid ? "✓" : "✕"
+      }
+      if (statusPill) {
+        statusPill.className = `validation-status-pill ${isValid ? "status-valid" : "status-invalid"}`
+        statusPill.textContent = isValid ? "VALID HANDLE" : "INVALID SPEC"
+      }
+      if (hashEl) {
+        hashEl.textContent = val ? pseudoHash(val) : "0x00000000000000000000..."
+      }
+      if (addrEl) {
+        addrEl.textContent = isValid ? pseudoAddress(val) : "0x0000000000000000000000000000000000000000 (Unregistered)"
+      }
+    }
+
+    input.addEventListener("input", updateHandleValidation)
+  }
+
+  /* ---------------------- widget: memo inspector ----------------------------- */
+  const memoWidget = document.querySelector('[data-widget="memo-inspector"]')
+  if (memoWidget) {
+    const textarea = memoWidget.querySelector("[data-memo-input]")
+    const counter = memoWidget.querySelector("[data-memo-counter]")
+    const meter = memoWidget.querySelector("[data-memo-meter]")
+    const eventPreview = memoWidget.querySelector("[data-memo-event]")
+
+    function updateMemoInspector() {
+      const text = textarea.value
+      const encoder = new TextEncoder()
+      const bytes = encoder.encode(text).length
+      const max = 140
+      const pct = Math.min(100, Math.round((bytes / max) * 100))
+
+      if (counter) {
+        counter.textContent = `${bytes} / ${max} bytes`
+        counter.style.color = bytes > max ? "#ef4444" : bytes > 100 ? "#f59e0b" : "var(--ink-muted)"
+      }
+      if (meter) {
+        meter.style.width = `${pct}%`
+        meter.classList.toggle("is-warning", bytes > 100 && bytes <= max)
+        meter.classList.toggle("is-overflow", bytes > max)
+      }
+      if (eventPreview) {
+        const safeText = text.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
+        eventPreview.textContent = `emit Paid(0x80a022...6E8D, 0x932F...180B, tUSDC, 45.00, "${safeText}", ${Math.floor(Date.now() / 1000)});`
+      }
+    }
+
+    textarea.addEventListener("input", updateMemoInspector)
+  }
+
+  /* ------------------- widget: inflation defense slider ---------------------- */
+  const inflationWidget = document.querySelector('[data-widget="inflation"]')
+  if (inflationWidget) {
+    const slider = inflationWidget.querySelector("[data-donation-slider]")
+    const display = inflationWidget.querySelector("[data-donation-display]")
+    const vulnMetric = inflationWidget.querySelector("[data-vuln-stolen]")
+    const safeMetric = inflationWidget.querySelector("[data-safe-stolen]")
+
+    function updateInflation() {
+      const donation = Number(slider.value)
+      if (display) display.textContent = `${donation.toLocaleString()} tUSDC`
+      if (vulnMetric) {
+        if (donation >= 1000) {
+          vulnMetric.textContent = "100.0%"
+        } else if (donation === 0) {
+          vulnMetric.textContent = "0.0%"
+        } else {
+          const ratio = (donation / (1000 + donation)) * 100
+          vulnMetric.textContent = `${ratio.toFixed(1)}%`
+        }
+      }
+      if (safeMetric) {
+        safeMetric.textContent = "0.00%"
+      }
+    }
+
+    slider.addEventListener("input", updateInflation)
+  }
+
+  /* ----------------------- widget: siwe inspector ---------------------------- */
+  const siweWidget = document.querySelector('[data-widget="siwe-inspector"]')
+  if (siweWidget) {
+    const addrInput = siweWidget.querySelector("[data-siwe-address]")
+    const chainSelect = siweWidget.querySelector("[data-siwe-chain]")
+    const banner = siweWidget.querySelector("[data-siwe-banner]")
+    const msg = siweWidget.querySelector("[data-siwe-msg]")
+    const output = siweWidget.querySelector("[data-siwe-output]")
+    const copyBtn = siweWidget.querySelector("[data-siwe-copy]")
+
+    const fixedNonce = "8f39b2a1c0d4e5f67890123456789abc"
+    const nowIso = new Date().toISOString()
+    const expIso = new Date(Date.now() + 10 * 60 * 1000).toISOString()
+
+    function updateSiwe() {
+      const addr = (addrInput?.value || "").trim()
+      const chainId = chainSelect?.value || "43113"
+      const isFuji = chainId === "43113"
+      const isHexAddr = /^0x[a-fA-F0-9]{40}$/.test(addr)
+
+      if (banner && msg) {
+        if (!isFuji) {
+          banner.className = "siwe-status-banner banner-danger"
+          banner.querySelector(".status-icon").textContent = "✕"
+          msg.textContent = `Rejected: Chain ID ${chainId} is forbidden. Aero Identity exclusively accepts Avalanche Fuji (43113).`
+        } else if (!isHexAddr) {
+          banner.className = "siwe-status-banner banner-warning"
+          banner.querySelector(".status-icon").textContent = "!"
+          msg.textContent = "Invalid address format: must be a 42-character 0x-prefixed hex string."
+        } else {
+          banner.className = "siwe-status-banner banner-safe"
+          banner.querySelector(".status-icon").textContent = "✓"
+          msg.textContent = "Valid Fuji EOA challenge payload. Target matches Avalanche Fuji Testnet (43113)."
+        }
+      }
+
+      const siweText = `docs.useaero.org wants you to sign in with your Ethereum account:\n${addr || "0x0000000000000000000000000000000000000000"}\n\nSign in to Aero documentation and sandbox services. This request does not authorize transfers.\n\nURI: https://docs.useaero.org/login\nVersion: 1\nChain ID: ${chainId}\nNonce: ${fixedNonce}\nIssued At: ${nowIso}\nExpiration Time: ${expIso}`
+
+      if (output) {
+        output.textContent = siweText
+      }
+    }
+
+    addrInput?.addEventListener("input", updateSiwe)
+    chainSelect?.addEventListener("change", updateSiwe)
+    updateSiwe()
+
+    copyBtn?.addEventListener("click", async () => {
+      if (output) {
+        await navigator.clipboard.writeText(output.textContent || "")
+        const label = copyBtn.querySelector(".copy-label")
+        if (label) label.textContent = "Copied!"
+        window.setTimeout(() => {
+          if (label) label.textContent = "Copy Payload"
+        }, 1600)
+      }
+    })
+  }
+
+  /* ------------------- widget: package manager tabs ------------------------- */
+  const pkgWidget = document.querySelector('[data-widget="pkg-install"]')
+  if (pkgWidget) {
+    const tabs = [...pkgWidget.querySelectorAll(".pkg-tab")]
+    const codeEl = pkgWidget.querySelector("[data-pkg-code]")
+    const commands = {
+      npm: "npm install && cp .env.example .env.local && npm run dev",
+      pnpm: "pnpm install && cp .env.example .env.local && pnpm run dev",
+      yarn: "yarn install && cp .env.example .env.local && yarn dev",
+      bun: "bun install && cp .env.example .env.local && bun run dev",
+    }
+
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        tabs.forEach((t) => {
+          const active = t === tab
+          t.classList.toggle("is-active", active)
+          t.setAttribute("aria-selected", String(active))
+        })
+        const pkg = tab.getAttribute("data-pkg") || "npm"
+        if (codeEl) codeEl.textContent = commands[pkg] || commands.npm
+      })
+    })
+  }
 })()
 
