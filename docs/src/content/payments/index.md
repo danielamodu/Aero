@@ -35,6 +35,8 @@ flowchart TD
 
 A successful hash is **submission evidence**, not proof of finality. The UI waits for a receipt, but Aero has no chain-specific finality policy, reorg reconciliation or payment state machine.
 
+{{widget:lifecycle-stepper}}
+
 ## AeroPay
 
 `AeroPay.sol` is intentionally small:
@@ -49,6 +51,8 @@ function pay(address token, address to, uint256 amount, string calldata memo) ex
 ```
 
 `payUsername` resolves a handle through an `IAeroNames` registry and then performs the same transfer. The memo limit is 140 bytes. The contract emits `Paid` with the sender, recipient, token, amount, memo and timestamp.
+
+{{widget:memo-inspector}}
 
 ### Known limitations
 

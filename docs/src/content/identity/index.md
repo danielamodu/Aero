@@ -42,6 +42,8 @@ sequenceDiagram
 
 The server chooses the domain, URI, statement, chain ID, issue time, expiry, request ID and 256-bit nonce. The client cannot override them. The signed message says the proof cannot authorize transfers.
 
+{{widget:siwe-inspector}}
+
 ## What the implementation enforces
 
 | Control | Behavior |

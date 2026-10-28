@@ -12,6 +12,8 @@ Aero is a Fuji sandbox. Do not point local development at a production key, a pr
 
 ## Run the main app
 
+{{widget:pkg-install}}
+
 ```bash
 npm install
 cp .env.example .env.local   # PowerShell: Copy-Item .env.example .env.local

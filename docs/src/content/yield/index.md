@@ -30,6 +30,8 @@ AeroRouter is a share-accounted portfolio. It:
 
 The router's deployment version is `2_111`. The frontend checks that version plus Fuji bytecode, asset equality, slot count and `configurationValid()` before enabling router actions. That is a configuration gate, not a source-verification or audit.
 
+{{widget:inflation-visualizer}}
+
 ### Deposit and allocation
 
 ```mermaid

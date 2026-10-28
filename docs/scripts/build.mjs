@@ -168,6 +168,206 @@ function makeRenderer(page) {
   return { renderer, headings }
 }
 
+function renderHandleValidatorWidget() {
+  return `<div class="interactive-widget widget-handle-validator" data-widget="handle-validator">
+    <div class="widget-header">
+      <div class="widget-title">
+        <span class="widget-pulse" aria-hidden="true"></span>
+        <strong>AeroNames Handle Validator & Resolver</strong>
+        <span class="widget-badge font-mono">AeroNames.sol</span>
+      </div>
+      <span class="widget-meta">Rules: 3–20 chars · [a-z0-9_]</span>
+    </div>
+    <div class="widget-body">
+      <div class="widget-input-row">
+        <div class="input-wrapper">
+          <span class="input-prefix font-mono">@</span>
+          <input type="text" class="widget-input font-mono" placeholder="username" value="maya" spellcheck="false" autocomplete="off" maxlength="28" data-handle-input aria-label="Test username registration" />
+        </div>
+        <span class="validation-status-pill status-valid" data-handle-status>VALID HANDLE</span>
+      </div>
+      <div class="rules-grid">
+        <div class="rule-chip is-valid" data-rule="length"><span class="rule-icon" aria-hidden="true">✓</span> 3 to 20 characters</div>
+        <div class="rule-chip is-valid" data-rule="chars"><span class="rule-icon" aria-hidden="true">✓</span> Lowercase alphanumeric + _</div>
+        <div class="rule-chip is-valid" data-rule="unique"><span class="rule-icon" aria-hidden="true">✓</span> Releases old handle on re-register</div>
+      </div>
+      <div class="widget-details">
+        <div class="detail-row">
+          <span class="detail-label">keccak256(bytes(name)):</span>
+          <code class="detail-val font-mono" data-handle-hash>0x3b85f096238379201a141b619426f0ec405a06be32c5f11181290373...</code>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Mock Resolved Address:</span>
+          <code class="detail-val font-mono text-brand" data-handle-address>0x80a02210ec13d498299ab1a568de188ea2cc6e8d</code>
+        </div>
+      </div>
+    </div>
+  </div>`
+}
+
+function renderMemoInspectorWidget() {
+  return `<div class="interactive-widget widget-memo-inspector" data-widget="memo-inspector">
+    <div class="widget-header">
+      <div class="widget-title">
+        <span class="widget-pulse" aria-hidden="true"></span>
+        <strong>AeroPay Memo & Calldata Inspector</strong>
+        <span class="widget-badge font-mono">MAX_MEMO_BYTES = 140</span>
+      </div>
+      <span class="widget-counter font-mono" data-memo-counter>28 / 140 bytes</span>
+    </div>
+    <div class="widget-body">
+      <div class="memo-input-wrap">
+        <textarea class="widget-textarea" rows="2" placeholder="Type memo (UTF-8 supported)..." data-memo-input aria-label="Test payment memo">Dinner with friends 🍕</textarea>
+        <div class="memo-meter-track">
+          <div class="memo-meter-bar" data-memo-meter style="width: 20%;"></div>
+        </div>
+      </div>
+      <div class="memo-payload-preview">
+        <div class="payload-header">
+          <span class="payload-label font-mono">Solidity Event Preview</span>
+          <span class="payload-gas font-mono">Gas Bound: ~24,500</span>
+        </div>
+        <pre class="payload-code"><code class="hljs language-solidity" data-memo-event>emit Paid(0x80a022...6E8D, 0x932F...180B, tUSDC, 45.00, "Dinner with friends 🍕", 1792088075);</code></pre>
+      </div>
+    </div>
+  </div>`
+}
+
+function renderInflationVisualizerWidget() {
+  return `<div class="interactive-widget widget-inflation" data-widget="inflation">
+    <div class="widget-header">
+      <div class="widget-title">
+        <span class="widget-pulse" aria-hidden="true"></span>
+        <strong>AeroRouter Virtual Shares Inflation Defense</strong>
+        <span class="widget-badge font-mono">VIRTUAL_ASSETS = 1</span>
+      </div>
+      <span class="widget-meta font-mono">virtualShares = 10¹²</span>
+    </div>
+    <div class="widget-body">
+      <div class="slider-control">
+        <div class="slider-labels">
+          <span>Attacker Front-Run Donation: <strong class="font-mono" data-donation-display>10,000 tUSDC</strong></span>
+          <span class="slider-hint">Drag slider to test attack scale</span>
+        </div>
+        <input type="range" min="0" max="100000" step="5000" value="10000" class="widget-slider" data-donation-slider aria-label="Attacker donation amount slider" />
+      </div>
+      <div class="comparison-cards">
+        <div class="comparison-card card-vulnerable">
+          <div class="comp-badge bad">Vulnerable ERC-4626 (No Offset)</div>
+          <div class="comp-metric"><span class="metric-val text-red" data-vuln-stolen>100%</span> <span class="metric-desc">Victim Deposit Stolen</span></div>
+          <p class="comp-note">Without virtual shares, share price jumps to 10,001. A victim deposit of 1,000 mints 0 shares due to integer truncation, and the attacker burns 1 share to steal all 1,000 tUSDC.</p>
+        </div>
+        <div class="comparison-card card-safe">
+          <div class="comp-badge good">AeroRouter (virtualShares = 10¹²)</div>
+          <div class="comp-metric"><span class="metric-val text-emerald" data-safe-stolen>0.00%</span> <span class="metric-desc">Victim Receives Fair Value</span></div>
+          <p class="comp-note">Virtual shares normalize 6-decimal USDC to 18-decimal shares. The victim receives millions of sub-shares; attacker donation is neutralized.</p>
+        </div>
+      </div>
+    </div>
+  </div>`
+}
+
+function renderLifecycleStepperWidget() {
+  return `<div class="transaction-stepper" aria-label="Payment lifecycle stepper">
+    <div class="stepper-item is-complete">
+      <div class="stepper-rail"><span class="stepper-node">1</span><span class="stepper-line"></span></div>
+      <div class="stepper-content">
+        <div class="stepper-head"><strong class="stepper-title">Resolve Handle</strong><span class="stepper-badge font-mono">AeroNames</span></div>
+        <p class="stepper-desc">Client calls <code>resolveAddress(name)</code> against the Fuji registry. The resolved address is verified as non-zero.</p>
+      </div>
+    </div>
+    <div class="stepper-item is-complete">
+      <div class="stepper-rail"><span class="stepper-node">2</span><span class="stepper-line"></span></div>
+      <div class="stepper-content">
+        <div class="stepper-head"><strong class="stepper-title">Check Token Allowance</strong><span class="stepper-badge font-mono">tUSDC</span></div>
+        <p class="stepper-desc">Browser checks current <code>allowance(user, AeroPay)</code>. If insufficient, wallet prompts for a one-time approval.</p>
+      </div>
+    </div>
+    <div class="stepper-item is-active">
+      <div class="stepper-rail"><span class="stepper-node">3</span><span class="stepper-line"></span></div>
+      <div class="stepper-content">
+        <div class="stepper-head"><strong class="stepper-title">Sign 1-Transaction Payment</strong><span class="stepper-badge font-mono">AeroPay.pay</span></div>
+        <p class="stepper-desc">User wallet authorizes single call carrying destination, amount, and bounded memo (≤ 140 bytes). <code>Paid</code> event emitted.</p>
+      </div>
+    </div>
+    <div class="stepper-item">
+      <div class="stepper-rail"><span class="stepper-node">4</span></div>
+      <div class="stepper-content">
+        <div class="stepper-head"><strong class="stepper-title">Fuji Confirmation & Log Watch</strong><span class="stepper-badge font-mono">Chain 43113</span></div>
+        <p class="stepper-desc">Wagmi waits for receipt. Transaction hash is recorded in local activity store. No custodial key ever touches the payment.</p>
+      </div>
+    </div>
+  </div>`
+}
+
+function renderSiweInspectorWidget() {
+  return `<div class="interactive-widget widget-siwe" data-widget="siwe-inspector">
+    <div class="widget-header">
+      <div class="widget-title">
+        <span class="widget-pulse" aria-hidden="true"></span>
+        <strong>EIP-4361 Canonical SIWE Payload Inspector</strong>
+        <span class="widget-badge font-mono">Chain 43113</span>
+      </div>
+      <span class="widget-meta font-mono">Fuji EOA Only</span>
+    </div>
+    <div class="widget-body">
+      <div class="siwe-controls-grid">
+        <div class="siwe-field">
+          <label class="field-label">Wallet Address (EOA)</label>
+          <div class="input-wrapper">
+            <input type="text" class="widget-input font-mono" value="0x80a02210ec13d498299ab1a568de188ea2cc6e8d" spellcheck="false" autocomplete="off" data-siwe-address aria-label="SIWE Wallet Address" />
+          </div>
+        </div>
+        <div class="siwe-field">
+          <label class="field-label">Target Chain ID</label>
+          <div class="select-wrapper">
+            <select class="widget-select font-mono" data-siwe-chain aria-label="SIWE Chain Selector">
+              <option value="43113" selected>43113 (Avalanche Fuji Testnet)</option>
+              <option value="43114">43114 (Avalanche Mainnet — Rejected)</option>
+              <option value="1">1 (Ethereum Mainnet — Rejected)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="siwe-status-banner banner-safe" data-siwe-banner>
+        <span class="status-icon" aria-hidden="true">✓</span>
+        <span class="status-msg" data-siwe-msg>Valid Fuji EOA challenge payload. Target matches Fuji Testnet.</span>
+      </div>
+      <div class="memo-payload-preview">
+        <div class="payload-header">
+          <span class="payload-label font-mono">Canonical EIP-191 Personal Sign String</span>
+          <button type="button" class="copy-code" data-siwe-copy aria-label="Copy SIWE message">
+            <span class="copy-label">Copy Payload</span>
+          </button>
+        </div>
+        <pre class="payload-code"><code class="hljs language-plaintext" data-siwe-output></code></pre>
+      </div>
+    </div>
+  </div>`
+}
+
+function renderPkgInstallWidget() {
+  return `<div class="interactive-widget widget-pkg" data-widget="pkg-install">
+    <div class="pkg-header">
+      <div class="pkg-tabs" role="tablist" aria-label="Package manager selection">
+        <button type="button" class="pkg-tab is-active" data-pkg="npm" role="tab" aria-selected="true">npm</button>
+        <button type="button" class="pkg-tab" data-pkg="pnpm" role="tab" aria-selected="false">pnpm</button>
+        <button type="button" class="pkg-tab" data-pkg="yarn" role="tab" aria-selected="false">yarn</button>
+        <button type="button" class="pkg-tab" data-pkg="bun" role="tab" aria-selected="false">bun</button>
+      </div>
+      <span class="pkg-meta font-mono">Next.js 16 · React 19</span>
+    </div>
+    <div class="pkg-code-wrap code-block" style="margin:0; border:0; border-radius:0;">
+      <pre style="padding:14px 16px;"><code class="hljs language-bash" data-pkg-code>npm install &amp;&amp; cp .env.example .env.local &amp;&amp; npm run dev</code></pre>
+      <button type="button" class="copy-code pkg-copy" data-copy aria-label="Copy install command">
+        <svg class="copy-icon-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+        <svg class="copied-icon-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+        <span class="copy-label">Copy</span>
+      </button>
+    </div>
+  </div>`
+}
+
 function badgeHtml(label, detail) {
   const key = label.trim().toLowerCase()
   const cls = BADGES[key] || "is-neutral"
@@ -177,11 +377,44 @@ function badgeHtml(label, detail) {
 
 function renderMarkdown(raw, page) {
   const { body } = parseFrontmatter(raw)
-  // Badges are rendered as HTML after Markdown parsing. Inline HTML is escaped
-  // by the renderer for safety, so a placeholder token survives tables and
-  // inline text without exposing arbitrary HTML authoring in content files.
+  
+  // Replace widgets with tokens
+  const widgets = []
+  let processed = body
+    .replace(/\{\{widget:handle-validator\}\}/g, () => {
+      const token = `AEROWIDGET${widgets.length}TOKEN`
+      widgets.push(renderHandleValidatorWidget())
+      return token
+    })
+    .replace(/\{\{widget:memo-inspector\}\}/g, () => {
+      const token = `AEROWIDGET${widgets.length}TOKEN`
+      widgets.push(renderMemoInspectorWidget())
+      return token
+    })
+    .replace(/\{\{widget:inflation-visualizer\}\}/g, () => {
+      const token = `AEROWIDGET${widgets.length}TOKEN`
+      widgets.push(renderInflationVisualizerWidget())
+      return token
+    })
+    .replace(/\{\{widget:lifecycle-stepper\}\}/g, () => {
+      const token = `AEROWIDGET${widgets.length}TOKEN`
+      widgets.push(renderLifecycleStepperWidget())
+      return token
+    })
+    .replace(/\{\{widget:siwe-inspector\}\}/g, () => {
+      const token = `AEROWIDGET${widgets.length}TOKEN`
+      widgets.push(renderSiweInspectorWidget())
+      return token
+    })
+    .replace(/\{\{widget:pkg-install\}\}/g, () => {
+      const token = `AEROWIDGET${widgets.length}TOKEN`
+      widgets.push(renderPkgInstallWidget())
+      return token
+    })
+
+  // Badges are rendered as HTML after Markdown parsing.
   const badges = []
-  const withBadges = body.replace(/\{\{badge:([^}|]+)(?:\|([^}]+))?\}\}/g, (_, label, detail) => {
+  const withBadges = processed.replace(/\{\{badge:([^}|]+)(?:\|([^}]+))?\}\}/g, (_, label, detail) => {
     const token = `AEROBADGE${badges.length}TOKEN`
     badges.push(badgeHtml(label, detail))
     return token
@@ -190,7 +423,8 @@ function renderMarkdown(raw, page) {
   const marked = new Marked({ gfm: true, breaks: false })
   marked.use({ renderer })
   const parsed = marked.parse(withBadges)
-  const html = parsed.replace(/AEROBADGE(\d+)TOKEN/g, (_, index) => badges[Number(index)] ?? "")
+  const htmlWithBadges = parsed.replace(/AEROBADGE(\d+)TOKEN/g, (_, index) => badges[Number(index)] ?? "")
+  const html = htmlWithBadges.replace(/AEROWIDGET(\d+)TOKEN/g, (_, index) => widgets[Number(index)] ?? "")
   return { html, headings }
 }
 
@@ -388,10 +622,20 @@ function layout({ page, item, content, headings, index }) {
         <div class="sidebar-status-card">
           <div class="status-card-header">
             <span class="pulse-dot" aria-hidden="true"></span>
-            <span class="status-card-badge">FUJI SANDBOX</span>
-            <span class="status-card-chain">#43113</span>
+            <span class="status-card-badge">SURFACE GATE</span>
+            <span class="status-card-chain font-mono">43113</span>
           </div>
-          <p class="status-card-note">Contracts active on Fuji testnet. Test tokens have no cash value.</p>
+          <div class="network-toggle-group" role="radiogroup" aria-label="Environment surface switch">
+            <button type="button" class="network-toggle-btn is-active" data-env-switch="fuji" aria-checked="true">
+              <span class="toggle-dot"></span>
+              <span>Fuji Testnet</span>
+            </button>
+            <button type="button" class="network-toggle-btn" data-env-switch="prod" aria-checked="false">
+              <span class="lock-icon" aria-hidden="true">🔒</span>
+              <span>Production</span>
+            </button>
+          </div>
+          <p class="status-card-note" data-env-note>Sandbox mode: tUSDC has no cash value. Live contracts require Fuji AVAX gas.</p>
         </div>
         ${navHtml(page.file)}
         <div class="sidebar-bottom">
@@ -597,7 +841,7 @@ async function main() {
   )
   await writeFile(
     path.join(outDir, "404.html"),
-    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Page not found — Aero Docs</title><link rel="stylesheet" href="/assets/styles.css"></head><body class="not-found"><main><a class="brand" href="/">${brandMark()}<span class="brand-text"><strong>AERO</strong><span>Docs</span></span></a><p class="eyebrow">404</p><h1>That page moved off-course.</h1><p>Return to the <a href="/">documentation home</a>, check <a href="/status/">current status</a>, or visit <a href="https://useaero.org" target="_blank" rel="noopener noreferrer">useaero.org</a>.</p></main></body></html>`,
+    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>404: Flight Path Off-Course — Aero Docs</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700&family=Geist:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="/assets/styles.css"></head><body class="not-found"><main class="not-found-card"><div class="radar-box"><div class="radar-ring r1"></div><div class="radar-ring r2"></div><div class="radar-sweep"></div><div class="radar-cross-h"></div><div class="radar-cross-v"></div><div class="radar-blip"></div></div><a class="brand" href="/">${brandMark()}<span class="brand-text"><strong>AERO</strong><span class="brand-sub">Docs</span></span></a><p class="not-found-eyebrow">404 // FLIGHT PATH OFF-COURSE</p><h1>Lost in the testnet airspace.</h1><p class="not-found-lead">The requested documentation coordinate does not exist. Navigate back to the flight deck:</p><div class="not-found-links"><a class="button button-primary" href="/"><span>Return to Overview</span> <span aria-hidden="true">→</span></a><a class="button button-ghost" href="/status/"><span>Current Status Matrix</span></a><a class="button button-ghost" href="/contracts/"><span>Contract Reference</span></a><a class="button button-ghost" href="${site.domain.startsWith("http") ? site.domain : "https://" + site.domain}" target="_blank" rel="noopener noreferrer"><span>Launch App</span></a></div><p class="not-found-coords font-mono">Target: Avalanche Fuji Airspace · Chain ID 43113</p></main></body></html>`,
     "utf8"
   )
 

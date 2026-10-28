@@ -18,6 +18,8 @@ The handle is resolved by the on-chain **AeroNames** registry. A handle belongs 
 
 Read [Payments](/payments/) for the full flow and the [contract reference](/contracts/) for AeroPay's exact behavior.
 
+{{widget:handle-validator}}
+
 ## Pay
 
 Pay is the broadest and least complete product area. In the current app it consists of four related surfaces:
