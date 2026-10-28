@@ -388,31 +388,6 @@
     }, 3200)
   }
 
-  /* ----------------------- environment surface switch ------------------------ */
-  const envSwitchButtons = [...document.querySelectorAll("[data-env-switch]")]
-  const envNote = document.querySelector("[data-env-note]")
-  envSwitchButtons.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const targetEnv = btn.getAttribute("data-env-switch")
-      envSwitchButtons.forEach((b) => {
-        const active = b === btn
-        b.classList.toggle("is-active", active)
-        b.setAttribute("aria-checked", String(active))
-      })
-      if (targetEnv === "prod") {
-        if (envNote) {
-          envNote.textContent = "Production contracts are not deployed. Aero operates exclusively in the Avalanche Fuji sandbox."
-        }
-        showToast("Production surface is gated: Fuji testnet is currently active.", "🔒")
-      } else {
-        if (envNote) {
-          envNote.textContent = "Sandbox mode: tUSDC has no cash value. Live contracts require Fuji AVAX gas."
-        }
-        showToast("Switched to Avalanche Fuji Sandbox (Chain 43113).", "❄️")
-      }
-    })
-  })
-
   /* ---------------------- widget: handle validator --------------------------- */
   const handleWidget = document.querySelector('[data-widget="handle-validator"]')
   if (handleWidget) {

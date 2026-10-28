@@ -450,7 +450,6 @@ function navHtml(activeFile) {
                 const isActive = item.file === activeFile
                 return `<li>
                   <a class="nav-link${isActive ? " is-active" : ""}" href="${routeFor(item.file)}"${isActive ? ' aria-current="page"' : ""}>
-                    ${isActive ? '<span class="nav-indicator" aria-hidden="true"></span>' : ""}
                     <span class="nav-text">${escapeHtml(item.title)}</span>
                   </a>
                 </li>`
@@ -519,26 +518,25 @@ function layout({ page, item, content, headings, index }) {
   const hero = isHome
     ? `<section class="home-hero">
         <div class="hero-copy">
-          <div class="hero-eyebrow">
-            <span class="live-dot" aria-hidden="true"></span>
-            <span>Avalanche Fuji · Documentation</span>
-          </div>
-          <h1>Money that moves<br>like a message.</h1>
+          <p class="hero-eyebrow font-mono">DOCUMENTATION // TESTNET 43113</p>
+          <h1>Money that moves like a message.</h1>
           <p class="hero-lede">Aero is building username payments, everyday payment experiences, and yield on eligible stablecoins. Try the current Fuji sandbox with worthless test tokens and simulated services.</p>
           <div class="hero-actions">
             <a class="button button-primary" href="${site.testnet}" target="_blank" rel="noopener noreferrer">
-              <span>Try the testnet</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              <span>Launch sandbox</span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </a>
             <a class="button button-ghost" href="/status/">
-              <span>Read current status</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+              <span>Status matrix</span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
             </a>
           </div>
-          <div class="hero-meta">
-            <span class="hero-meta-tag"><span class="meta-dot"></span>Avalanche Fuji sandbox</span>
-            <span class="hero-meta-tag">tUSDC · no cash value</span>
-            <span class="hero-meta-tag font-mono">Chain ID 43113</span>
+          <div class="hero-meta font-mono">
+            <span>Avalanche Fuji</span>
+            <span class="meta-sep" aria-hidden="true">/</span>
+            <span>tUSDC Sandbox</span>
+            <span class="meta-sep" aria-hidden="true">/</span>
+            <span>Chain ID 43113</span>
           </div>
         </div>
       </section>`
@@ -588,9 +586,8 @@ function layout({ page, item, content, headings, index }) {
         <span class="brand-text"><strong>AERO</strong><span class="brand-sub">Docs</span></span>
       </a>
       <span class="topbar-divider" aria-hidden="true"></span>
-      <div class="topbar-context-pill">
-        <span class="live-dot" aria-hidden="true"></span>
-        <span>Fuji Sandbox <strong class="pill-chain">43113</strong></span>
+      <div class="topbar-env font-mono">
+        <span class="env-chip">FUJI 43113</span>
       </div>
       <div class="topbar-actions">
         <button class="search-trigger" type="button" aria-label="Search documentation" data-search-open>
@@ -600,10 +597,7 @@ function layout({ page, item, content, headings, index }) {
           <span class="search-label">Search docs…</span>
           <kbd class="kbd-shortcut">⌘K</kbd>
         </button>
-        <a class="topbar-link topbar-status-link" href="/status/">
-          <span class="status-indicator-dot" aria-hidden="true"></span>
-          <span>Status</span>
-        </a>
+        <a class="topbar-link" href="/status/">Status</a>
         <a class="topbar-link topbar-external-link" href="${site.website}" target="_blank" rel="noopener noreferrer">
           <span>useaero.org</span>
           <svg class="external-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7"/><path d="M7 7h10v10"/></svg>
@@ -619,23 +613,9 @@ function layout({ page, item, content, headings, index }) {
   <div class="shell">
     <aside class="sidebar" id="sidebar" aria-label="Documentation navigation">
       <div class="sidebar-inner">
-        <div class="sidebar-status-card">
-          <div class="status-card-header">
-            <span class="pulse-dot" aria-hidden="true"></span>
-            <span class="status-card-badge">SURFACE GATE</span>
-            <span class="status-card-chain font-mono">43113</span>
-          </div>
-          <div class="network-toggle-group" role="radiogroup" aria-label="Environment surface switch">
-            <button type="button" class="network-toggle-btn is-active" data-env-switch="fuji" aria-checked="true">
-              <span class="toggle-dot"></span>
-              <span>Fuji Testnet</span>
-            </button>
-            <button type="button" class="network-toggle-btn" data-env-switch="prod" aria-checked="false">
-              <span class="lock-icon" aria-hidden="true">🔒</span>
-              <span>Production</span>
-            </button>
-          </div>
-          <p class="status-card-note" data-env-note>Sandbox mode: tUSDC has no cash value. Live contracts require Fuji AVAX gas.</p>
+        <div class="sidebar-meta font-mono">
+          <span class="meta-tag">TESTNET SANDBOX</span>
+          <span class="meta-chain">43113</span>
         </div>
         ${navHtml(page.file)}
         <div class="sidebar-bottom">
