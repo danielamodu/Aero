@@ -124,14 +124,42 @@ function makeRenderer(page) {
       if (language === "mermaid") {
         page.mermaid += 1
         const id = `mermaid-${page.mermaid}`
-        return `<div class="diagram" data-diagram="${id}"><div class="diagram-head"><span>Diagram</span><span class="diagram-source-label">Mermaid</span></div><pre class="mermaid" id="${id}">${escapeHtml(text)}</pre></div>`
+        return `<div class="diagram" data-diagram="${id}"><div class="diagram-head"><div class="diagram-head-title"><span class="diagram-dot"></span><span>Architecture Diagram</span></div><span class="diagram-source-label">Mermaid</span></div><pre class="mermaid" id="${id}">${escapeHtml(text)}</pre></div>`
       }
       const supported = language && hljs.getLanguage(language)
       const highlighted = supported
         ? hljs.highlight(text, { language, ignoreIllegals: true }).value
         : escapeHtml(text)
-      const label = language || "text"
-      return `<div class="code-block"><div class="code-head"><span>${escapeHtml(label)}</span><button type="button" class="copy-code" data-copy>Copy</button></div><pre><code class="hljs language-${escapeHtml(supported ? language : "plaintext")}">${highlighted}</code></pre></div>`
+      const label = language ? language.toUpperCase() : "TEXT"
+      return `<div class="code-block"><div class="code-head"><div class="code-dots" aria-hidden="true"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div><span class="code-lang-pill">${escapeHtml(label)}</span><button type="button" class="copy-code" data-copy aria-label="Copy code to clipboard"><span class="copy-icon-svg" aria-hidden="true"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></span><span class="copied-icon-svg" aria-hidden="true"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="copy-label">Copy</span></button></div><pre><code class="hljs language-${escapeHtml(supported ? language : "plaintext")}">${highlighted}</code></pre></div>`
+    },
+    blockquote({ text }) {
+      const trimmed = text.trim()
+      let calloutClass = "callout-note"
+      let icon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`
+      let title = "Note"
+
+      if (/sandbox boundary/i.test(trimmed) || /warning/i.test(trimmed) || /blocked/i.test(trimmed)) {
+        calloutClass = "callout-warning"
+        icon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`
+        title = "Sandbox Boundary"
+      } else if (/the short version/i.test(trimmed) || /summary/i.test(trimmed)) {
+        calloutClass = "callout-summary"
+        icon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`
+        title = "Quick Summary"
+      } else if (/tip/i.test(trimmed)) {
+        calloutClass = "callout-tip"
+        icon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="m4.93 4.93 2.83 2.83"/><path d="M2 12h4"/><path d="m4.93 19.07 2.83-2.83"/><path d="M12 22v-4"/><path d="m19.07 19.07-2.83-2.83"/><path d="M22 12h-4"/><path d="m19.07 4.93-2.83 2.83"/></svg>`
+        title = "Tip"
+      } else if (/security/i.test(trimmed)) {
+        calloutClass = "callout-security"
+        icon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>`
+        title = "Security Notice"
+      }
+
+      const formatted = trimmed
+        .replace(/^\*\*([^*]+)\*\*:?/, '<strong class="callout-lead">$1</strong>')
+      return `<div class="callout ${calloutClass}"><div class="callout-icon" aria-hidden="true">${icon}</div><div class="callout-body"><div class="callout-title">${title}</div><div class="callout-text">${formatted}</div></div></div>`
     },
     html({ text }) {
       return escapeHtml(text)
@@ -184,11 +212,15 @@ function navHtml(activeFile) {
         <ul class="nav-list">
           ${group.items
             .map(
-              (item) => `<li>
-                <a class="nav-link${item.file === activeFile ? " is-active" : ""}" href="${routeFor(item.file)}"${item.file === activeFile ? ' aria-current="page"' : ""}>
-                  <span>${escapeHtml(item.title)}</span>
-                </a>
-              </li>`
+              (item) => {
+                const isActive = item.file === activeFile
+                return `<li>
+                  <a class="nav-link${isActive ? " is-active" : ""}" href="${routeFor(item.file)}"${isActive ? ' aria-current="page"' : ""}>
+                    ${isActive ? '<span class="nav-indicator" aria-hidden="true"></span>' : ""}
+                    <span class="nav-text">${escapeHtml(item.title)}</span>
+                  </a>
+                </li>`
+              }
             )
             .join("")}
         </ul>
@@ -200,14 +232,23 @@ function navHtml(activeFile) {
 function tocHtml(headings) {
   if (headings.length < 2) return ""
   return `<aside class="page-toc" aria-label="On this page">
-    <p class="toc-label">On this page</p>
-    <nav>
+    <div class="toc-header">
+      <svg class="toc-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="21" y1="6" x2="3" y2="6"/><line x1="15" y1="12" x2="3" y2="12"/><line x1="17" y1="18" x2="3" y2="18"/></svg>
+      <span class="toc-label">On this page</span>
+    </div>
+    <nav class="toc-nav">
       ${headings
         .map(
-          (heading) => `<a class="toc-link toc-depth-${heading.depth}" href="#${heading.id}">${escapeHtml(heading.text)}</a>`
+          (heading) => `<a class="toc-link toc-depth-${heading.depth}" href="#${heading.id}"><span>${escapeHtml(heading.text)}</span></a>`
         )
         .join("")}
     </nav>
+    <div class="toc-foot">
+      <a class="toc-back-top" href="#main-content" aria-label="Scroll back to top">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 15-6-6-6 6"/></svg>
+        <span>Back to top</span>
+      </a>
+    </div>
   </aside>`
 }
 
@@ -217,8 +258,8 @@ function breadcrumbHtml(page, item) {
   }
   return `<nav class="breadcrumbs" aria-label="Breadcrumb">
     <a href="/">Docs</a><span class="crumb-sep">/</span>
-    <span>${escapeHtml(item.category)}</span><span class="crumb-sep">/</span>
-    <span aria-current="page">${escapeHtml(item.title)}</span>
+    <span class="crumb-category">${escapeHtml(item.category)}</span><span class="crumb-sep">/</span>
+    <span class="crumb-current" aria-current="page">${escapeHtml(item.title)}</span>
   </nav>`
 }
 
@@ -228,10 +269,10 @@ function prevNextHtml(page, index) {
   if (!previous && !next) return ""
   return `<nav class="page-pager" aria-label="Previous and next pages">
     ${previous
-      ? `<a class="pager-card pager-prev" href="${routeFor(previous.file)}"><span class="pager-kicker">Previous</span><span class="pager-title">${escapeHtml(previous.title)}</span></a>`
+      ? `<a class="pager-card pager-prev" href="${routeFor(previous.file)}"><span class="pager-kicker">← Previous</span><span class="pager-title">${escapeHtml(previous.title)}</span></a>`
       : `<span></span>`}
     ${next
-      ? `<a class="pager-card pager-next" href="${routeFor(next.file)}"><span class="pager-kicker">Next</span><span class="pager-title">${escapeHtml(next.title)}</span></a>`
+      ? `<a class="pager-card pager-next" href="${routeFor(next.file)}"><span class="pager-kicker">Next →</span><span class="pager-title">${escapeHtml(next.title)}</span></a>`
       : `<span></span>`}
   </nav>`
 }
@@ -244,16 +285,26 @@ function layout({ page, item, content, headings, index }) {
   const hero = isHome
     ? `<section class="home-hero">
         <div class="hero-copy">
-          <div class="hero-eyebrow"><span class="live-dot"></span> Fuji sandbox · Documentation</div>
+          <div class="hero-eyebrow">
+            <span class="live-dot" aria-hidden="true"></span>
+            <span>Avalanche Fuji · Documentation</span>
+          </div>
           <h1>Money that moves<br>like a message.</h1>
           <p class="hero-lede">Aero is building username payments, everyday payment experiences, and yield on eligible stablecoins. Try the current Fuji sandbox with worthless test tokens and simulated services.</p>
           <div class="hero-actions">
-            <a class="button button-primary" href="${site.testnet}" target="_blank" rel="noopener noreferrer">Try the testnet <span aria-hidden="true">→</span></a>
-            <a class="button button-ghost" href="/status/">Read current status</a>
+            <a class="button button-primary" href="${site.testnet}" target="_blank" rel="noopener noreferrer">
+              <span>Try the testnet</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </a>
+            <a class="button button-ghost" href="/status/">
+              <span>Read current status</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+            </a>
           </div>
           <div class="hero-meta">
-            <span>Avalanche Fuji sandbox</span>
-            <span>tUSDC · no cash value</span>
+            <span class="hero-meta-tag"><span class="meta-dot"></span>Avalanche Fuji sandbox</span>
+            <span class="hero-meta-tag">tUSDC · no cash value</span>
+            <span class="hero-meta-tag font-mono">Chain ID 43113</span>
           </div>
         </div>
       </section>`
@@ -262,7 +313,11 @@ function layout({ page, item, content, headings, index }) {
         <div class="page-kicker">${escapeHtml(item.category)}</div>
         <h1>${escapeHtml(item.title)}</h1>
         <p class="page-description">${escapeHtml(item.description)}</p>
-        <div class="page-meta"><span>Last reviewed ${escapeHtml(site.lastReviewed)}</span><span>Fuji testnet documentation</span><span>${readingTime(content)} min read</span></div>
+        <div class="page-meta">
+          <span class="meta-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> ${readingTime(content)} min read</span>
+          <span class="meta-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Reviewed ${escapeHtml(site.lastReviewed)}</span>
+          <span class="meta-item meta-item-badge">Fuji 43113</span>
+        </div>
       </header>`
 
   return `<!doctype html>
@@ -281,6 +336,9 @@ function layout({ page, item, content, headings, index }) {
   <meta property="og:url" content="${canonical}">
   <link rel="icon" href="/assets/favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="/assets/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700&family=Geist:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/styles.css">
   <script defer src="/assets/app.js"></script>
 </head>
@@ -293,18 +351,33 @@ function layout({ page, item, content, headings, index }) {
       </button>
       <a class="brand" href="/" aria-label="Aero documentation home">
         ${brandMark()}
-        <span class="brand-text"><strong>AERO</strong><span>Docs</span></span>
+        <span class="brand-text"><strong>AERO</strong><span class="brand-sub">Docs</span></span>
       </a>
       <span class="topbar-divider" aria-hidden="true"></span>
-      <span class="topbar-context">Fuji sandbox documentation</span>
+      <div class="topbar-context-pill">
+        <span class="live-dot" aria-hidden="true"></span>
+        <span>Fuji Sandbox <strong class="pill-chain">43113</strong></span>
+      </div>
       <div class="topbar-actions">
         <button class="search-trigger" type="button" aria-label="Search documentation" data-search-open>
-          <span class="search-icon" aria-hidden="true"></span>
-          <span class="search-label">Search docs</span>
-          <kbd>⌘K</kbd>
+          <span class="search-icon-svg" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </span>
+          <span class="search-label">Search docs…</span>
+          <kbd class="kbd-shortcut">⌘K</kbd>
         </button>
-        <a class="topbar-link" href="/status/">Status</a>
-        <a class="topbar-link" href="${site.website}" target="_blank" rel="noopener noreferrer">useaero.org <span aria-hidden="true">↗</span></a>
+        <a class="topbar-link topbar-status-link" href="/status/">
+          <span class="status-indicator-dot" aria-hidden="true"></span>
+          <span>Status</span>
+        </a>
+        <a class="topbar-link topbar-external-link" href="${site.website}" target="_blank" rel="noopener noreferrer">
+          <span>useaero.org</span>
+          <svg class="external-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7"/><path d="M7 7h10v10"/></svg>
+        </a>
+        <a class="topbar-cta" href="${site.testnet}" target="_blank" rel="noopener noreferrer">
+          <span>Sandbox</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </a>
       </div>
     </div>
   </header>
@@ -312,15 +385,26 @@ function layout({ page, item, content, headings, index }) {
   <div class="shell">
     <aside class="sidebar" id="sidebar" aria-label="Documentation navigation">
       <div class="sidebar-inner">
-        <div class="sidebar-note">
-          <span class="sidebar-note-label">Release status</span>
-          <strong>Fuji testnet only</strong>
-          <span>Test tokens have no cash value.</span>
+        <div class="sidebar-status-card">
+          <div class="status-card-header">
+            <span class="pulse-dot" aria-hidden="true"></span>
+            <span class="status-card-badge">FUJI SANDBOX</span>
+            <span class="status-card-chain">#43113</span>
+          </div>
+          <p class="status-card-note">Contracts active on Fuji testnet. Test tokens have no cash value.</p>
         </div>
         ${navHtml(page.file)}
         <div class="sidebar-bottom">
-          <a href="${site.testnet}" target="_blank" rel="noopener noreferrer">Open testnet <span aria-hidden="true">↗</span></a>
-          <a href="${site.website}" target="_blank" rel="noopener noreferrer">Main website <span aria-hidden="true">↗</span></a>
+          <div class="sidebar-links-group">
+            <a class="sidebar-link" href="${site.testnet}" target="_blank" rel="noopener noreferrer">
+              <span>Open testnet sandbox</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7"/><path d="M7 7h10v10"/></svg>
+            </a>
+            <a class="sidebar-link" href="${site.repository}" target="_blank" rel="noopener noreferrer">
+              <span>GitHub repository</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7"/><path d="M7 7h10v10"/></svg>
+            </a>
+          </div>
         </div>
       </div>
     </aside>
@@ -336,7 +420,7 @@ function layout({ page, item, content, headings, index }) {
   <footer class="site-footer">
     <div class="footer-inner">
       <div class="footer-brand">${brandMark()}<span>Aero Docs</span></div>
-      <p>${escapeHtml(site.tagline)}</p>
+      <p class="footer-tagline">${escapeHtml(site.tagline)}</p>
       <div class="footer-links">
         <a href="${site.website}" target="_blank" rel="noopener noreferrer">Website</a>
         <a href="${site.testnet}" target="_blank" rel="noopener noreferrer">Fuji sandbox</a>
@@ -347,16 +431,36 @@ function layout({ page, item, content, headings, index }) {
     </div>
   </footer>
   <div class="search-overlay" hidden data-search-overlay>
+    <div class="search-backdrop" data-search-close></div>
     <div class="search-dialog" role="dialog" aria-modal="true" aria-labelledby="search-title">
       <div class="search-head">
-        <span class="search-icon" aria-hidden="true"></span>
-        <input id="search-title" type="search" placeholder="Search documentation…" autocomplete="off" spellcheck="false" data-search-input>
-        <button type="button" class="search-close" aria-label="Close search" data-search-close>Esc</button>
+        <span class="search-input-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </span>
+        <input id="search-title" type="search" placeholder="Search documentation, contracts, architecture..." autocomplete="off" spellcheck="false" data-search-input>
+        <button type="button" class="search-esc-btn" aria-label="Close search" data-search-close>ESC</button>
       </div>
       <div class="search-results" data-search-results>
-        <p class="search-empty">Type to search status, payments, yield, identity and architecture.</p>
+        <div class="search-empty">
+          <p class="empty-title">Type to search Aero documentation</p>
+          <p class="empty-sub">Explore handles, payments, yield, identity, and Fuji contracts.</p>
+          <div class="search-quick-tags">
+            <button type="button" class="quick-tag" data-tag="AeroPay">AeroPay</button>
+            <button type="button" class="quick-tag" data-tag="AeroNames">AeroNames</button>
+            <button type="button" class="quick-tag" data-tag="AeroRouter">AeroRouter</button>
+            <button type="button" class="quick-tag" data-tag="SIWE">SIWE Identity</button>
+            <button type="button" class="quick-tag" data-tag="status">Status Matrix</button>
+          </div>
+        </div>
       </div>
-      <div class="search-foot"><span><kbd>↑</kbd><kbd>↓</kbd> to navigate</span><span><kbd>Enter</kbd> to open</span><span><kbd>Esc</kbd> to close</span></div>
+      <div class="search-foot">
+        <div class="search-shortcuts">
+          <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+          <span><kbd>↵</kbd> select</span>
+          <span><kbd>esc</kbd> close</span>
+        </div>
+        <span class="search-foot-brand">Aero Docs</span>
+      </div>
     </div>
   </div>
   <script type="application/ld+json">${JSON.stringify({
@@ -376,9 +480,39 @@ function brandMark() {
 
 function homeCards() {
   return `<div class="home-grid cards">
-    <a class="home-card" href="/product/"><span class="card-index">01</span><h3>Product</h3><p>Send, Pay and Earn — with explicit labels for what is live, mock or planned.</p><span class="card-link">Read the product boundary →</span></a>
-    <a class="home-card" href="/architecture/"><span class="card-index">02</span><h3>Architecture</h3><p>Follow a payment from the browser through the wallet, contracts and Fuji.</p><span class="card-link">Open the system map →</span></a>
-    <a class="home-card" href="/status/"><span class="card-index">03</span><h3>Status</h3><p>The honest matrix: implemented, tested, simulated, partial, planned or blocked.</p><span class="card-link">Check current status →</span></a>
+    <a class="home-card" href="/product/">
+      <div class="card-top">
+        <span class="card-badge">01</span>
+        <span class="card-icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        </span>
+      </div>
+      <h3>Product</h3>
+      <p>Send, Pay and Earn — with explicit labels for what is live, mock or planned.</p>
+      <span class="card-link"><span>Read product boundaries</span><span class="card-arrow" aria-hidden="true">→</span></span>
+    </a>
+    <a class="home-card" href="/architecture/">
+      <div class="card-top">
+        <span class="card-badge">02</span>
+        <span class="card-icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+        </span>
+      </div>
+      <h3>Architecture</h3>
+      <p>Follow a payment from the browser through the wallet, contracts and Fuji.</p>
+      <span class="card-link"><span>Open the system map</span><span class="card-arrow" aria-hidden="true">→</span></span>
+    </a>
+    <a class="home-card" href="/status/">
+      <div class="card-top">
+        <span class="card-badge">03</span>
+        <span class="card-icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+        </span>
+      </div>
+      <h3>Status</h3>
+      <p>The honest matrix: implemented, tested, simulated, partial, planned or blocked.</p>
+      <span class="card-link"><span>Check current status</span><span class="card-arrow" aria-hidden="true">→</span></span>
+    </a>
   </div>`
 }
 
