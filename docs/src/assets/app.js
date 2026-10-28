@@ -25,12 +25,13 @@
     button.addEventListener("click", async () => {
       const block = button.closest(".code-block")
       const code = block?.querySelector("code")?.textContent ?? ""
+      const label = button.querySelector(".copy-label")
       try {
         await navigator.clipboard.writeText(code)
-        button.textContent = "Copied"
+        if (label) label.textContent = "Copied!"
         button.classList.add("is-copied")
         window.setTimeout(() => {
-          button.textContent = "Copy"
+          if (label) label.textContent = "Copy"
           button.classList.remove("is-copied")
         }, 1600)
       } catch {
@@ -41,7 +42,7 @@
           selection.removeAllRanges()
           selection.addRange(range)
         }
-        button.textContent = "Select + copy"
+        if (label) label.textContent = "Selected"
       }
     })
   })
@@ -251,12 +252,24 @@
     cards[activeResult]?.scrollIntoView({ block: "nearest" })
   }
 
+  const defaultEmptyHtml = `
+    <div class="search-empty">
+      <p class="empty-title">Type to search Aero documentation</p>
+      <p class="empty-sub">Explore handles, payments, yield, identity, and Fuji contracts.</p>
+      <div class="search-quick-tags">
+        <button type="button" class="quick-tag" data-tag="AeroPay">AeroPay</button>
+        <button type="button" class="quick-tag" data-tag="AeroNames">AeroNames</button>
+        <button type="button" class="quick-tag" data-tag="AeroRouter">AeroRouter</button>
+        <button type="button" class="quick-tag" data-tag="SIWE">SIWE Identity</button>
+        <button type="button" class="quick-tag" data-tag="status">Status Matrix</button>
+      </div>
+    </div>`
+
   function renderSearch(query) {
     const clean = query.trim().toLowerCase()
     if (!clean) {
       activeResult = -1
-      results.innerHTML =
-        '<p class="search-empty">Type to search status, payments, yield, identity and architecture.</p>'
+      results.innerHTML = defaultEmptyHtml
       return
     }
     const terms = clean.split(/\s+/).filter(Boolean)
@@ -268,14 +281,18 @@
         .slice(0, 12)
       activeResult = matches.length > 0 ? 0 : -1
       if (matches.length === 0) {
-        results.innerHTML = `<p class="search-empty">No results for <strong>${escapeHtml(query)}</strong>. Try "status", "withdraw", "SIWE" or "mock".</p>`
+        results.innerHTML = `<div class="search-empty"><p class="empty-title">No results for "${escapeHtml(query)}"</p><p class="empty-sub">Try searching for "status", "AeroRouter", "SIWE", or "Fuji".</p></div>`
         return
       }
       results.innerHTML = matches
         .map(
           ({ page }, index) => `<a class="search-result${index === 0 ? " is-active" : ""}" href="${page.url}">
-            <span class="search-result-top"><span class="search-result-category">${escapeHtml(page.category)}</span><span class="search-result-title">${escapeHtml(page.title)}</span></span>
-            <span class="search-result-excerpt">${escapeHtml(excerpt(page, terms))}</span>
+            <div class="search-result-header">
+              <span class="search-result-cat">${escapeHtml(page.category)}</span>
+              <span class="search-result-name">${escapeHtml(page.title)}</span>
+              <span class="search-result-arrow" aria-hidden="true">→</span>
+            </div>
+            <p class="search-result-snippet">${escapeHtml(excerpt(page, terms))}</p>
           </a>`
         )
         .join("")
@@ -299,7 +316,16 @@
   }
 
   openButtons.forEach((button) => button.addEventListener("click", openSearch))
-  closeButton?.addEventListener("click", closeSearch)
+  document.querySelectorAll("[data-search-close]").forEach((btn) => btn.addEventListener("click", closeSearch))
+  results?.addEventListener("click", (event) => {
+    const tagBtn = event.target.closest(".quick-tag")
+    if (tagBtn && input) {
+      const tag = tagBtn.getAttribute("data-tag") || ""
+      input.value = tag
+      input.focus()
+      renderSearch(tag)
+    }
+  })
   overlay?.addEventListener("click", (event) => {
     if (event.target === overlay) closeSearch()
   })
